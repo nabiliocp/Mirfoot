@@ -403,27 +403,19 @@ export default function ChallengesView() {
 
             <div className="border-t border-gray-100 pt-4">
               <h3 className="font-bold text-lg text-emerald-800 mb-3 border-b border-gray-100 pb-2">
-                2. Configurer les Points (Phase de Groupes)
+                Règles de Points Appliquées
               </h3>
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                {['exact_score', 'good_result', 'close_score', 'first_to_score'].map(k => (
-                  <div key={k} className="bg-gray-50 p-3 rounded-xl">
-                    <label className="block text-xs font-bold text-gray-700 mb-1 capitalize">{k.replace('_', ' ')}</label>
-                    <input type="number" min="0" value={pointRules.group_stage[k as keyof RulesSet]} onChange={(e) => setPointRules(prev => ({...prev, group_stage: {...prev.group_stage, [k]: parseInt(e.target.value) || 0} as RulesSet}))} className="w-full p-2 border-gray-300 rounded-lg text-sm text-center" />
-                  </div>
-                ))}
-              </div>
-
-              <h3 className="font-bold text-lg text-emerald-800 mt-6 mb-3 border-b border-gray-100 pb-2">
-                Points (Phase Éliminatoire)
-              </h3>
-              <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
-                {['exact_score', 'good_result', 'close_score', 'first_to_score', 'extra_time', 'penalties'].map(k => (
-                  <div key={k} className="bg-gray-50 p-3 rounded-xl">
-                    <label className="block text-xs font-bold text-gray-700 mb-1 capitalize">{k.replace('_', ' ')}</label>
-                    <input type="number" min="0" value={pointRules.knockout_stage[k as keyof KnockoutRulesSet]} onChange={(e) => setPointRules(prev => ({...prev, knockout_stage: {...prev.knockout_stage, [k]: parseInt(e.target.value) || 0} as KnockoutRulesSet}))} className="w-full p-2 border-gray-300 rounded-lg text-sm text-center" />
-                  </div>
-                ))}
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div className="bg-gray-50 p-3 rounded-xl">
+                  <span className="block font-bold text-emerald-800 mb-1">Phase Groupes</span>
+                  <p className="text-xs">Score Exact: {pointRules.group_stage.exact_score} pts</p>
+                  <p className="text-xs">Bon Résultat: {pointRules.group_stage.good_result} pts</p>
+                </div>
+                <div className="bg-gray-50 p-3 rounded-xl">
+                  <span className="block font-bold text-emerald-800 mb-1">Phase Élim.</span>
+                  <p className="text-xs">Score Exact: {pointRules.knockout_stage.exact_score} pts</p>
+                  <p className="text-xs">Prolongations: {pointRules.knockout_stage.extra_time} pts</p>
+                </div>
               </div>
             </div>
 
