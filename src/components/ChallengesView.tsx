@@ -230,6 +230,9 @@ export default function ChallengesView() {
       setViewMode("list");
       setNewTitle("");
       setSelectedMatch(null);
+    } else if (error) {
+      console.error("Erreur de création:", error);
+      alert("Erreur lors de la création du défi: " + error.message);
     }
     setCreating(false);
   };
@@ -350,6 +353,13 @@ export default function ChallengesView() {
               </div>
             ) : (
               <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
+                <button
+                  type="button"
+                  onClick={() => setSelectedMatch({ id: 0, homeTeam: { shortName: "Comp", name: "Comp", crest: "" }, awayTeam: { shortName: "Comp", name: "Comp", crest: "" }, utcDate: new Date().toISOString(), status: "SCHEDULED" } as any)}
+                  className="w-full p-3 border-2 border-emerald-100 rounded-xl hover:border-emerald-500 hover:bg-emerald-50 transition flex justify-between items-center text-sm font-semibold text-emerald-700 bg-emerald-50"
+                >
+                  <span>Toute la compétition</span>
+                </button>
                 {Array.isArray(matches) && matches.map((m) => (
                   <button
                     key={m.id}
