@@ -282,7 +282,7 @@ export default function ChallengesView() {
       .eq("id", challengeId);
 
     if (!error) {
-      setChallenges((prev) => prev.filter((c) => c.id !== challengeId));
+      setChallenges((prev) => prev.filter((c) => String(c.id) !== String(challengeId)));
     } else {
       alert("Erreur lors de la suppression: " + error.message);
     }
@@ -797,25 +797,19 @@ export default function ChallengesView() {
 
                 {challenge.matchId === 0 && (
                   <div className="flex gap-2 mb-4">
-                    <button className="text-xs font-bold text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-lg hover:bg-indigo-100 transition">Règles</button>
-                    <button className="text-xs font-bold text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-lg hover:bg-indigo-100 transition">Participants</button>
+                    <button onClick={() => alert("Règles du défi: " + challenge.title)} className="text-xs font-bold text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-lg hover:bg-indigo-100 transition">Règles</button>
+                    <button onClick={() => alert("Participants bientôt disponibles")} className="text-xs font-bold text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-lg hover:bg-indigo-100 transition">Participants</button>
                   </div>
                 )}
-                {renderPredictionForm(challenge)}
+                {challenge.matchId !== 0 && renderPredictionForm(challenge)}
 
                 {isCreator && !challenge.locked && !challenge.resolved && (
-                  <div className="mt-6 pt-4 border-t border-gray-100 grid grid-cols-2 gap-2">
-                    <button
-                      onClick={() => handleLock(challenge.id)}
-                      className="text-xs font-bold text-amber-600 hover:text-amber-700 flex items-center justify-center gap-1 border-r border-gray-100"
-                    >
-                      <Lock className="w-4 h-4" /> Verrouiller
-                    </button>
+                  <div className="mt-6 pt-4 border-t border-gray-100 text-center">
                     <button
                       onClick={() => handleDelete(challenge.id)}
-                      className="text-xs font-bold text-red-600 hover:text-red-700 flex items-center justify-center gap-1"
+                      className="text-xs font-bold text-red-500 hover:text-red-700 flex items-center justify-center gap-1 w-full"
                     >
-                      Supprimer
+                      Supprimer le défi
                     </button>
                   </div>
                 )}
