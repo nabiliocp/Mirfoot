@@ -51,14 +51,13 @@ export default function ChallengesView() {
   const [loadingMatches, setLoadingMatches] = useState(false);
 
   const [customRulesConfig, setCustomRulesConfig] = useState<{
-    [key: string]: { enabled: boolean; points: number };
+    [key: string]: { enabled: boolean; points: number; label: string };
   }>({
-    exact_score: { enabled: true, points: 5 },
-    good_result: { enabled: true, points: 3 },
-    close_score: { enabled: false, points: 1 },
-    first_to_score: { enabled: false, points: 2 },
-    extra_time: { enabled: false, points: 1 },
-    penalties: { enabled: false, points: 1 },
+    exact_score: { enabled: true, points: 5, label: "Score Exact" },
+    correct_winner: { enabled: true, points: 2, label: "Bon Vainqueur (1N2)" },
+    closest_guess: { enabled: true, points: 1, label: "Plus proche du score" },
+    exact_score_penalties: { enabled: false, points: 5, label: "Score Exact Tab (Knockout)" },
+    correct_winner_penalties: { enabled: false, points: 2, label: "Vainqueur Tab (Knockout)" },
   });
 
   const toggleRule = (rule: string) => {
@@ -221,22 +220,22 @@ export default function ChallengesView() {
 
     const title = newTitle.trim()
       ? newTitle
-      : `Défi: ${selectedMatch.homeTeam.shortName} vs ${selectedMatch.awayTeam.shortName}`;
+      : selectedMatch.id === 0 
+        ? `Défi: ${competitions.find(c => c.id === selectedCompId)?.name || "Compétition"}`
+        : `Défi: ${selectedMatch.homeTeam.shortName} vs ${selectedMatch.awayTeam.shortName}`;
 
     const savedRules: PointRules = {
       group_stage: {
         exact_score: customRulesConfig.exact_score.enabled ? customRulesConfig.exact_score.points : 0,
-        good_result: customRulesConfig.good_result.enabled ? customRulesConfig.good_result.points : 0,
-        close_score: customRulesConfig.close_score.enabled ? customRulesConfig.close_score.points : 0,
-        first_to_score: customRulesConfig.first_to_score.enabled ? customRulesConfig.first_to_score.points : 0,
+        correct_winner: customRulesConfig.correct_winner.enabled ? customRulesConfig.correct_winner.points : 0,
+        closest_guess: customRulesConfig.closest_guess.enabled ? customRulesConfig.closest_guess.points : 0,
       },
       knockout_stage: {
         exact_score: customRulesConfig.exact_score.enabled ? customRulesConfig.exact_score.points : 0,
-        good_result: customRulesConfig.good_result.enabled ? customRulesConfig.good_result.points : 0,
-        close_score: customRulesConfig.close_score.enabled ? customRulesConfig.close_score.points : 0,
-        first_to_score: customRulesConfig.first_to_score.enabled ? customRulesConfig.first_to_score.points : 0,
-        extra_time: customRulesConfig.extra_time.enabled ? customRulesConfig.extra_time.points : 0,
-        penalties: customRulesConfig.penalties.enabled ? customRulesConfig.penalties.points : 0,
+        correct_winner: customRulesConfig.correct_winner.enabled ? customRulesConfig.correct_winner.points : 0,
+        closest_guess: customRulesConfig.closest_guess.enabled ? customRulesConfig.closest_guess.points : 0,
+        exact_score_penalties: customRulesConfig.exact_score_penalties.enabled ? customRulesConfig.exact_score_penalties.points : 0,
+        correct_winner_penalties: customRulesConfig.correct_winner_penalties.enabled ? customRulesConfig.correct_winner_penalties.points : 0,
       },
     };
 
@@ -481,17 +480,19 @@ export default function ChallengesView() {
           <div className="space-y-6">
             <div className="bg-emerald-50 p-4 py-3 rounded-xl flex justify-between items-center border border-emerald-100">
               <div className="flex items-center gap-3">
-                {selectedMatch.homeTeam.crest && <img src={selectedMatch.homeTeam.crest} alt={selectedMatch.homeTeam.shortName} className="w-8 h-8 object-contain" />}
+                {selectedMatch.id !== 0 && selectedMatch.homeTeam.crest && <img src={selectedMatch.homeTeam.crest} alt={selectedMatch.homeTeam.shortName} className="w-8 h-8 object-contain" />}
                 <div>
                   <div className="text-xs text-emerald-600 font-bold mb-1 uppercase tracking-wider">
-                    Match sélectionné
+                    {selectedMatch.id === 0 ? "Compétition sélectionnée" : "Match sélectionné"}
                   </div>
                   <div className="font-bold text-gray-800">
-                    {selectedMatch.homeTeam.shortName} vs{" "}
-                    {selectedMatch.awayTeam.shortName}
+                    {selectedMatch.id === 0 
+                      ? competitions.find(c => c.id === selectedCompId)?.name || "Toute la compétition"
+                      : `${selectedMatch.homeTeam.shortName} vs ${selectedMatch.awayTeam.shortName}`
+                    }
                   </div>
                 </div>
-                {selectedMatch.awayTeam.crest && <img src={selectedMatch.awayTeam.crest} alt={selectedMatch.awayTeam.shortName} className="w-8 h-8 object-contain" />}
+                {selectedMatch.id !== 0 && selectedMatch.awayTeam.crest && <img src={selectedMatch.awayTeam.crest} alt={selectedMatch.awayTeam.shortName} className="w-8 h-8 object-contain" />}
               </div>
               <button
                 type="button"
@@ -525,7 +526,7 @@ export default function ChallengesView() {
                   <div key={key} className="flex justify-between items-center bg-gray-50 p-3 rounded-xl border border-gray-100">
                     <label className="flex items-center gap-2 cursor-pointer font-semibold text-gray-700">
                       <input type="checkbox" checked={rule.enabled} onChange={() => toggleRule(key)} className="accent-emerald-600" />
-                      <span className="capitalize text-xs">{key.replace('_', ' ')}</span>
+                      <span className="text-xs">{rule.label}</span>
                     </label>
                     <input
                       type="number"
@@ -635,86 +636,30 @@ export default function ChallengesView() {
         </div>
 
         <div className="space-y-3 pt-2">
-          {challenge.pointRules?.knockout_stage.first_to_score! > 0 && (
-            <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1">
-                1er à marquer ({challenge.pointRules?.knockout_stage.first_to_score} pts)
-              </label>
-              <select
-                value={activeForm.firstToScore || ""}
-                onChange={(e) =>
-                  updatePredictionForm(challenge.id, {
-                    firstToScore: e.target.value,
-                  })
-                }
-                disabled={!isOpen && !userPred}
-                className="w-full p-2.5 rounded-lg border border-gray-300 text-sm disabled:bg-gray-100 disabled:text-gray-500"
-              >
-                <option value="">Sélectionner...</option>
-                <option value="home">{challenge.matchHomeTeam}</option>
-                <option value="away">{challenge.matchAwayTeam}</option>
-                <option value="none">Aucun (0-0)</option>
-              </select>
-            </div>
-          )}
-
-          {challenge.pointRules?.knockout_stage.extra_time! > 0 && (
-            <div className="flex items-center justify-between bg-white p-3 rounded-lg border border-gray-200">
-              <span className="text-xs font-semibold text-gray-700">
-                Prolongations ? ({challenge.pointRules?.knockout_stage.extra_time} pts)
-              </span>
-              <div className="flex gap-2 text-sm">
-                <button
-                  type="button"
-                  onClick={() =>
-                    updatePredictionForm(challenge.id, { extraTime: true })
-                  }
-                  disabled={!isOpen && !userPred}
-                  className={`px-4 py-1.5 rounded-md font-bold transition disabled:opacity-50 ${activeForm.extraTime === true ? "bg-indigo-100 text-indigo-700 border border-indigo-200" : "bg-gray-100 text-gray-600"}`}
-                >
-                  Oui
-                </button>
-                <button
-                  type="button"
-                  onClick={() =>
-                    updatePredictionForm(challenge.id, { extraTime: false })
-                  }
-                  disabled={!isOpen && !userPred}
-                  className={`px-4 py-1.5 rounded-md font-bold transition disabled:opacity-50 ${activeForm.extraTime === false ? "bg-indigo-100 text-indigo-700 border border-indigo-200" : "bg-gray-100 text-gray-600"}`}
-                >
-                  Non
-                </button>
-              </div>
-            </div>
-          )}
-
-          {challenge.pointRules?.knockout_stage.penalties! > 0 && (
-            <div className="flex items-center justify-between bg-white p-3 rounded-lg border border-gray-200">
-              <span className="text-xs font-semibold text-gray-700">
-                Tirs au but ? ({challenge.pointRules?.knockout_stage.penalties} pts)
-              </span>
-              <div className="flex gap-2 text-sm">
-                <button
-                  type="button"
-                  onClick={() =>
-                    updatePredictionForm(challenge.id, { penalties: true })
-                  }
-                  disabled={!isOpen && !userPred}
-                  className={`px-4 py-1.5 rounded-md font-bold transition disabled:opacity-50 ${activeForm.penalties === true ? "bg-indigo-100 text-indigo-700 border border-indigo-200" : "bg-gray-100 text-gray-600"}`}
-                >
-                  Oui
-                </button>
-                <button
-                  type="button"
-                  onClick={() =>
-                    updatePredictionForm(challenge.id, { penalties: false })
-                  }
-                  disabled={!isOpen && !userPred}
-                  className={`px-4 py-1.5 rounded-md font-bold transition disabled:opacity-50 ${activeForm.penalties === false ? "bg-indigo-100 text-indigo-700 border border-indigo-200" : "bg-gray-100 text-gray-600"}`}
-                >
-                  Non
-                </button>
-              </div>
+          {challenge.pointRules?.knockout_stage.exact_score_penalties! > 0 && (
+            <div className="flex border-t border-gray-100 pt-3 flex-col gap-2">
+                <label className="block text-xs font-bold text-gray-700">
+                   Score des Tirs au but (si égalité)
+                </label>
+                <div className="flex gap-2 justify-center">
+                    <input
+                      type="number"
+                      placeholder="Dom."
+                      value={activeForm.penaltiesHomeScore ?? ""}
+                      onChange={(e) => updatePredictionForm(challenge.id, { penaltiesHomeScore: parseInt(e.target.value) })}
+                      disabled={!isOpen && !userPred}
+                      className="w-12 h-10 text-center border rounded-lg"
+                    />
+                    <span className="self-center">-</span>
+                    <input
+                        type="number"
+                        placeholder="Ext."
+                        value={activeForm.penaltiesAwayScore ?? ""}
+                        onChange={(e) => updatePredictionForm(challenge.id, { penaltiesAwayScore: parseInt(e.target.value) })}
+                        disabled={!isOpen && !userPred}
+                        className="w-12 h-10 text-center border rounded-lg"
+                    />
+                </div>
             </div>
           )}
         </div>

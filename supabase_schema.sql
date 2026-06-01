@@ -92,5 +92,15 @@ create trigger on_auth_user_created
   after insert on auth.users
   for each row execute procedure public.handle_new_user();
 
+-- 6. Helper function to increment points
+create or replace function public.increment_user_points(user_uuid uuid, points_to_add int)
+returns void as $$
+begin
+  update public.profiles
+  set points = points + points_to_add
+  where id = user_uuid;
+end;
+$$ language plpgsql security definer;
+
 -- 6. Insert some sample mock data (Optional)
 -- insert into public.challenges (match_id, title, point_rules) values ...

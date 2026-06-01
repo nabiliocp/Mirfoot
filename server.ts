@@ -1,6 +1,15 @@
 import express from "express";
 import path from "path";
 import { createServer as createViteServer } from "vite";
+import { createClient } from "@supabase/supabase-js";
+import dotenv from "dotenv";
+
+dotenv.config();
+
+const supabase = createClient(
+  process.env.VITE_SUPABASE_URL || "",
+  process.env.SUPABASE_SERVICE_ROLE_KEY || ""
+);
 
 async function startServer() {
   const app = express();
@@ -8,81 +17,137 @@ async function startServer() {
 
   app.use(express.json());
 
-  // In-memory data store for the prototype (ideally a database like Firebase/PostgreSQL)
-  const db = {
-    users: [
-      { id: "1", name: "You (Admin)", points: 0 },
-      { id: "2", name: "Marc", points: 12 },
-      { id: "3", name: "Sophie", points: 8 },
-      { id: "4", name: "Julien", points: 15 },
-    ],
-    challenges: [
-      { id: "1", matchId: 1, title: "Qui marquera le premier but ?", options: ["Équipe Domicile", "Équipe Extérieur", "Aucun"], resolved: false },
-      { id: "2", matchId: 1, title: "Y aura-t-il un carton rouge ?", options: ["Oui", "Non"], resolved: false }
-    ],
-    bets: []
-  };
-
-  // API Endpoints
-  
   // Real Integration with football-data.org
   app.get("/api/competitions", async (req, res) => {
     try {
       const apiKey = process.env.FOOTBALL_DATA_API_KEY;
       if (!apiKey) {
-        return res.status(401).json({ error: "Missing FOOTBALL_DATA_API_KEY. Configure it in AI Studio settings." });
+        return res.status(401).json({ error: "Configuration requise: Veuillez ajouter FOOTBALL_DATA_API_KEY dans les 'Secrets'." });
       }
 
       const response = await fetch("https://api.football-data.org/v4/competitions", {
         headers: { "X-Auth-Token": apiKey }
       });
       
-      if (!response.ok) {
-        throw new Error("Failed to fetch competitions from external API");
-      }
-      
+      if (!response.ok) throw new Error("API Error");
       const data = await response.json();
       res.json(data);
     } catch (err) {
-      console.error(err);
-      res.status(500).json({ error: "Internal server error connecting to Football Data API" });
+      res.status(500).json({ error: "Erreur réseau" });
     }
   });
 
   app.get("/api/matches/:competitionId", async (req, res) => {
     try {
       const apiKey = process.env.FOOTBALL_DATA_API_KEY;
-      if (!apiKey) {
-        return res.status(401).json({ error: "Missing FOOTBALL_DATA_API_KEY. Configure it in AI Studio settings." });
-      }
+      if (!apiKey) return res.status(401).json({ error: "Clé API manquante" });
 
-      const response = await fetch(`https://api.football-data.org/v4/competitions/${req.params.competitionId}/matches?status=SCHEDULED`, {
+      const response = await fetch(`https://api.football-data.org/v4/competitions/${req.params.competitionId}/matches`, {
         headers: { "X-Auth-Token": apiKey }
       });
       
-      if (!response.ok) {
-        throw new Error("Failed to fetch matches from external API");
-      }
-      
+      if (!response.ok) throw new Error("API Error");
       const data = await response.json();
       res.json(data);
     } catch (err) {
-      console.error(err);
-      res.status(500).json({ error: "Internal server error connecting to Football Data API" });
+      res.status(500).json({ error: "Erreur réseau" });
     }
   });
 
-  // App API endpoints for leaderboard and challenges
-  app.get("/api/leaderboard", (req, res) => {
-    const sortedUsers = [...db.users].sort((a, b) => b.points - a.points);
-    res.json(sortedUsers);
+  // Admin endpoint to manually resolve challenges
+  app.post("/api/admin/resolve-challenges", async (req, res) => {
+     try {
+       const apiKey = process.env.FOOTBALL_DATA_API_KEY;
+       if (!apiKey) return res.status(401).json({ error: "Clé API manquante" });
+
+       // 1. Get unresolved challenges
+       const { data: challenges } = await supabase
+         .from("challenges")
+         .select("*")
+         .eq("resolved", false);
+
+       if (!challenges || challenges.length === 0) {
+         return res.json({ message: "Aucun défi à résoudre" });
+       }
+
+       let resolvedCount = 0;
+
+       for (const challenge of challenges) {
+         // Check match status via API
+         const matchRes = await fetch(`https://api.football-data.org/v4/matches/${challenge.match_id}`, {
+           headers: { "X-Auth-Token": apiKey }
+         });
+         
+         if (!matchRes.ok) continue;
+         const matchData = await matchRes.json();
+
+         if (matchData.status === "FINISHED") {
+           const finalScore = matchData.score.fullTime;
+           const homeScore = finalScore.home;
+           const awayScore = finalScore.away;
+           
+           // Logic to calculate points for each user
+           const { data: bets } = await supabase
+             .from("bets")
+             .select("*")
+             .eq("challenge_id", challenge.id);
+
+           if (bets) {
+             for (const bet of bets) {
+               const pred = typeof bet.predictions === 'string' ? JSON.parse(bet.predictions) : bet.predictions;
+               const rules = typeof challenge.point_rules === 'string' ? JSON.parse(challenge.point_rules) : challenge.point_rules;
+               
+               let points = 0;
+               const isExact = pred.homeScore === homeScore && pred.awayScore === awayScore;
+               const actualWinner = homeScore > awayScore ? 'home' : homeScore < awayScore ? 'away' : 'draw';
+               const predWinner = pred.homeScore > pred.awayScore ? 'home' : pred.homeScore < pred.awayScore ? 'away' : 'draw';
+               
+               if (isExact) {
+                 points = rules.group_stage.exact_score;
+               } else if (actualWinner === predWinner) {
+                 // Check if it's the closest guess by absolute difference for matches
+                 // (Simplified version: award correct_winner points, closest guess is usually used as a tiebreaker or separate points)
+                 points = rules.group_stage.correct_winner;
+               } else {
+                 // Check for closest guess logic? 
+                 // We'll award the 'closest_guess' points if they got the winner wrong but scores were close
+                 const diff = Math.abs(pred.homeScore - homeScore) + Math.abs(pred.awayScore - awayScore);
+                 if (diff <= 2) {
+                    points = rules.group_stage.closest_guess;
+                 }
+               }
+               
+               // Knockout penalties logic
+               if (matchData.score.winner === 'PENALTY_SHOOTOUT' && pred.penaltiesHomeScore !== undefined) {
+                  const actualPenWinner = matchData.score.penalties.home > matchData.score.penalties.away ? 'home' : 'away';
+                  const predPenWinner = pred.penaltiesHomeScore > pred.penaltiesAwayScore ? 'home' : 'away';
+                  const isExactPen = pred.penaltiesHomeScore === matchData.score.penalties.home && pred.penaltiesAwayScore === matchData.score.penalties.away;
+                  
+                  if (isExactPen) {
+                    points += rules.knockout_stage.exact_score_penalties;
+                  } else if (actualPenWinner === predPenWinner) {
+                    points += rules.knockout_stage.correct_winner_penalties;
+                  }
+               }
+               
+               await supabase.from("bets").update({ points_awarded: points }).eq("id", bet.id);
+               await supabase.rpc('increment_user_points', { user_uuid: bet.user_id, points_to_add: points });
+             }
+           }
+
+           await supabase.from("challenges").update({ resolved: true }).eq("id", challenge.id);
+           resolvedCount++;
+         }
+       }
+
+       res.json({ message: `Résolution terminée. ${resolvedCount} défis résolus.` });
+     } catch (err) {
+       console.error(err);
+       res.status(500).json({ error: "Erreur serveur" });
+     }
   });
 
-  app.get("/api/challenges", (req, res) => {
-    res.json(db.challenges);
-  });
-
-  // Vite middleware for development
+  // Vite middleware
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
       server: { middlewareMode: true },

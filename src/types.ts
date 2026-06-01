@@ -6,14 +6,13 @@ export interface User {
 
 export interface RulesSet {
   exact_score: number;
-  good_result: number;
-  close_score: number;
-  first_to_score: number;
+  correct_winner: number;
+  closest_guess: number;
 }
 
 export interface KnockoutRulesSet extends RulesSet {
-  extra_time: number;
-  penalties: number;
+  exact_score_penalties: number;
+  correct_winner_penalties: number;
 }
 
 export interface PointRules {
