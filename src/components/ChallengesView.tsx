@@ -19,10 +19,17 @@ import {
   ChevronRight,
   Clock,
   Trophy,
+  Trash2,
+  Edit2,
 } from "lucide-react";
 import { supabase } from "../lib/supabase";
 
 export default function ChallengesView() {
+  const [activeModal, setActiveModal] = useState<{
+    type: "rules" | "participants";
+    challenge: Challenge;
+  } | null>(null);
+
   const [challenges, setChallenges] = useState<Challenge[]>([]);
   const [loading, setLoading] = useState(true);
   const [userPredictions, setUserPredictions] = useState<
@@ -797,25 +804,55 @@ export default function ChallengesView() {
 
                 {challenge.matchId === 0 && (
                   <div className="flex gap-2 mb-4">
-                    <button onClick={() => alert("Règles du défi: " + challenge.title)} className="text-xs font-bold text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-lg hover:bg-indigo-100 transition">Règles</button>
-                    <button onClick={() => alert("Participants bientôt disponibles")} className="text-xs font-bold text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-lg hover:bg-indigo-100 transition">Participants</button>
+                    <button onClick={() => setActiveModal({ type: 'rules', challenge })} className="text-xs font-bold text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-lg hover:bg-indigo-100 transition">Règles</button>
+                    <button onClick={() => setActiveModal({ type: 'participants', challenge })} className="text-xs font-bold text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-lg hover:bg-indigo-100 transition">Participants</button>
                   </div>
                 )}
                 {challenge.matchId !== 0 && renderPredictionForm(challenge)}
 
                 {isCreator && !challenge.locked && !challenge.resolved && (
-                  <div className="mt-6 pt-4 border-t border-gray-100 text-center">
+                  <div className="mt-3 flex gap-2">
+                    <button
+                      onClick={() => alert("Édition non implémentée")}
+                      className="text-xs font-semibold text-gray-500 hover:text-gray-700 flex items-center gap-1 p-1"
+                    >
+                      <Edit2 className="w-3.5 h-3.5" />
+                      Éditer
+                    </button>
                     <button
                       onClick={() => handleDelete(challenge.id)}
-                      className="text-xs font-bold text-red-500 hover:text-red-700 flex items-center justify-center gap-1 w-full"
+                      className="text-xs font-semibold text-gray-400 hover:text-red-600 flex items-center gap-1 p-1"
                     >
-                      Supprimer le défi
+                      <Trash2 className="w-3.5 h-3.5" />
+                      Supprimer
                     </button>
                   </div>
                 )}
               </div>
             );
           })}
+        </div>
+      )}
+      {activeModal && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl w-full max-w-sm p-6 shadow-2xl space-y-4">
+            <h3 className="font-black text-xl text-gray-900 capitalize text-center">
+              {activeModal.type}
+            </h3>
+            <div className="text-sm text-gray-600 bg-gray-50 p-4 rounded-xl border border-gray-100">
+               {activeModal.type === "rules" ? (
+                 <pre className="whitespace-pre-wrap">{JSON.stringify(activeModal.challenge.pointRules, null, 2)}</pre>
+               ) : (
+                 "Participants bientôt disponibles"
+               )}
+            </div>
+            <button
+              onClick={() => setActiveModal(null)}
+              className="w-full bg-emerald-600 text-white font-bold p-3 rounded-xl hover:bg-emerald-700 transition"
+            >
+              Fermer
+            </button>
+          </div>
         </div>
       )}
     </div>
