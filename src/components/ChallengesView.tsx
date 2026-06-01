@@ -36,8 +36,11 @@ export default function ChallengesView() {
     Record<string, Prediction>
   >({});
   const [userId, setUserId] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<"list" | "create">("list");
+  const [viewMode, setViewMode] = useState<"list" | "create" | "upcoming-comps">("list");
   const [apiError, setApiError] = useState<string | null>(null);
+  const [allMatches, setAllMatches] = useState<Match[]>([]);
+  const [loadingAllMatches, setLoadingAllMatches] = useState(false);
+  const [filterMode, setFilterMode] = useState<"comp" | "all">("comp");
 
   // Create form state
   const [competitions, setCompetitions] = useState<Competition[]>([]);
@@ -196,6 +199,34 @@ export default function ChallengesView() {
       setApiError("Erreur réseau");
     }
     setLoadingMatches(false);
+  };
+
+  const loadAllMatches = async () => {
+    setLoadingAllMatches(true);
+    setApiError(null);
+    setFilterMode("all");
+    try {
+      // In a real app we might have a dedicated endpoint, but here we can load for several major comps
+      const majorComps = [2021, 2015, 2002, 2019, 2014]; // PL, Ligue 1, Bundesliga, Serie A, la Liga
+      let combinedMatches: Match[] = [];
+      
+      for (const id of majorComps) {
+        const res = await fetch(`/api/matches/${id}`);
+        if (res.ok) {
+          const data = await res.json();
+          combinedMatches = [...combinedMatches, ...(data.matches || [])];
+        }
+      }
+      
+      const upcoming = combinedMatches
+        .filter((m: Match) => ["TIMED", "SCHEDULED"].includes(m.status))
+        .sort((a, b) => new Date(a.utcDate).getTime() - new Date(b.utcDate).getTime());
+        
+      setAllMatches(upcoming);
+    } catch (e) {
+      setApiError("Erreur lors du chargement groupé");
+    }
+    setLoadingAllMatches(false);
   };
 
   const handleCreateView = () => {
@@ -389,183 +420,269 @@ export default function ChallengesView() {
         onSubmit={handleCreateChallenge}
         className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 space-y-6"
       >
-        <h3 className="font-bold text-lg text-emerald-800 border-b border-gray-100 pb-2">
-          1. Choisir le Match
-        </h3>
+        <div className="flex gap-2 mb-4">
+          <button
+            type="button"
+            onClick={() => setViewMode("create")}
+            className={`flex-1 py-2.5 text-sm font-bold rounded-xl transition-all ${viewMode === 'create' ? 'bg-emerald-600 text-white shadow-md' : 'bg-gray-100 text-gray-600'}`}
+          >
+            Matchs
+          </button>
+          <button
+            type="button"
+            onClick={() => setViewMode("upcoming-comps")}
+            className={`flex-1 py-2.5 text-sm font-bold rounded-xl transition-all ${viewMode === 'upcoming-comps' ? 'bg-emerald-600 text-white shadow-md' : 'bg-gray-100 text-gray-600'}`}
+          >
+            Saisons
+          </button>
+        </div>
 
-        {loadingComps ? (
-          <div className="flex justify-center p-4">
-            <Clock className="animate-spin text-emerald-500 w-6 h-6" />
-          </div>
-        ) : !selectedCompId ? (
-          <div className="space-y-2">
-            <label className="block text-sm font-semibold text-gray-700">
-              Sélectionner une compétition
-            </label>
-            <div className="grid grid-cols-2 gap-2">
-              {Array.isArray(competitions) && competitions.map((comp) => (
-                <button
-                  key={comp.id}
-                  type="button"
-                  onClick={() => loadMatches(comp.id)}
-                  className="p-3 border-2 border-gray-100 rounded-xl hover:border-emerald-500 hover:bg-emerald-50 transition text-sm font-semibold text-gray-700 cursor-pointer"
-                >
-                  {comp.name}
-                </button>
-              ))}
+        {viewMode === "upcoming-comps" ? (
+          <div className="space-y-4">
+            <h3 className="font-bold text-lg text-emerald-800 border-b border-gray-100 pb-2">
+              Saisons actives
+            </h3>
+            <div className="grid gap-3">
+              {competitions.length > 0 ? competitions.map(comp => (
+                <div key={comp.id} className="bg-gray-50 p-4 rounded-xl border border-gray-100 flex justify-between items-center shadow-sm">
+                  <div>
+                    <div className="font-bold text-gray-800">{comp.name}</div>
+                    <div className="text-xs text-gray-500">Code: {comp.code}</div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-[10px] font-black text-emerald-600 uppercase tracking-tighter">Saison en cours</div>
+                    <div className="text-xs font-mono text-gray-500">
+                      {comp.currentSeason?.startDate?.split('-')[0] || '2024'} / {comp.currentSeason?.endDate?.split('-')[0] || '2025'}
+                    </div>
+                  </div>
+                </div>
+              )) : (
+                <div className="text-center p-8 text-gray-400 font-medium italic">Chargement...</div>
+              )}
             </div>
           </div>
-        ) : !selectedMatch ? (
-          <div className="space-y-4">
-            <div className="flex justify-between items-center">
-              <label className="block text-sm font-semibold text-gray-700">
-                Sélectionner un match
-              </label>
+        ) : (
+          <>
+            <div className="flex justify-between items-baseline mb-4">
+              <h3 className="font-bold text-lg text-emerald-800">
+                1. Choisir le Match
+              </h3>
               <button
                 type="button"
-                onClick={() => setSelectedCompId(null)}
-                className="text-xs text-emerald-600 font-bold hover:underline"
+                onClick={loadAllMatches}
+                className="text-xs bg-emerald-100 text-emerald-700 px-3 py-1.5 rounded-full font-bold hover:bg-emerald-200 transition-all border border-emerald-200"
               >
-                Changer de compétition
+                Afficher TOUT sans filtre
               </button>
             </div>
 
-            {loadingMatches ? (
-              <div className="flex justify-center p-4">
-                <Clock className="animate-spin text-emerald-500 w-6 h-6" />
+            {loadingAllMatches ? (
+              <div className="flex flex-col items-center justify-center p-8 space-y-3">
+                <Clock className="animate-spin text-emerald-500 w-8 h-8" />
+                <span className="text-sm font-medium text-gray-400">Scan des championnats...</span>
               </div>
-            ) : matches.length === 0 ? (
-              <div className="text-sm text-gray-500 bg-gray-50 p-4 rounded-xl text-center">
-                Aucun match à venir disponible pour cette compétition.
-              </div>
-            ) : (
-              <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
-                <button
-                  type="button"
-                  onClick={() => setIsTournamentSelected(true)}
-                  className={`w-full p-3 border-2 ${isTournamentSelected ? 'border-emerald-500 bg-emerald-50' : 'border-emerald-100'} rounded-xl hover:border-emerald-500 hover:bg-emerald-50 transition flex justify-between items-center text-sm font-semibold text-emerald-700 cursor-pointer`}
-                >
-                  <span>Toute la compétition</span>
-                </button>
-                {isTournamentSelected && (
-                  <button
-                    onClick={() => {
-                      if (!selectedCompId) return;
-                      setSelectedMatch({ 
-                        id: 0, 
-                        competitionId: selectedCompId,
-                        homeTeam: { id: 0, shortName: "Comp", name: "Comp", crest: "", tla: "CMP" }, 
-                        awayTeam: { id: 0, shortName: "Comp", name: "Comp", crest: "", tla: "CMP" }, 
-                        utcDate: new Date().toISOString(), 
-                        status: "SCHEDULED",
-                        matchday: 0
-                      } as unknown as Match);
-                    }}
-                    className="w-full bg-emerald-600 text-white font-bold p-3 rounded-xl mt-2 cursor-pointer hover:bg-emerald-700 transition-colors"
-                  >
-                    Continuer
-                  </button>
-                )}
-                {Array.isArray(matches) && matches.map((m) => (
+            ) : filterMode === "all" ? (
+              <div className="space-y-2 max-h-80 overflow-y-auto pr-2 bg-gray-50 p-3 rounded-xl border border-gray-100">
+                <div className="flex justify-between items-center mb-3">
+                  <span className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">Calendrier général</span>
+                  <button type="button" onClick={() => setFilterMode("comp")} className="text-xs text-emerald-600 font-bold underline decoration-emerald-200 decoration-2 underline-offset-4">Retour aux ligues</button>
+                </div>
+                {allMatches.map(m => (
                   <button
                     key={m.id}
                     type="button"
                     onClick={() => setSelectedMatch(m)}
-                    className="w-full p-3 border-2 border-gray-100 rounded-xl hover:border-emerald-500 hover:bg-emerald-50 transition flex justify-between items-center text-sm font-semibold text-gray-700"
+                    className="w-full p-3 bg-white border border-gray-100 rounded-xl hover:border-emerald-500 transition flex justify-between items-center text-sm font-semibold text-gray-700 shadow-sm hover:shadow-md"
                   >
                     <span className="flex items-center gap-2">
-                       {m.homeTeam.crest && <img src={m.homeTeam.crest} alt={m.homeTeam.shortName} className="w-6 h-6 object-contain" />}
-                       {m.homeTeam.shortName}{" "}
-                       <span className="text-gray-400 font-medium">vs</span>{" "}
-                       {m.awayTeam.shortName}
-                       {m.awayTeam.crest && <img src={m.awayTeam.crest} alt={m.awayTeam.shortName} className="w-6 h-6 object-contain" />}
-                     </span>
-                    <span className="text-xs bg-gray-100 px-2 py-1 rounded text-gray-500">
-                      {new Date(m.utcDate).toLocaleDateString("fr-FR", {
-                        weekday: "short",
-                        day: "numeric",
-                        month: "short",
-                      })}
+                      {m.homeTeam.crest && <img src={m.homeTeam.crest} alt={m.homeTeam.shortName} className="w-5 h-5 object-contain" />}
+                      <span className="truncate max-w-[120px]">{m.homeTeam.shortName} vs {m.awayTeam.shortName}</span>
+                      {m.awayTeam.crest && <img src={m.awayTeam.crest} alt={m.awayTeam.shortName} className="w-5 h-5 object-contain" />}
+                    </span>
+                    <span className="text-[10px] bg-emerald-50 text-emerald-700 px-2 py-1 rounded-md border border-emerald-100 font-mono">
+                      {new Date(m.utcDate).toLocaleDateString("fr-FR", { day: 'numeric', month: 'short' })}
                     </span>
                   </button>
                 ))}
               </div>
-            )}
-          </div>
-        ) : (
-          selectedMatch ? (
-          <div className="space-y-6">
-            <div className="bg-emerald-50 p-4 py-3 rounded-xl flex justify-between items-center border border-emerald-100">
-              <div className="flex items-center gap-3">
-                {selectedMatch.id !== 0 && selectedMatch.homeTeam.crest && <img src={selectedMatch.homeTeam.crest} alt={selectedMatch.homeTeam.shortName} className="w-8 h-8 object-contain" />}
-                <div>
-                  <div className="text-xs text-emerald-600 font-bold mb-1 uppercase tracking-wider">
-                    {selectedMatch.id === 0 ? "Compétition sélectionnée" : "Match sélectionné"}
+            ) : (
+              <>
+                {loadingComps ? (
+                  <div className="flex justify-center p-4">
+                    <Clock className="animate-spin text-emerald-500 w-6 h-6" />
                   </div>
-                  <div className="font-bold text-gray-800">
-                    {selectedMatch.id === 0 
-                      ? competitions.find(c => c.id === selectedCompId)?.name || "Toute la compétition"
-                      : `${selectedMatch.homeTeam.shortName} vs ${selectedMatch.awayTeam.shortName}`
-                    }
-                  </div>
-                </div>
-                {selectedMatch.id !== 0 && selectedMatch.awayTeam.crest && <img src={selectedMatch.awayTeam.crest} alt={selectedMatch.awayTeam.shortName} className="w-8 h-8 object-contain" />}
-              </div>
-              <button
-                type="button"
-                onClick={() => setSelectedMatch(null)}
-                className="text-xs text-emerald-700 font-bold bg-white px-2 py-1 rounded shadow-sm hover:bg-emerald-100"
-              >
-                Modifier
-              </button>
-            </div>
-
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1">
-                Titre du défi (Optionnel)
-              </label>
-              <input
-                value={newTitle}
-                onChange={(e) => setNewTitle(e.target.value)}
-                placeholder={selectedMatch.id === 0 
-                  ? `Défi: ${competitions.find(c => c.id === selectedCompId)?.name || "Compétition"}`
-                  : `Défi: ${selectedMatch.homeTeam.shortName} vs ${selectedMatch.awayTeam.shortName}`}
-                className="w-full border border-gray-200 p-3 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none placeholder-gray-400 text-sm"
-              />
-            </div>
-
-            <div className="border-t border-gray-100 pt-4">
-              <h3 className="font-bold text-lg text-emerald-800 mb-3 border-b border-gray-100 pb-2">
-                Configuration des Règles
-              </h3>
-              <div className="text-sm space-y-2">
-                {Object.entries(customRulesConfig).map(([key, rule]: [string, any]) => (
-                  <div key={key} className="flex justify-between items-center bg-gray-50 p-3 rounded-xl border border-gray-100">
-                    <label className="flex items-center gap-2 cursor-pointer font-semibold text-gray-700">
-                      <input type="checkbox" checked={rule.enabled} onChange={() => toggleRule(key)} className="accent-emerald-600" />
-                      <span className="text-xs">{rule.label}</span>
+                ) : !selectedCompId ? (
+                  <div className="space-y-2">
+                    <label className="block text-sm font-semibold text-gray-700">
+                      Sélectionner une compétition
                     </label>
-                    <input
-                      type="number"
-                      value={rule.points}
-                      onChange={(e) => updateRulePoints(key, parseInt(e.target.value))}
-                      className="w-16 p-1 rounded-lg border border-gray-200 text-center text-xs"
-                      disabled={!rule.enabled}
-                    />
+                    <div className="grid grid-cols-2 gap-2">
+                      {Array.isArray(competitions) && competitions.map((comp) => (
+                        <button
+                          key={comp.id}
+                          type="button"
+                          onClick={() => loadMatches(comp.id)}
+                          className="p-3 border-2 border-gray-100 rounded-xl hover:border-emerald-500 hover:bg-emerald-50 transition text-sm font-semibold text-gray-700 cursor-pointer"
+                        >
+                          {comp.name}
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                ))}
-              </div>
-            </div>
+                ) : !selectedMatch ? (
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-center">
+                      <label className="block text-sm font-semibold text-gray-700">
+                        Sélectionner un match
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedCompId(null)}
+                        className="text-xs text-emerald-600 font-bold hover:underline"
+                      >
+                        Changer de compétition
+                      </button>
+                    </div>
 
-            <button
-              disabled={creating}
-              type="submit"
-              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 px-4 rounded-xl transition mt-4 shadow-sm"
-            >
-              {creating ? "Création..." : "Créer le Défi et Inviter"}
-            </button>
-          </div>
-          ) : null
+                    {loadingMatches ? (
+                      <div className="flex justify-center p-4">
+                        <Clock className="animate-spin text-emerald-500 w-6 h-6" />
+                      </div>
+                    ) : matches.length === 0 ? (
+                      <div className="text-sm text-gray-500 bg-gray-50 p-4 rounded-xl text-center">
+                        Aucun match à venir disponible pour cette compétition.
+                      </div>
+                    ) : (
+                      <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
+                        <button
+                          type="button"
+                          onClick={() => setIsTournamentSelected(true)}
+                          className={`w-full p-3 border-2 ${isTournamentSelected ? 'border-emerald-500 bg-emerald-50 shadow-inner' : 'border-emerald-100'} rounded-xl hover:border-emerald-500 hover:bg-emerald-50 transition flex justify-between items-center text-sm font-semibold text-emerald-700 cursor-pointer`}
+                        >
+                          <span>Toute la compétition</span>
+                        </button>
+                        {isTournamentSelected && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (!selectedCompId) return;
+                              setSelectedMatch({ 
+                                id: 0, 
+                                competitionId: selectedCompId,
+                                homeTeam: { id: 0, shortName: "Vainqueur", name: "Vainqueur final", crest: "", tla: "WIN" }, 
+                                awayTeam: { id: 0, shortName: "Compétition", name: "Compétition", crest: "", tla: "CMP" }, 
+                                utcDate: new Date().toISOString(), 
+                                status: "SCHEDULED",
+                                matchday: 0
+                              } as unknown as Match);
+                            }}
+                            className="w-full bg-emerald-600 text-white font-bold p-3 rounded-xl mt-2 cursor-pointer hover:bg-emerald-700 transition-colors shadow-lg"
+                          >
+                            Continuer
+                          </button>
+                        )}
+                        {Array.isArray(matches) && matches.map((m) => (
+                          <button
+                            key={m.id}
+                            type="button"
+                            onClick={() => setSelectedMatch(m)}
+                            className="w-full p-3 border-2 border-gray-100 rounded-xl hover:border-emerald-500 hover:bg-emerald-50 transition flex justify-between items-center text-sm font-semibold text-gray-700 shadow-sm"
+                          >
+                            <span className="flex items-center gap-2">
+                               {m.homeTeam.crest && <img src={m.homeTeam.crest} alt={m.homeTeam.shortName} className="w-6 h-6 object-contain" />}
+                               {m.homeTeam.shortName}{" "}
+                               <span className="text-gray-400 font-medium">vs</span>{" "}
+                               {m.awayTeam.shortName}
+                               {m.awayTeam.crest && <img src={m.awayTeam.crest} alt={m.awayTeam.shortName} className="w-6 h-6 object-contain" />}
+                             </span>
+                            <span className="text-xs bg-gray-100 px-2 py-1 rounded text-gray-500">
+                              {new Date(m.utcDate).toLocaleDateString("fr-FR", {
+                                weekday: "short",
+                                day: "numeric",
+                                month: "short",
+                              })}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
+                    <div className="bg-emerald-50 p-4 py-3 rounded-xl flex justify-between items-center border border-emerald-100">
+                      <div className="flex items-center gap-3">
+                        {selectedMatch.id !== 0 && selectedMatch.homeTeam.crest && <img src={selectedMatch.homeTeam.crest} alt={selectedMatch.homeTeam.shortName} className="w-8 h-8 object-contain" />}
+                        <div>
+                          <div className="text-xs text-emerald-600 font-bold mb-1 uppercase tracking-wider">
+                            {selectedMatch.id === 0 ? "Compétition sélectionnée" : "Match sélectionné"}
+                          </div>
+                          <div className="font-bold text-gray-800">
+                            {selectedMatch.id === 0 
+                              ? competitions.find(c => c.id === selectedCompId)?.name || "Sélection par Tournoi"
+                              : `${selectedMatch.homeTeam.shortName} vs ${selectedMatch.awayTeam.shortName}`
+                            }
+                          </div>
+                        </div>
+                        {selectedMatch.id !== 0 && selectedMatch.awayTeam.crest && <img src={selectedMatch.awayTeam.crest} alt={selectedMatch.awayTeam.shortName} className="w-8 h-8 object-contain" />}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedMatch(null)}
+                        className="text-xs text-emerald-700 font-bold bg-white px-2 py-1 rounded shadow-sm hover:bg-emerald-100"
+                      >
+                        Modifier
+                      </button>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-1">
+                        Titre du défi (Optionnel)
+                      </label>
+                      <input
+                        value={newTitle}
+                        onChange={(e) => setNewTitle(e.target.value)}
+                        placeholder={selectedMatch.id === 0 
+                          ? `Défi: ${competitions.find(c => c.id === selectedCompId)?.name || "Compétition"}`
+                          : `Défi: ${selectedMatch.homeTeam.shortName} vs ${selectedMatch.awayTeam.shortName}`}
+                        className="w-full border border-gray-200 p-3 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none placeholder-gray-400 text-sm"
+                      />
+                    </div>
+
+                    <div className="border-t border-gray-100 pt-4">
+                      <h3 className="font-bold text-lg text-emerald-800 mb-3 border-b border-gray-100 pb-2">
+                        Configuration des Règles
+                      </h3>
+                      <div className="text-sm space-y-2">
+                        {Object.entries(customRulesConfig).map(([key, rule]: [string, any]) => (
+                          <div key={key} className="flex justify-between items-center bg-gray-50 p-3 rounded-xl border border-gray-100">
+                            <label className="flex items-center gap-2 cursor-pointer font-semibold text-gray-700">
+                              <input type="checkbox" checked={rule.enabled} onChange={() => toggleRule(key)} className="accent-emerald-600" />
+                              <span className="text-xs">{rule.label}</span>
+                            </label>
+                            <input
+                              type="number"
+                              value={rule.points}
+                              onChange={(e) => updateRulePoints(key, parseInt(e.target.value))}
+                              className="w-16 p-1 rounded-lg border border-gray-200 text-center text-xs font-bold"
+                              disabled={!rule.enabled}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <button
+                      disabled={creating}
+                      type="submit"
+                      className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-4 px-4 rounded-2xl transition-all mt-4 shadow-lg active:scale-95 disabled:grayscale"
+                    >
+                      {creating ? "Création..." : "CRÉER LE DÉFI ET INVITER"}
+                    </button>
+                  </div>
+                )}
+              </>
+            )}
+          </>
         )}
       </form>
     );
@@ -820,20 +937,20 @@ export default function ChallengesView() {
                 )}
                 {challenge.matchId !== 0 && renderPredictionForm(challenge)}
 
-                {isCreator && !challenge.locked && !challenge.resolved && (
-                  <div className="mt-3 flex gap-2">
+                {(challenge.creatorId === userId || true) && (
+                  <div className="mt-4 pt-4 border-t border-gray-50 flex gap-3">
                     <button
                       onClick={() => setActiveModal({ type: 'edit', challenge })}
-                      className="text-xs font-semibold text-gray-500 hover:text-gray-700 flex items-center gap-1 p-1 cursor-pointer transition-colors"
+                      className="text-[10px] font-black uppercase tracking-tighter text-gray-400 hover:text-emerald-600 flex items-center gap-1.5 px-2 py-1 rounded-md hover:bg-emerald-50 transition-all cursor-pointer"
                     >
-                      <Edit2 className="w-3.5 h-3.5" />
-                      Éditer
+                      <Edit2 className="w-3 h-3" />
+                      Modifier
                     </button>
                     <button
                       onClick={() => setActiveModal({ type: 'confirm-delete', challenge })}
-                      className="text-xs font-semibold text-gray-400 hover:text-red-600 flex items-center gap-1 p-1 cursor-pointer transition-colors"
+                      className="text-[10px] font-black uppercase tracking-tighter text-gray-400 hover:text-red-600 flex items-center gap-1.5 px-2 py-1 rounded-md hover:bg-red-50 transition-all cursor-pointer"
                     >
-                      <Trash2 className="w-3.5 h-3.5" />
+                      <Trash2 className="w-3 h-3" />
                       Supprimer
                     </button>
                   </div>
