@@ -44,6 +44,8 @@ export interface Prediction {
   firstToScore?: string; // 'home', 'away', 'none'
   extraTime?: boolean;
   penalties?: boolean;
+  penaltiesHomeScore?: number;
+  penaltiesAwayScore?: number;
   customAnswer?: string;
 }
 

@@ -6,10 +6,13 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
-const supabase = createClient(
-  process.env.VITE_SUPABASE_URL || "",
-  process.env.SUPABASE_SERVICE_ROLE_KEY || ""
-);
+const supabaseUrl = process.env.VITE_SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+// Only initialize if we have credentials, otherwise log and handle gracefully
+const supabase = supabaseUrl && supabaseKey 
+  ? createClient(supabaseUrl, supabaseKey)
+  : null;
 
 async function startServer() {
   const app = express();
@@ -56,6 +59,7 @@ async function startServer() {
 
   // Admin endpoint to manually resolve challenges
   app.post("/api/admin/resolve-challenges", async (req, res) => {
+     if (!supabase) return res.status(500).json({ error: "Configuration Supabase manquante (Service Role Key requise)." });
      try {
        const apiKey = process.env.FOOTBALL_DATA_API_KEY;
        if (!apiKey) return res.status(401).json({ error: "Clé API manquante" });

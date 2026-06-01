@@ -438,11 +438,12 @@ export default function ChallengesView() {
                       setSelectedMatch({ 
                         id: 0, 
                         competitionId: selectedCompId,
-                        homeTeam: { shortName: "Comp", name: "Comp", crest: "" }, 
-                        awayTeam: { shortName: "Comp", name: "Comp", crest: "" }, 
+                        homeTeam: { id: 0, shortName: "Comp", name: "Comp", crest: "", tla: "CMP" }, 
+                        awayTeam: { id: 0, shortName: "Comp", name: "Comp", crest: "", tla: "CMP" }, 
                         utcDate: new Date().toISOString(), 
-                        status: "SCHEDULED" 
-                      } as Match);
+                        status: "SCHEDULED",
+                        matchday: 0
+                      } as unknown as Match);
                     }}
                     className="w-full bg-emerald-600 text-white font-bold p-3 rounded-xl mt-2 cursor-pointer hover:bg-emerald-700 transition-colors"
                   >
@@ -522,7 +523,7 @@ export default function ChallengesView() {
                 Configuration des Règles
               </h3>
               <div className="text-sm space-y-2">
-                {Object.entries(customRulesConfig).map(([key, rule]) => (
+                {Object.entries(customRulesConfig).map(([key, rule]: [string, any]) => (
                   <div key={key} className="flex justify-between items-center bg-gray-50 p-3 rounded-xl border border-gray-100">
                     <label className="flex items-center gap-2 cursor-pointer font-semibold text-gray-700">
                       <input type="checkbox" checked={rule.enabled} onChange={() => toggleRule(key)} className="accent-emerald-600" />
