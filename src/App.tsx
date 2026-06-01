@@ -38,6 +38,25 @@ export default function App() {
   const [loadingInvite, setLoadingInvite] = useState(true);
 
   useEffect(() => {
+    if (session && inviteId && supabase) {
+      // Process invite!
+      supabase
+        .from("challenge_invitations")
+        .upsert(
+          {
+            challenge_id: inviteId,
+            user_id: session.user.id,
+            accepted: true,
+          },
+          { onConflict: "challenge_id, user_id" },
+        )
+        .then(() => {
+          setInviteId(null);
+        });
+    }
+  }, [session, inviteId]);
+
+  useEffect(() => {
     if (!supabase) return;
 
     const checkProfile = async (userId: string) => {

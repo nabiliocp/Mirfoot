@@ -39,6 +39,54 @@ export default function ChallengesView() {
   const [viewMode, setViewMode] = useState<"list" | "create">("list");
   const [apiError, setApiError] = useState<string | null>(null);
 
+  const ruleLabels: Record<string, string> = {
+    exact_score: "Score Exact",
+    correct_winner: "Bon Vainqueur (1N2)",
+    closest_guess: "Plus proche du score",
+    exact_score_penalties: "Score Exact Tab (Knockout)",
+    correct_winner_penalties: "Vainqueur Tab (Knockout)",
+  };
+
+  const renderReadableRules = (rules: PointRules) => {
+    return (
+      <div className="space-y-4">
+        <div>
+          <h4 className="font-bold text-emerald-700 text-sm mb-2 flex items-center gap-2">
+            <div className="w-2 h-2 bg-emerald-500 rounded-full" />
+            Phase de Groupes
+          </h4>
+          <div className="grid grid-cols-1 gap-2 pl-4 border-l-2 border-emerald-100">
+            {Object.entries(rules.group_stage).map(([key, value]) => (
+              value > 0 && (
+                <div key={key} className="flex justify-between text-xs items-center">
+                  <span className="text-gray-600 font-medium">{ruleLabels[key] || key}</span>
+                  <span className="bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full font-bold">+{value} pts</span>
+                </div>
+              )
+            ))}
+          </div>
+        </div>
+        
+        <div>
+          <h4 className="font-bold text-indigo-700 text-sm mb-2 flex items-center gap-2">
+            <div className="w-2 h-2 bg-indigo-500 rounded-full" />
+            Phase Éliminatoire
+          </h4>
+          <div className="grid grid-cols-1 gap-2 pl-4 border-l-2 border-indigo-100">
+            {Object.entries(rules.knockout_stage).map(([key, value]) => (
+              value > 0 && (
+                <div key={key} className="flex justify-between text-xs items-center">
+                  <span className="text-gray-600 font-medium">{ruleLabels[key] || key}</span>
+                  <span className="bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-full font-bold">+{value} pts</span>
+                </div>
+              )
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   // Create form state
   const [competitions, setCompetitions] = useState<Competition[]>([]);
   const [selectedCompId, setSelectedCompId] = useState<number | null>(null);
@@ -861,11 +909,15 @@ export default function ChallengesView() {
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl w-full max-w-sm p-6 shadow-2xl space-y-4">
             <h3 className="font-black text-xl text-gray-900 capitalize text-center">
-              {activeModal.type}
+              {activeModal.type === "rules" ? "Barème de Points" : activeModal.type}
             </h3>
             <div className="text-sm text-gray-600 bg-gray-50 p-4 rounded-xl border border-gray-100">
              {activeModal.type === "rules" ? (
-                 <pre className="whitespace-pre-wrap">{JSON.stringify(activeModal.challenge.pointRules, null, 2)}</pre>
+                 activeModal.challenge.pointRules ? (
+                   renderReadableRules(activeModal.challenge.pointRules)
+                 ) : (
+                   <p className="text-center italic py-4">Aucune règle définie</p>
+                 )
                ) : activeModal.type === "confirm-delete" ? (
                  <>
                    <p className="text-center font-semibold text-gray-800 mb-4">Êtes-vous sûr de vouloir supprimer ce défi ?</p>

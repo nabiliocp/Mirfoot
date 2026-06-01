@@ -45,12 +45,34 @@ create table public.challenges (
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
--- Set up Row Level Security (RLS) for challenges
+-- 2.5 Create table for invitations
+create table public.challenge_invitations (
+  id uuid default gen_random_uuid() primary key,
+  challenge_id uuid references public.challenges(id) not null,
+  user_id uuid references auth.users(id) not null,
+  accepted boolean default false,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  unique(challenge_id, user_id)
+);
+
+-- Set up Row Level Security (RLS) for challenges and invitations
 alter table public.challenges enable row level security;
-create policy "Challenges are viewable by everyone." on public.challenges for select using (true);
+alter table public.challenge_invitations enable row level security;
+
+create policy "Challenges are viewable by creators and accepted invitees." on public.challenges for select using (
+  auth.uid() = creator_id OR exists (
+    select 1 from public.challenge_invitations 
+    where challenge_id = challenges.id and user_id = auth.uid() and accepted = true
+  )
+);
+drop policy if exists "Challenges are viewable by everyone." on public.challenges;
+
 create policy "Authenticated users can create challenges." on public.challenges for insert with check (auth.role() = 'authenticated');
 create policy "Creators can update challenges before locked." on public.challenges for update using (auth.uid() = creator_id and locked = false);
 create policy "Creators can delete their own challenges." on public.challenges for delete using (auth.uid() = creator_id);
+
+create policy "Users can view invitations for themselves." on public.challenge_invitations for select using (auth.uid() = user_id);
+create policy "Users can insert their own invitations." on public.challenge_invitations for insert with check (auth.uid() = user_id);
 
 -- 3. Create a table for user bets/pronostics
 create table public.bets (
