@@ -4,26 +4,37 @@ export interface User {
   points: number;
 }
 
-export interface PointRules {
+export interface RulesSet {
   exact_score: number;
   good_result: number;
   close_score: number;
   first_to_score: number;
+}
+
+export interface KnockoutRulesSet extends RulesSet {
   extra_time: number;
   penalties: number;
 }
 
+export interface PointRules {
+  group_stage: RulesSet;
+  knockout_stage: KnockoutRulesSet;
+}
+
 export interface Challenge {
   id: string;
+  type?: 'match' | 'custom';
   competitionId?: number;
-  matchId: number;
+  matchId?: number;
   matchHomeTeam?: string;
   matchAwayTeam?: string;
   matchDate?: string;
   creatorId?: string;
   title: string;
   rules?: string;
-  pointRules: PointRules;
+  options?: string[];
+  pointRules?: PointRules;
+  stage?: 'group' | 'knockout';
   locked: boolean;
   resolved: boolean;
 }
@@ -34,6 +45,7 @@ export interface Prediction {
   firstToScore?: string; // 'home', 'away', 'none'
   extraTime?: boolean;
   penalties?: boolean;
+  customAnswer?: string;
 }
 
 export interface Competition {
