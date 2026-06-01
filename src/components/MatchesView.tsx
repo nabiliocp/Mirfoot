@@ -69,20 +69,15 @@ export default function MatchesView() {
     <div className="space-y-6 animate-in fade-in zoom-in-95 duration-300">
       <div className="flex items-center space-x-2 bg-white rounded-xl shadow-sm px-4 py-2 border border-gray-100">
         <Search className="w-5 h-5 text-gray-400" />
-        <div className="flex-1 flex flex-col gap-1">
-          <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">Compétition</label>
-          <select 
-            className="bg-white py-2 px-3 text-sm font-bold border border-gray-100 rounded-lg w-full focus:ring-2 focus:ring-emerald-500 outline-none text-gray-700"
-            value={selectedCompId || ''}
-            onChange={(e) => setSelectedCompId(Number(e.target.value))}
-          >
-            {competitions.map(comp => (
-              <option key={comp.id} value={comp.id}>
-                {comp.name} {comp.currentSeason && `(${comp.currentSeason.startDate.split('-')[0]} - ${comp.currentSeason.endDate.split('-')[0]})`}
-              </option>
-            ))}
-          </select>
-        </div>
+        <select 
+          className="flex-1 bg-transparent py-2 text-sm font-medium outline-none text-gray-700 w-full"
+          value={selectedCompId || ''}
+          onChange={(e) => setSelectedCompId(Number(e.target.value))}
+        >
+          {competitions.map(comp => (
+            <option key={comp.id} value={comp.id}>{comp.name}</option>
+          ))}
+        </select>
       </div>
 
       <div className="space-y-4">

@@ -255,9 +255,9 @@ export default function ChallengesView() {
 
     setCreating(true);
     
+    // Get fresh user ID to be safe
     const { data: { user } } = await supabase.auth.getUser();
-    console.log("User creating challenge:", user);
-    const currentUserId = user?.id;
+    const currentUserId = user?.id || userId;
 
     if (!currentUserId) {
       alert("Session expirée. Veuillez vous reconnecter.");
