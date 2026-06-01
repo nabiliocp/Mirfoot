@@ -272,6 +272,22 @@ export default function ChallengesView() {
       .eq("id", challengeId);
   };
 
+  const handleDelete = async (challengeId: string) => {
+    if (!supabase) return;
+    if (!confirm("Êtes-vous sûr de vouloir supprimer ce défi ?")) return;
+
+    const { error } = await supabase
+      .from("challenges")
+      .delete()
+      .eq("id", challengeId);
+
+    if (!error) {
+      setChallenges((prev) => prev.filter((c) => c.id !== challengeId));
+    } else {
+      alert("Erreur lors de la suppression: " + error.message);
+    }
+  };
+
   const updatePredictionForm = (
     challengeId: string,
     updates: Partial<Prediction>,
@@ -788,13 +804,18 @@ export default function ChallengesView() {
                 {renderPredictionForm(challenge)}
 
                 {isCreator && !challenge.locked && !challenge.resolved && (
-                  <div className="mt-6 pt-4 border-t border-gray-100 text-center">
+                  <div className="mt-6 pt-4 border-t border-gray-100 grid grid-cols-2 gap-2">
                     <button
                       onClick={() => handleLock(challenge.id)}
-                      className="text-xs font-bold text-amber-600 hover:text-amber-700 flex items-center justify-center w-full gap-1"
+                      className="text-xs font-bold text-amber-600 hover:text-amber-700 flex items-center justify-center gap-1 border-r border-gray-100"
                     >
-                      <Lock className="w-4 h-4" /> Verrouiller les votes (début
-                      du match)
+                      <Lock className="w-4 h-4" /> Verrouiller
+                    </button>
+                    <button
+                      onClick={() => handleDelete(challenge.id)}
+                      className="text-xs font-bold text-red-600 hover:text-red-700 flex items-center justify-center gap-1"
+                    >
+                      Supprimer
                     </button>
                   </div>
                 )}
