@@ -29,7 +29,7 @@ export default function ChallengesView() {
     Record<string, Prediction>
   >({});
   const [userId, setUserId] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<'list' | 'create'>('list');
+  const [viewMode, setViewMode] = useState<"list" | "create">("list");
 
   // Create form state
   const [competitions, setCompetitions] = useState<Competition[]>([]);
