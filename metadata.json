@@ -1,0 +1,6 @@
+{
+  "name": "Mirfoot",
+  "description": "Application de paris sur le football entre amis avec création de défis personnalisés, récupération des compétitions en cours, invitations WhatsApp et classement en temps réel.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
