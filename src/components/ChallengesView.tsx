@@ -97,7 +97,7 @@ export default function ChallengesView() {
 
     if (challengesRes.data) {
       setChallenges(
-        challengesRes.data.map((c: any) => ({
+        (Array.isArray(challengesRes.data) ? challengesRes.data : []).map((c: any) => ({
           id: c.id,
           competitionId: c.competition_id,
           matchId: c.match_id,
@@ -113,7 +113,7 @@ export default function ChallengesView() {
               : c.point_rules,
           locked: c.locked,
           resolved: c.resolved,
-        })),
+        }))
       );
     }
 
@@ -136,7 +136,7 @@ export default function ChallengesView() {
       const res = await fetch("/api/competitions");
       if (res.ok) {
         const data = await res.json();
-        setCompetitions(data);
+        setCompetitions(Array.isArray(data) ? data : []);
       }
     } catch (e) {
       console.error(e);
@@ -152,9 +152,11 @@ export default function ChallengesView() {
       const res = await fetch(`/api/matches/${compId}`);
       if (res.ok) {
         const data = await res.json();
-        const upcomingMatches = data.filter((m: Match) =>
-          ["TIMED", "SCHEDULED"].includes(m.status),
-        );
+        const upcomingMatches = Array.isArray(data) 
+          ? data.filter((m: Match) =>
+              ["TIMED", "SCHEDULED"].includes(m.status),
+            )
+          : [];
         setMatches(upcomingMatches);
       }
     } catch (e) {
@@ -310,7 +312,7 @@ export default function ChallengesView() {
               Sélectionner une compétition
             </label>
             <div className="grid grid-cols-2 gap-2">
-              {competitions.map((comp) => (
+              {Array.isArray(competitions) && competitions.map((comp) => (
                 <button
                   key={comp.id}
                   type="button"
@@ -347,7 +349,7 @@ export default function ChallengesView() {
               </div>
             ) : (
               <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
-                {matches.map((m) => (
+                {Array.isArray(matches) && matches.map((m) => (
                   <button
                     key={m.id}
                     type="button"
