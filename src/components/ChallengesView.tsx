@@ -81,6 +81,11 @@ export default function ChallengesView() {
 
   useEffect(() => {
     loadData();
+    if (supabase) {
+      supabase.auth.onAuthStateChange((_event, session) => {
+        setUserId(session?.user?.id || null);
+      });
+    }
     const params = new URLSearchParams(window.location.search);
     const invite = params.get("invite");
     if (invite) {
@@ -212,11 +217,22 @@ export default function ChallengesView() {
 
   const handleCreateChallenge = async (e: FormEvent) => {
     e.preventDefault();
-    if (!supabase || !userId || !selectedMatch) {
+    if (!supabase || !selectedMatch) {
       alert("Veuillez sélectionner un match d'abord.");
       return;
     }
+
     setCreating(true);
+    
+    // Get fresh user ID to be safe
+    const { data: { user } } = await supabase.auth.getUser();
+    const currentUserId = user?.id || userId;
+
+    if (!currentUserId) {
+      alert("Session expirée. Veuillez vous reconnecter.");
+      setCreating(false);
+      return;
+    }
 
     const title = newTitle.trim()
       ? newTitle
@@ -247,7 +263,7 @@ export default function ChallengesView() {
         match_home_team: selectedMatch.homeTeam.name,
         match_away_team: selectedMatch.awayTeam.name,
         match_date: selectedMatch.utcDate,
-        creator_id: userId,
+        creator_id: currentUserId,
         title: title,
         point_rules: savedRules,
         locked: false,

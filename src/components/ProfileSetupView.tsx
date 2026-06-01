@@ -35,7 +35,8 @@ export default function ProfileSetupView({
     setLoading(true);
     setErrorMsg("");
 
-    const { error } = await supabase.auth.updateUser({
+    // Update auth metadata first
+    const { data: authData, error: authError } = await supabase.auth.updateUser({
       data: {
         username,
         avatar_type: avatarType,
@@ -43,10 +44,31 @@ export default function ProfileSetupView({
       },
     });
 
+    if (authError) {
+      setErrorMsg(authError.message);
+      setLoading(false);
+      return;
+    }
+
+    // Explicitly upsert profile to double-ensure it exists and is correct
+    const { error: profileError } = await supabase
+      .from("profiles")
+      .upsert({
+        id: authData.user.id,
+        username,
+        avatar_type: avatarType,
+        avatar_value: avatarValue
+      }, { onConflict: 'id' });
+
     setLoading(false);
 
-    if (error) {
-      setErrorMsg(error.message);
+    if (profileError) {
+       // If it's a "duplicate username" error, handle it
+       if (profileError.code === '23505') {
+         setErrorMsg("Ce pseudo est déjà pris.");
+       } else {
+         setErrorMsg("Erreur lors de l'enregistrement du profil: " + profileError.message);
+       }
     } else {
       onComplete();
     }

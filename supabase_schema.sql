@@ -35,7 +35,7 @@ create table public.challenges (
   match_home_team text,
   match_away_team text,
   match_date timestamp with time zone,
-  creator_id uuid references public.profiles(id),
+  creator_id uuid references auth.users(id),
   title text not null,
   rules text,
   point_rules jsonb not null default '{"exact_score": 5, "good_result": 3, "close_score": 1, "first_to_score": 0, "extra_time": 0, "penalties": 0}',
@@ -54,7 +54,7 @@ create policy "Creators can delete their own challenges." on public.challenges f
 -- 3. Create a table for user bets/pronostics
 create table public.bets (
   id uuid default gen_random_uuid() primary key,
-  user_id uuid references public.profiles(id) not null,
+  user_id uuid references auth.users(id) not null,
   challenge_id uuid references public.challenges(id) not null,
   predictions jsonb not null default '{}',
   points_awarded integer default null,
