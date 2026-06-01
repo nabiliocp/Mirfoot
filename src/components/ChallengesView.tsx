@@ -26,7 +26,7 @@ import { supabase } from "../lib/supabase";
 
 export default function ChallengesView() {
   const [activeModal, setActiveModal] = useState<{
-    type: "rules" | "participants";
+    type: "rules" | "participants" | "confirm-delete" | "edit";
     challenge: Challenge;
   } | null>(null);
 
@@ -41,6 +41,7 @@ export default function ChallengesView() {
   // Create form state
   const [competitions, setCompetitions] = useState<Competition[]>([]);
   const [selectedCompId, setSelectedCompId] = useState<number | null>(null);
+  const [isTournamentSelected, setIsTournamentSelected] = useState(false);
   const [matches, setMatches] = useState<Match[]>([]);
   const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
   const [creating, setCreating] = useState(false);
@@ -161,6 +162,7 @@ export default function ChallengesView() {
   const loadMatches = async (compId: number) => {
     setSelectedCompId(compId);
     setSelectedMatch(null);
+    setIsTournamentSelected(false);
     setLoadingMatches(true);
     try {
       const res = await fetch(`/api/matches/${compId}`);
@@ -279,9 +281,8 @@ export default function ChallengesView() {
       .eq("id", challengeId);
   };
 
-  const handleDelete = async (challengeId: string) => {
+  const performDelete = async (challengeId: string | number) => {
     if (!supabase) return;
-    if (!confirm("Êtes-vous sûr de vouloir supprimer ce défi ?")) return;
 
     const { error } = await supabase
       .from("challenges")
@@ -402,11 +403,19 @@ export default function ChallengesView() {
               <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
                 <button
                   type="button"
-                  onClick={() => setSelectedMatch({ id: 0, homeTeam: { shortName: "Comp", name: "Comp", crest: "" }, awayTeam: { shortName: "Comp", name: "Comp", crest: "" }, utcDate: new Date().toISOString(), status: "SCHEDULED" } as any)}
-                  className="w-full p-3 border-2 border-emerald-100 rounded-xl hover:border-emerald-500 hover:bg-emerald-50 transition flex justify-between items-center text-sm font-semibold text-emerald-700 bg-emerald-50"
+                  onClick={() => setIsTournamentSelected(true)}
+                  className={`w-full p-3 border-2 ${isTournamentSelected ? 'border-emerald-500 bg-emerald-50' : 'border-emerald-100'} rounded-xl hover:border-emerald-500 hover:bg-emerald-50 transition flex justify-between items-center text-sm font-semibold text-emerald-700`}
                 >
                   <span>Toute la compétition</span>
                 </button>
+                {isTournamentSelected && (
+                  <button
+                    onClick={() => setSelectedMatch({ id: 0, homeTeam: { shortName: "Comp", name: "Comp", crest: "" }, awayTeam: { shortName: "Comp", name: "Comp", crest: "" }, utcDate: new Date().toISOString(), status: "SCHEDULED" } as any)}
+                    className="w-full bg-emerald-600 text-white font-bold p-3 rounded-xl mt-2"
+                  >
+                    Continuer
+                  </button>
+                )}
                 {Array.isArray(matches) && matches.map((m) => (
                   <button
                     key={m.id}
@@ -813,14 +822,14 @@ export default function ChallengesView() {
                 {isCreator && !challenge.locked && !challenge.resolved && (
                   <div className="mt-3 flex gap-2">
                     <button
-                      onClick={() => alert("Édition non implémentée")}
+                      onClick={() => setActiveModal({ type: 'edit', challenge })}
                       className="text-xs font-semibold text-gray-500 hover:text-gray-700 flex items-center gap-1 p-1"
                     >
                       <Edit2 className="w-3.5 h-3.5" />
                       Éditer
                     </button>
                     <button
-                      onClick={() => handleDelete(challenge.id)}
+                      onClick={() => setActiveModal({ type: 'confirm-delete', challenge })}
                       className="text-xs font-semibold text-gray-400 hover:text-red-600 flex items-center gap-1 p-1"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
@@ -840,8 +849,18 @@ export default function ChallengesView() {
               {activeModal.type}
             </h3>
             <div className="text-sm text-gray-600 bg-gray-50 p-4 rounded-xl border border-gray-100">
-               {activeModal.type === "rules" ? (
+             {activeModal.type === "rules" ? (
                  <pre className="whitespace-pre-wrap">{JSON.stringify(activeModal.challenge.pointRules, null, 2)}</pre>
+               ) : activeModal.type === "confirm-delete" ? (
+                 <>
+                   <p className="text-center font-semibold text-gray-800 mb-4">Êtes-vous sûr de vouloir supprimer ce défi ?</p>
+                   <div className="flex gap-2">
+                     <button onClick={() => setActiveModal(null)} className="flex-1 bg-gray-200 text-gray-700 py-3 rounded-xl font-bold">Annuler</button>
+                     <button onClick={() => { performDelete(activeModal.challenge.id); setActiveModal(null); }} className="flex-1 bg-red-600 text-white py-3 rounded-xl font-bold">Supprimer</button>
+                   </div>
+                 </>
+               ) : activeModal.type === "edit" ? (
+                 <p className="text-center">Édition en cours d'implémentation</p>
                ) : (
                  "Participants bientôt disponibles"
                )}
