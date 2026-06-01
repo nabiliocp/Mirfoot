@@ -123,13 +123,13 @@ export default function App() {
             <div className="space-y-3">
               <button
                 onClick={handleAcceptInvite}
-                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 rounded-xl transition shadow-sm"
+                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 rounded-xl transition-all shadow-sm cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
               >
                 Rejoindre le défi
               </button>
               <button
                 onClick={handleDeclineInvite}
-                className="w-full bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold py-3.5 rounded-xl transition"
+                className="w-full bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold py-3.5 rounded-xl transition-all cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
               >
                 Annuler
               </button>
@@ -195,7 +195,7 @@ export default function App() {
           </a>
           <button
             onClick={handleLogout}
-            className="bg-emerald-800 hover:bg-emerald-900 text-emerald-100 p-2 rounded-full transition"
+            className="bg-emerald-800 hover:bg-emerald-900 text-emerald-100 p-2 rounded-full transition-all cursor-pointer hover:scale-110"
             title="Se déconnecter"
           >
             <LogOut className="w-5 h-5" />
@@ -213,7 +213,7 @@ export default function App() {
         <div className="max-w-md mx-auto flex justify-around">
           <button
             onClick={() => setActiveTab("matches")}
-            className={`flex-1 flex flex-col items-center py-3 ${activeTab === "matches" ? "text-emerald-600" : "text-gray-400 hover:text-gray-600"}`}
+            className={`flex-1 flex flex-col items-center py-3 transition-colors cursor-pointer ${activeTab === "matches" ? "text-emerald-600" : "text-gray-400 hover:text-gray-600"}`}
           >
             <CalendarCheck className="w-6 h-6 mb-1" />
             <span className="text-xs font-semibold">Matchs</span>
@@ -221,7 +221,7 @@ export default function App() {
 
           <button
             onClick={() => setActiveTab("challenges")}
-            className={`flex-1 flex flex-col items-center py-3 ${activeTab === "challenges" ? "text-emerald-600" : "text-gray-400 hover:text-gray-600"}`}
+            className={`flex-1 flex flex-col items-center py-3 transition-colors cursor-pointer ${activeTab === "challenges" ? "text-emerald-600" : "text-gray-400 hover:text-gray-600"}`}
           >
             <Users className="w-6 h-6 mb-1" />
             <span className="text-xs font-semibold">Défis</span>
@@ -229,7 +229,7 @@ export default function App() {
 
           <button
             onClick={() => setActiveTab("leaderboard")}
-            className={`flex-1 flex flex-col items-center py-3 ${activeTab === "leaderboard" ? "text-emerald-600" : "text-gray-400 hover:text-gray-600"}`}
+            className={`flex-1 flex flex-col items-center py-3 transition-colors cursor-pointer ${activeTab === "leaderboard" ? "text-emerald-600" : "text-gray-400 hover:text-gray-600"}`}
           >
             <Trophy className="w-6 h-6 mb-1" />
             <span className="text-xs font-semibold">Classement</span>

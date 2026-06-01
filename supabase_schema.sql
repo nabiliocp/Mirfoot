@@ -49,6 +49,7 @@ alter table public.challenges enable row level security;
 create policy "Challenges are viewable by everyone." on public.challenges for select using (true);
 create policy "Authenticated users can create challenges." on public.challenges for insert with check (auth.role() = 'authenticated');
 create policy "Creators can update challenges before locked." on public.challenges for update using (auth.uid() = creator_id and locked = false);
+create policy "Creators can delete their own challenges." on public.challenges for delete using (auth.uid() = creator_id);
 
 -- 3. Create a table for user bets/pronostics
 create table public.bets (
@@ -66,6 +67,7 @@ alter table public.bets enable row level security;
 create policy "Bets are viewable by everyone." on public.bets for select using (true);
 create policy "Users can insert their own bets." on public.bets for insert with check (auth.uid() = user_id);
 create policy "Users can update their own bets." on public.bets for update using (auth.uid() = user_id);
+create policy "Users can delete their own bets." on public.bets for delete using (auth.uid() = user_id);
 
 -- 4. Function to automatically handle new user signups from Supabase Auth
 create or replace function public.handle_new_user()

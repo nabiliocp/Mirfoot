@@ -45,6 +45,7 @@ export default function ChallengesView() {
   const [isTournamentSelected, setIsTournamentSelected] = useState(false);
   const [matches, setMatches] = useState<Match[]>([]);
   const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
+  const [newTitle, setNewTitle] = useState("");
   const [creating, setCreating] = useState(false);
   const [loadingComps, setLoadingComps] = useState(false);
   const [loadingMatches, setLoadingMatches] = useState(false);
@@ -392,7 +393,7 @@ export default function ChallengesView() {
                   key={comp.id}
                   type="button"
                   onClick={() => loadMatches(comp.id)}
-                  className="p-3 border-2 border-gray-100 rounded-xl hover:border-emerald-500 hover:bg-emerald-50 transition text-sm font-semibold text-gray-700"
+                  className="p-3 border-2 border-gray-100 rounded-xl hover:border-emerald-500 hover:bg-emerald-50 transition text-sm font-semibold text-gray-700 cursor-pointer"
                 >
                   {comp.name}
                 </button>
@@ -427,7 +428,7 @@ export default function ChallengesView() {
                 <button
                   type="button"
                   onClick={() => setIsTournamentSelected(true)}
-                  className={`w-full p-3 border-2 ${isTournamentSelected ? 'border-emerald-500 bg-emerald-50' : 'border-emerald-100'} rounded-xl hover:border-emerald-500 hover:bg-emerald-50 transition flex justify-between items-center text-sm font-semibold text-emerald-700`}
+                  className={`w-full p-3 border-2 ${isTournamentSelected ? 'border-emerald-500 bg-emerald-50' : 'border-emerald-100'} rounded-xl hover:border-emerald-500 hover:bg-emerald-50 transition flex justify-between items-center text-sm font-semibold text-emerald-700 cursor-pointer`}
                 >
                   <span>Toute la compétition</span>
                 </button>
@@ -444,7 +445,7 @@ export default function ChallengesView() {
                         status: "SCHEDULED" 
                       } as Match);
                     }}
-                    className="w-full bg-emerald-600 text-white font-bold p-3 rounded-xl mt-2"
+                    className="w-full bg-emerald-600 text-white font-bold p-3 rounded-xl mt-2 cursor-pointer hover:bg-emerald-700 transition-colors"
                   >
                     Continuer
                   </button>
@@ -722,7 +723,7 @@ export default function ChallengesView() {
           <button
             type="button"
             onClick={() => submitPrediction(challenge)}
-            className="w-full mt-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl transition shadow-sm"
+            className="w-full mt-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl transition-all shadow-sm cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
           >
             Valider mon pronostic
           </button>
@@ -851,8 +852,8 @@ export default function ChallengesView() {
 
                 {challenge.matchId === 0 && (
                   <div className="flex gap-2 mb-4">
-                    <button onClick={() => setActiveModal({ type: 'rules', challenge })} className="text-xs font-bold text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-lg hover:bg-indigo-100 transition">Règles</button>
-                    <button onClick={() => setActiveModal({ type: 'participants', challenge })} className="text-xs font-bold text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-lg hover:bg-indigo-100 transition">Participants</button>
+                    <button onClick={() => setActiveModal({ type: 'rules', challenge })} className="text-xs font-bold text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-lg hover:bg-indigo-100 transition-all cursor-pointer hover:scale-[1.02]">Règles</button>
+                    <button onClick={() => setActiveModal({ type: 'participants', challenge })} className="text-xs font-bold text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-lg hover:bg-indigo-100 transition-all cursor-pointer hover:scale-[1.02]">Participants</button>
                   </div>
                 )}
                 {challenge.matchId !== 0 && renderPredictionForm(challenge)}
@@ -861,14 +862,14 @@ export default function ChallengesView() {
                   <div className="mt-3 flex gap-2">
                     <button
                       onClick={() => setActiveModal({ type: 'edit', challenge })}
-                      className="text-xs font-semibold text-gray-500 hover:text-gray-700 flex items-center gap-1 p-1"
+                      className="text-xs font-semibold text-gray-500 hover:text-gray-700 flex items-center gap-1 p-1 cursor-pointer transition-colors"
                     >
                       <Edit2 className="w-3.5 h-3.5" />
                       Éditer
                     </button>
                     <button
                       onClick={() => setActiveModal({ type: 'confirm-delete', challenge })}
-                      className="text-xs font-semibold text-gray-400 hover:text-red-600 flex items-center gap-1 p-1"
+                      className="text-xs font-semibold text-gray-400 hover:text-red-600 flex items-center gap-1 p-1 cursor-pointer transition-colors"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                       Supprimer
@@ -893,8 +894,8 @@ export default function ChallengesView() {
                  <>
                    <p className="text-center font-semibold text-gray-800 mb-4">Êtes-vous sûr de vouloir supprimer ce défi ?</p>
                    <div className="flex gap-2">
-                     <button onClick={() => setActiveModal(null)} className="flex-1 bg-gray-200 text-gray-700 py-3 rounded-xl font-bold">Annuler</button>
-                     <button onClick={() => { performDelete(activeModal.challenge.id); setActiveModal(null); }} className="flex-1 bg-red-600 text-white py-3 rounded-xl font-bold">Supprimer</button>
+                     <button onClick={() => setActiveModal(null)} className="flex-1 bg-gray-200 text-gray-700 py-3 rounded-xl font-bold cursor-pointer hover:bg-gray-300 transition-all">Annuler</button>
+                     <button onClick={() => { performDelete(activeModal.challenge.id); setActiveModal(null); }} className="flex-1 bg-red-600 text-white py-3 rounded-xl font-bold cursor-pointer hover:bg-red-700 transition-all">Supprimer</button>
                    </div>
                  </>
                ) : activeModal.type === "edit" ? (
@@ -905,7 +906,7 @@ export default function ChallengesView() {
             </div>
             <button
               onClick={() => setActiveModal(null)}
-              className="w-full bg-emerald-600 text-white font-bold p-3 rounded-xl hover:bg-emerald-700 transition"
+              className="w-full bg-emerald-600 text-white font-bold p-3 rounded-xl hover:bg-emerald-700 transition-all cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
             >
               Fermer
             </button>

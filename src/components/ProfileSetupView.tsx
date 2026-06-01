@@ -91,14 +91,14 @@ export default function ProfileSetupView({
               <button
                 type="button"
                 onClick={() => setAvatarType("emoji")}
-                className={`py-2 px-4 rounded-xl font-bold text-sm transition ${avatarType === "emoji" ? "bg-emerald-100 text-emerald-700 border-2 border-emerald-500" : "bg-gray-100 text-gray-500 border-2 border-transparent"}`}
+                className={`py-2 px-4 rounded-xl font-bold text-sm transition-all cursor-pointer hover:scale-105 ${avatarType === "emoji" ? "bg-emerald-100 text-emerald-700 border-2 border-emerald-500" : "bg-gray-100 text-gray-500 border-2 border-transparent"}`}
               >
                 Emoji
               </button>
               <button
                 type="button"
                 onClick={() => setAvatarType("jersey")}
-                className={`py-2 px-4 rounded-xl font-bold text-sm transition ${avatarType === "jersey" ? "bg-emerald-100 text-emerald-700 border-2 border-emerald-500" : "bg-gray-100 text-gray-500 border-2 border-transparent"}`}
+                className={`py-2 px-4 rounded-xl font-bold text-sm transition-all cursor-pointer hover:scale-105 ${avatarType === "jersey" ? "bg-emerald-100 text-emerald-700 border-2 border-emerald-500" : "bg-gray-100 text-gray-500 border-2 border-transparent"}`}
               >
                 Maillot
               </button>
@@ -131,7 +131,7 @@ export default function ProfileSetupView({
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 rounded-xl transition shadow-sm disabled:opacity-50"
+            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 rounded-xl transition-all shadow-sm disabled:opacity-50 cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
           >
             {loading ? "Enregistrement..." : "C'est parti !"}
           </button>
