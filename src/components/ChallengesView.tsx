@@ -182,7 +182,10 @@ export default function ChallengesView() {
 
   const handleCreateChallenge = async (e: FormEvent) => {
     e.preventDefault();
-    if (!supabase || !userId || !selectedMatch) return;
+    if (!supabase || !userId || !selectedMatch) {
+      alert("Veuillez sélectionner un match d'abord.");
+      return;
+    }
     setCreating(true);
 
     const title = newTitle.trim()
@@ -351,11 +354,13 @@ export default function ChallengesView() {
                     onClick={() => setSelectedMatch(m)}
                     className="w-full p-3 border-2 border-gray-100 rounded-xl hover:border-emerald-500 hover:bg-emerald-50 transition flex justify-between items-center text-sm font-semibold text-gray-700"
                   >
-                    <span>
-                      {m.homeTeam.shortName}{" "}
-                      <span className="text-gray-400 font-medium">vs</span>{" "}
-                      {m.awayTeam.shortName}
-                    </span>
+                    <span className="flex items-center gap-2">
+                       {m.homeTeam.crest && <img src={m.homeTeam.crest} alt={m.homeTeam.shortName} className="w-6 h-6 object-contain" />}
+                       {m.homeTeam.shortName}{" "}
+                       <span className="text-gray-400 font-medium">vs</span>{" "}
+                       {m.awayTeam.shortName}
+                       {m.awayTeam.crest && <img src={m.awayTeam.crest} alt={m.awayTeam.shortName} className="w-6 h-6 object-contain" />}
+                     </span>
                     <span className="text-xs bg-gray-100 px-2 py-1 rounded text-gray-500">
                       {new Date(m.utcDate).toLocaleDateString("fr-FR", {
                         weekday: "short",
@@ -371,14 +376,18 @@ export default function ChallengesView() {
         ) : (
           <div className="space-y-6">
             <div className="bg-emerald-50 p-4 py-3 rounded-xl flex justify-between items-center border border-emerald-100">
-              <div>
-                <div className="text-xs text-emerald-600 font-bold mb-1 uppercase tracking-wider">
-                  Match sélectionné
+              <div className="flex items-center gap-3">
+                {selectedMatch.homeTeam.crest && <img src={selectedMatch.homeTeam.crest} alt={selectedMatch.homeTeam.shortName} className="w-8 h-8 object-contain" />}
+                <div>
+                  <div className="text-xs text-emerald-600 font-bold mb-1 uppercase tracking-wider">
+                    Match sélectionné
+                  </div>
+                  <div className="font-bold text-gray-800">
+                    {selectedMatch.homeTeam.shortName} vs{" "}
+                    {selectedMatch.awayTeam.shortName}
+                  </div>
                 </div>
-                <div className="font-bold text-gray-800">
-                  {selectedMatch.homeTeam.shortName} vs{" "}
-                  {selectedMatch.awayTeam.shortName}
-                </div>
+                {selectedMatch.awayTeam.crest && <img src={selectedMatch.awayTeam.crest} alt={selectedMatch.awayTeam.shortName} className="w-8 h-8 object-contain" />}
               </div>
               <button
                 type="button"
