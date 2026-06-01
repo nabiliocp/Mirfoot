@@ -40,23 +40,30 @@ export default function ChallengesView() {
   const [loadingComps, setLoadingComps] = useState(false);
   const [loadingMatches, setLoadingMatches] = useState(false);
 
-  const [newTitle, setNewTitle] = useState("");
-  const [pointRules, setPointRules] = useState<PointRules>({
-    group_stage: {
-      exact_score: 5,
-      good_result: 3,
-      close_score: 1,
-      first_to_score: 2,
-    },
-    knockout_stage: {
-      exact_score: 5,
-      good_result: 3,
-      close_score: 1,
-      first_to_score: 2,
-      extra_time: 1,
-      penalties: 1,
-    },
+  const [customRulesConfig, setCustomRulesConfig] = useState<{
+    [key: string]: { enabled: boolean; points: number };
+  }>({
+    exact_score: { enabled: true, points: 5 },
+    good_result: { enabled: true, points: 3 },
+    close_score: { enabled: false, points: 1 },
+    first_to_score: { enabled: false, points: 2 },
+    extra_time: { enabled: false, points: 1 },
+    penalties: { enabled: false, points: 1 },
   });
+
+  const toggleRule = (rule: string) => {
+    setCustomRulesConfig(prev => ({
+      ...prev,
+      [rule]: { ...prev[rule], enabled: !prev[rule].enabled }
+    }));
+  };
+
+  const updateRulePoints = (rule: string, points: number) => {
+    setCustomRulesConfig(prev => ({
+      ...prev,
+      [rule]: { ...prev[rule], points }
+    }));
+  };
 
   // Betting form state
   const [predictionForms, setPredictionForms] = useState<
@@ -195,6 +202,23 @@ export default function ChallengesView() {
       ? newTitle
       : `Défi: ${selectedMatch.homeTeam.shortName} vs ${selectedMatch.awayTeam.shortName}`;
 
+    const savedRules: PointRules = {
+      group_stage: {
+        exact_score: customRulesConfig.exact_score.enabled ? customRulesConfig.exact_score.points : 0,
+        good_result: customRulesConfig.good_result.enabled ? customRulesConfig.good_result.points : 0,
+        close_score: customRulesConfig.close_score.enabled ? customRulesConfig.close_score.points : 0,
+        first_to_score: customRulesConfig.first_to_score.enabled ? customRulesConfig.first_to_score.points : 0,
+      },
+      knockout_stage: {
+        exact_score: customRulesConfig.exact_score.enabled ? customRulesConfig.exact_score.points : 0,
+        good_result: customRulesConfig.good_result.enabled ? customRulesConfig.good_result.points : 0,
+        close_score: customRulesConfig.close_score.enabled ? customRulesConfig.close_score.points : 0,
+        first_to_score: customRulesConfig.first_to_score.enabled ? customRulesConfig.first_to_score.points : 0,
+        extra_time: customRulesConfig.extra_time.enabled ? customRulesConfig.extra_time.points : 0,
+        penalties: customRulesConfig.penalties.enabled ? customRulesConfig.penalties.points : 0,
+      },
+    };
+
     const { data, error } = await supabase
       .from("challenges")
       .insert({
@@ -205,7 +229,7 @@ export default function ChallengesView() {
         match_date: selectedMatch.utcDate,
         creator_id: userId,
         title: title,
-        point_rules: pointRules, // pointRules is now already fully structured as PointRules
+        point_rules: savedRules,
         locked: false,
         resolved: false,
         type: 'match',
@@ -419,26 +443,33 @@ export default function ChallengesView() {
               <input
                 value={newTitle}
                 onChange={(e) => setNewTitle(e.target.value)}
-                placeholder={`Défi: ${selectedMatch.homeTeam.shortName} vs ${selectedMatch.awayTeam.shortName}`}
+                placeholder={selectedMatch.id === 0 
+                  ? `Défi: ${competitions.find(c => c.id === selectedCompId)?.name || "Compétition"}`
+                  : `Défi: ${selectedMatch.homeTeam.shortName} vs ${selectedMatch.awayTeam.shortName}`}
                 className="w-full border border-gray-200 p-3 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none placeholder-gray-400 text-sm"
               />
             </div>
 
             <div className="border-t border-gray-100 pt-4">
               <h3 className="font-bold text-lg text-emerald-800 mb-3 border-b border-gray-100 pb-2">
-                Règles de Points Appliquées
+                Configuration des Règles
               </h3>
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                <div className="bg-gray-50 p-3 rounded-xl">
-                  <span className="block font-bold text-emerald-800 mb-1">Phase Groupes</span>
-                  <p className="text-xs">Score Exact: {pointRules.group_stage.exact_score} pts</p>
-                  <p className="text-xs">Bon Résultat: {pointRules.group_stage.good_result} pts</p>
-                </div>
-                <div className="bg-gray-50 p-3 rounded-xl">
-                  <span className="block font-bold text-emerald-800 mb-1">Phase Élim.</span>
-                  <p className="text-xs">Score Exact: {pointRules.knockout_stage.exact_score} pts</p>
-                  <p className="text-xs">Prolongations: {pointRules.knockout_stage.extra_time} pts</p>
-                </div>
+              <div className="text-sm space-y-2">
+                {Object.entries(customRulesConfig).map(([key, rule]) => (
+                  <div key={key} className="flex justify-between items-center bg-gray-50 p-3 rounded-xl border border-gray-100">
+                    <label className="flex items-center gap-2 cursor-pointer font-semibold text-gray-700">
+                      <input type="checkbox" checked={rule.enabled} onChange={() => toggleRule(key)} className="accent-emerald-600" />
+                      <span className="capitalize text-xs">{key.replace('_', ' ')}</span>
+                    </label>
+                    <input
+                      type="number"
+                      value={rule.points}
+                      onChange={(e) => updateRulePoints(key, parseInt(e.target.value))}
+                      className="w-16 p-1 rounded-lg border border-gray-200 text-center text-xs"
+                      disabled={!rule.enabled}
+                    />
+                  </div>
+                ))}
               </div>
             </div>
 
@@ -748,6 +779,12 @@ export default function ChallengesView() {
                   </div>
                 )}
 
+                {challenge.matchId === 0 && (
+                  <div className="flex gap-2 mb-4">
+                    <button className="text-xs font-bold text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-lg hover:bg-indigo-100 transition">Règles</button>
+                    <button className="text-xs font-bold text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-lg hover:bg-indigo-100 transition">Participants</button>
+                  </div>
+                )}
                 {renderPredictionForm(challenge)}
 
                 {isCreator && !challenge.locked && !challenge.resolved && (
