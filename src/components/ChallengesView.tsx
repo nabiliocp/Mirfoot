@@ -283,7 +283,19 @@ export default function ChallengesView() {
 
   const performDelete = async (challengeId: string | number) => {
     if (!supabase) return;
+    
+    // First, delete associated bets
+    const { error: betsError } = await supabase
+      .from("bets")
+      .delete()
+      .eq("challenge_id", challengeId);
 
+    if (betsError) {
+      alert("Erreur lors de la suppression des paris: " + betsError.message);
+      return;
+    }
+
+    // Then delete the challenge
     const { error } = await supabase
       .from("challenges")
       .delete()
@@ -292,7 +304,7 @@ export default function ChallengesView() {
     if (!error) {
       setChallenges((prev) => prev.filter((c) => String(c.id) !== String(challengeId)));
     } else {
-      alert("Erreur lors de la suppression: " + error.message);
+      alert("Erreur lors de la suppression du défi: " + error.message);
     }
   };
 
@@ -410,7 +422,17 @@ export default function ChallengesView() {
                 </button>
                 {isTournamentSelected && (
                   <button
-                    onClick={() => setSelectedMatch({ id: 0, homeTeam: { shortName: "Comp", name: "Comp", crest: "" }, awayTeam: { shortName: "Comp", name: "Comp", crest: "" }, utcDate: new Date().toISOString(), status: "SCHEDULED" } as any)}
+                    onClick={() => {
+                      if (!selectedCompId) return;
+                      setSelectedMatch({ 
+                        id: 0, 
+                        competitionId: selectedCompId,
+                        homeTeam: { shortName: "Comp", name: "Comp", crest: "" }, 
+                        awayTeam: { shortName: "Comp", name: "Comp", crest: "" }, 
+                        utcDate: new Date().toISOString(), 
+                        status: "SCHEDULED" 
+                      } as Match);
+                    }}
                     className="w-full bg-emerald-600 text-white font-bold p-3 rounded-xl mt-2"
                   >
                     Continuer
