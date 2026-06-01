@@ -234,6 +234,20 @@ export default function ChallengesView() {
       return;
     }
 
+    // Double check that the profile exists to avoid foreign key errors
+    const { data: profileCheck } = await supabase
+      .from("profiles")
+      .select("id")
+      .eq("id", currentUserId)
+      .single();
+
+    if (!profileCheck) {
+      alert("Votre profil n'a pas été trouvé. Redirection vers la configuration du profil...");
+      window.location.reload(); // App.tsx will catch this and show ProfileSetupView
+      setCreating(false);
+      return;
+    }
+
     const title = newTitle.trim()
       ? newTitle
       : selectedMatch.id === 0 

@@ -40,10 +40,25 @@ export default function App() {
   useEffect(() => {
     if (!supabase) return;
 
+    const checkProfile = async (userId: string) => {
+      if (!supabase) return;
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("username")
+        .eq("id", userId)
+        .single();
+      
+      if (error || !data?.username) {
+        setNeedsProfileSetup(true);
+      } else {
+        setNeedsProfileSetup(false);
+      }
+    };
+
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
-      if (session && !session.user.user_metadata?.username) {
-        setNeedsProfileSetup(true);
+      if (session) {
+        checkProfile(session.user.id);
       }
     });
 
@@ -51,8 +66,8 @@ export default function App() {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
-      if (session && !session.user.user_metadata?.username) {
-        setNeedsProfileSetup(true);
+      if (session) {
+        checkProfile(session.user.id);
       } else {
         setNeedsProfileSetup(false);
       }
