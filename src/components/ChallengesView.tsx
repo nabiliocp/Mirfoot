@@ -136,7 +136,7 @@ export default function ChallengesView() {
       const res = await fetch("/api/competitions");
       if (res.ok) {
         const data = await res.json();
-        setCompetitions(Array.isArray(data) ? data : []);
+        setCompetitions(Array.isArray(data.competitions) ? data.competitions : []);
       }
     } catch (e) {
       console.error(e);
@@ -152,8 +152,9 @@ export default function ChallengesView() {
       const res = await fetch(`/api/matches/${compId}`);
       if (res.ok) {
         const data = await res.json();
-        const upcomingMatches = Array.isArray(data) 
-          ? data.filter((m: Match) =>
+        const matchesData = data.matches || [];
+        const upcomingMatches = Array.isArray(matchesData) 
+          ? matchesData.filter((m: Match) =>
               ["TIMED", "SCHEDULED"].includes(m.status),
             )
           : [];
@@ -236,7 +237,7 @@ export default function ChallengesView() {
   const handleLock = async (challengeId: string) => {
     if (!supabase) return;
     setChallenges((prev) =>
-      prev.map((c) => (c.id === challengeId ? { ...c, locked: true } : c)),
+      (Array.isArray(prev) ? prev : []).map((c) => (c.id === challengeId ? { ...c, locked: true } : c)),
     );
     await supabase
       .from("challenges")
@@ -695,7 +696,7 @@ export default function ChallengesView() {
               </button>
             </div>
           )}
-          {challenges.map((challenge) => {
+          {Array.isArray(challenges) && challenges.map((challenge) => {
             const isCreator = challenge.creatorId === userId;
 
             return (
