@@ -37,6 +37,7 @@ export default function ChallengesView() {
   >({});
   const [userId, setUserId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<"list" | "create">("list");
+  const [apiError, setApiError] = useState<string | null>(null);
 
   // Create form state
   const [competitions, setCompetitions] = useState<Competition[]>([]);
@@ -147,14 +148,19 @@ export default function ChallengesView() {
 
   const loadCompetitions = async () => {
     setLoadingComps(true);
+    setApiError(null);
     try {
       const res = await fetch("/api/competitions");
       if (res.ok) {
         const data = await res.json();
         setCompetitions(Array.isArray(data.competitions) ? data.competitions : []);
+      } else {
+        const errorData = await res.json();
+        setApiError(errorData.error || "Erreur lors de la récupération des compétitions");
       }
     } catch (e) {
       console.error(e);
+      setApiError("Erreur réseau");
     }
     setLoadingComps(false);
   };
@@ -164,6 +170,7 @@ export default function ChallengesView() {
     setSelectedMatch(null);
     setIsTournamentSelected(false);
     setLoadingMatches(true);
+    setApiError(null);
     try {
       const res = await fetch(`/api/matches/${compId}`);
       if (res.ok) {
@@ -175,9 +182,13 @@ export default function ChallengesView() {
             )
           : [];
         setMatches(upcomingMatches);
+      } else {
+        const errorData = await res.json();
+        setApiError(errorData.error || "Erreur lors de la récupération des matchs");
       }
     } catch (e) {
       console.error(e);
+      setApiError("Erreur réseau");
     }
     setLoadingMatches(false);
   };
@@ -302,7 +313,7 @@ export default function ChallengesView() {
       .eq("id", challengeId);
 
     if (!error) {
-      setChallenges((prev) => prev.filter((c) => String(c.id) !== String(challengeId)));
+      await loadData(); // Reload data to sync with DB
     } else {
       alert("Erreur lors de la suppression du défi: " + error.message);
     }
@@ -779,7 +790,12 @@ export default function ChallengesView() {
         renderCreateForm()
       ) : (
         <div className="space-y-6">
-          {challenges.length === 0 && (
+          {apiError && (
+            <div className="bg-red-50 text-red-700 p-4 rounded-xl border border-red-200 text-sm font-semibold">
+              {apiError}
+            </div>
+          )}
+          {challenges.length === 0 && !apiError && (
             <div className="text-center p-8 text-gray-500 bg-white rounded-xl shadow-sm border border-gray-100 flex flex-col items-center">
               <Trophy className="w-12 h-12 text-gray-300 mb-3" />
               Aucun défi en cours. Soit le premier à en créer un !
