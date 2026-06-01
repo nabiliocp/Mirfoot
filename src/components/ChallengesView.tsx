@@ -374,6 +374,7 @@ export default function ChallengesView() {
             )}
           </div>
         ) : (
+          selectedMatch ? (
           <div className="space-y-6">
             <div className="bg-emerald-50 p-4 py-3 rounded-xl flex justify-between items-center border border-emerald-100">
               <div className="flex items-center gap-3">
@@ -436,6 +437,7 @@ export default function ChallengesView() {
               {creating ? "Création..." : "Créer le Défi et Inviter"}
             </button>
           </div>
+          ) : null
         )}
       </form>
     );
