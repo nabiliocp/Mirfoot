@@ -475,17 +475,57 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
 
     setUserId(user.id);
 
-    // Fetch only challenges where the user is creator OR invited
-    const { data: challengesRes, error: challengesError } = await supabase
+    // Fetch any challenges created by this user
+    const { data: createdChallenges, error: createdError } = await supabase
       .from("challenges")
-      .select("*, challenge_invitations!left(*)")
-      .or(`creator_id.eq.${user.id},challenge_invitations.user_id.eq.${user.id}`)
-      .order("created_at", { ascending: false });
+      .select("*")
+      .eq("creator_id", user.id);
 
-    if (challengesError) {
-      console.error("Error loading challenges:", challengesError);
-      return;
+    if (createdError) {
+      console.error("Error loading created challenges:", createdError);
     }
+
+    // Fetch invitations where user accepted
+    const { data: invitations, error: invsError } = await supabase
+      .from("challenge_invitations")
+      .select("challenge_id")
+      .eq("user_id", user.id)
+      .eq("accepted", true);
+
+    if (invsError) {
+      console.error("Error loading invitations:", invsError);
+    }
+
+    // Extract unique challenge IDs from invitations
+    const invitedChallengeIds = (invitations || []).map((inv: any) => inv.challenge_id);
+
+    // If there are invited challenge IDs, fetch those challenges too
+    let joinedChallenges: any[] = [];
+    if (invitedChallengeIds.length > 0) {
+      const { data: joinedData, error: joinedError } = await supabase
+        .from("challenges")
+        .select("*")
+        .in("id", invitedChallengeIds);
+
+      if (joinedError) {
+        console.error("Error loading joined challenges:", joinedError);
+      } else if (joinedData) {
+        joinedChallenges = joinedData;
+      }
+    }
+
+    // Combine and remove duplicates based on challenge id
+    const allUniqueChallengesMap: Record<string, any> = {};
+    (createdChallenges || []).forEach((c: any) => {
+      allUniqueChallengesMap[c.id] = c;
+    });
+    joinedChallenges.forEach((c: any) => {
+      allUniqueChallengesMap[c.id] = c;
+    });
+
+    const challengesRes = Object.values(allUniqueChallengesMap).sort(
+      (a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    );
     
     // Bets and profiles as before
     const [betsRes, profilesRes] = await Promise.all([
