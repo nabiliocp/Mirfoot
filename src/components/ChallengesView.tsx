@@ -1611,6 +1611,15 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
                           </div>
                         </div>
 
+                        {hasSubmitted && isOpen && (
+                          <div className="mt-2 text-center">
+                            <button className="w-full text-xs font-black bg-amber-500 text-white py-2 rounded-lg hover:bg-amber-600 transition cursor-pointer">
+                               Jouer mon Bonus X2
+                            </button>
+                            <p className="text-[9px] text-gray-400 mt-1">Si juste : Score x2 | Si faux : -4 pts</p>
+                          </div>
+                        )}
+
                         {/* Submit Button for Competition Match bet */}
                         <div className="mt-3">
                           {hasSubmitted ? (
@@ -2013,11 +2022,6 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
                       );
                     })()}
                   </div>
-
-                  <button className="w-full mt-4 bg-amber-500 hover:bg-amber-600 text-white font-black text-xs py-2.5 rounded-xl transition shadow-sm hover:shadow-amber-100 flex items-center justify-center gap-2 cursor-pointer">
-                    <Trophy className="w-4 h-4" />
-                    Jouer mon Bonus X2
-                  </button>
                 </div>
 
                 {challenge.locked && (
