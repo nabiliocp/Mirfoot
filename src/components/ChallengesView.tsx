@@ -942,7 +942,9 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
   };
 
   const submitPrediction = async (challenge: Challenge) => {
-    if (!supabase || !userId || challenge.locked || challenge.resolved) return;
+    if (!supabase) { alert("Erreur de connexion"); return; }
+    if (!userId) { alert("Vous devez être connecté"); return; }
+    if (challenge.locked || challenge.resolved) { alert("Le défi est verrouillé ou terminé"); return; }
 
     const pred = predictionForms[challenge.id];
 
@@ -957,7 +959,7 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
         pred.homeScore === undefined ||
         pred.awayScore === undefined
       ) {
-        alert("Veuillez remplir au moins les scores !");
+        alert("Veuillez remplir les scores !");
         return;
       }
     }
@@ -975,6 +977,7 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
 
     if (error) {
       console.error("Erreur lors de l'enregistrement du pari:", error);
+      alert("Erreur lors de l'enregistrement : " + error.message);
     }
   };
 
@@ -984,9 +987,14 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
     homeScore?: number,
     awayScore?: number,
   ) => {
-    if (!supabase || !userId || challenge.locked || challenge.resolved) return;
+    if (!supabase) { alert("Erreur de connexion"); return; }
+    if (!userId) { alert("Vous devez être connecté"); return; }
+    if (challenge.locked || challenge.resolved) { alert("Le défi est verrouillé ou terminé"); return; }
 
-    if (homeScore === undefined || awayScore === undefined || isNaN(homeScore) || isNaN(awayScore)) {
+    const hScore = homeScore !== undefined ? Number(homeScore) : NaN;
+    const aScore = awayScore !== undefined ? Number(awayScore) : NaN;
+
+    if (isNaN(hScore) || isNaN(aScore)) {
       alert("Veuillez remplir les scores avant de valider !");
       return;
     }
@@ -998,8 +1006,8 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
     const updatedMatches = {
       ...matchesPreds,
       [matchId]: {
-        homeScore,
-        awayScore,
+        homeScore: hScore,
+        awayScore: aScore,
       },
     };
 
