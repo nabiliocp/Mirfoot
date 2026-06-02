@@ -57,7 +57,10 @@ export default function LoginView() {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: cleanRedirectUrl
+        redirectTo: cleanRedirectUrl,
+        queryParams: {
+          prompt: 'select_account'
+        }
       }
     });
     if (error) setErrorMsg(error.message);
