@@ -232,43 +232,16 @@ export default function App() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2 sm:gap-3">
-            {/* Dynamic User Profile Block (Moved to Top-Right) */}
+          <div className="flex items-center gap-3">
+            {/* Dynamic User Profile Block - Display Username text next to LogOut arrow */}
             {userProfile && (
-              <div 
+              <span 
                 onClick={() => setIsProfileModalOpen(true)}
-                className="flex items-center gap-2 cursor-pointer group bg-emerald-800/40 hover:bg-emerald-800/80 p-1.5 sm:p-2 rounded-2xl border border-emerald-600/30 transition duration-150 text-left max-w-[140px] sm:max-w-[220px]"
+                className="font-extrabold text-sm sm:text-base text-emerald-100 hover:text-white hover:underline transition cursor-pointer select-none"
                 title="Modifier mon profil"
               >
-                <div className="relative flex-shrink-0">
-                  {userProfile.avatar_type === "emoji" ? (
-                    <span className="text-2xl sm:text-3xl filter drop-shadow-sm select-none">{userProfile.avatar_value}</span>
-                  ) : (
-                    <div 
-                      className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center text-white border border-white/20 shadow-xs" 
-                      style={{ backgroundColor: userProfile.avatar_value }}
-                    >
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M20.38 3.46 16 2a8.86 8.86 0 0 1-8 0L3.62 3.46a2 2 0 0 0-1.34 2.23l.58 3.47a1 1 0 0 0 .99.84H6v10c0 1.1.9 2 2 2h8a2 2 0 0 0 2-2V10h2.15a1 1 0 0 0 .99-.84l.58-3.47a2 2 0 0 0-1.34-2.23z"/></svg>
-                    </div>
-                  )}
-                  {/* Small aesthetic indicator */}
-                  <div className="absolute -bottom-0.5 -right-0.5 bg-emerald-500 rounded-full p-0.5 border border-emerald-700 opacity-60 group-hover:opacity-100 transition duration-150">
-                    <svg className="w-1.5 h-1.5 sm:w-2 sm:h-2 text-white" fill="none" stroke="currentColor" strokeWidth="3.5" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125" />
-                    </svg>
-                  </div>
-                </div>
-                <div className="min-w-0 pr-0.5">
-                  <div className="flex items-center gap-1.5 leading-none">
-                    <span className="font-extrabold text-xs sm:text-sm text-white group-hover:text-emerald-200 transition truncate max-w-[80px] sm:max-w-[130px]">
-                      {userProfile.username}
-                    </span>
-                  </div>
-                  <div className="text-[9px] sm:text-[11px] text-emerald-200/80 font-medium mt-0.5 leading-none truncate group-hover:text-white transition max-w-[80px] sm:max-w-[130px]">
-                    {session?.user?.email}
-                  </div>
-                </div>
-              </div>
+                {userProfile.username}
+              </span>
             )}
 
             {/* Logout button */}
