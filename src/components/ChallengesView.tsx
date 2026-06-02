@@ -475,11 +475,20 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
 
     setUserId(user.id);
 
-    const [challengesRes, betsRes, profilesRes] = await Promise.all([
-      supabase
-        .from("challenges")
-        .select("*")
-        .order("created_at", { ascending: false }),
+    // Fetch only challenges where the user is creator OR invited
+    const { data: challengesRes, error: challengesError } = await supabase
+      .from("challenges")
+      .select("*, challenge_invitations!left(*)")
+      .or(`creator_id.eq.${user.id},challenge_invitations.user_id.eq.${user.id}`)
+      .order("created_at", { ascending: false });
+
+    if (challengesError) {
+      console.error("Error loading challenges:", challengesError);
+      return;
+    }
+    
+    // Bets and profiles as before
+    const [betsRes, profilesRes] = await Promise.all([
       supabase.from("bets").select("*").eq("user_id", user.id),
       supabase.from("profiles").select("*"),
     ]);
@@ -495,9 +504,9 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
       });
     }
 
-    if (challengesRes.data) {
+    if (challengesRes) {
       setChallenges(
-        (Array.isArray(challengesRes.data) ? challengesRes.data : []).map((c: any) => ({
+        (Array.isArray(challengesRes) ? challengesRes : []).map((c: any) => ({
           id: c.id,
           competitionId: c.competition_id,
           matchId: c.match_id,
