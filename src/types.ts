@@ -13,6 +13,10 @@ export interface RulesSet {
 export interface KnockoutRulesSet extends RulesSet {
   exact_score_penalties: number;
   correct_winner_penalties: number;
+  // New rules
+  prolongation_winner: number;
+  prolongation_score: number;
+  penalties_winner: number;
 }
 
 export interface PointRules {
@@ -44,8 +48,12 @@ export interface Prediction {
   homeScore?: number;
   awayScore?: number;
   firstToScore?: string; // 'home', 'away', 'none'
-  extraTime?: boolean;
-  penalties?: boolean;
+  // New fields
+  endStage?: 'regulation' | 'prolongation' | 'penalties';
+  winner?: 'home' | 'away'; // applicable for prolongation or penalties
+  prolongationHomeScore?: number; // Should I add these? The user said "Quel score Prolongation score"
+  prolongationAwayScore?: number;
+  
   penaltiesHomeScore?: number;
   penaltiesAwayScore?: number;
   customAnswer?: string;
