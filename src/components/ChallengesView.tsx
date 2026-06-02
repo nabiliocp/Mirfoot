@@ -38,6 +38,9 @@ export default function ChallengesView() {
   const [userId, setUserId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<"list" | "create">("list");
   const [apiError, setApiError] = useState<string | null>(null);
+  const [modalMatches, setModalMatches] = useState<Match[]>([]);
+  const [loadingModalMatches, setLoadingModalMatches] = useState(false);
+  const [currentUsername, setCurrentUsername] = useState<string>("Moi");
 
   const ruleLabels: Record<string, string> = {
     exact_score: "Score Exact",
@@ -127,6 +130,50 @@ export default function ChallengesView() {
     Record<string, Prediction>
   >({});
 
+  const getFlagUrl = (teamName: string, officialCrest?: string) => {
+    if (officialCrest) return officialCrest;
+    const nameLower = (teamName || "").toLowerCase().trim();
+    const mapping: Record<string, string> = {
+      "morocco": "ma", "maroc": "ma",
+      "france": "fr",
+      "brazil": "br", "brésil": "br",
+      "argentina": "ar", "argentine": "ar",
+      "spain": "es", "espagne": "es",
+      "belgium": "be", "belgique": "be",
+      "croatia": "hr", "croatie": "hr",
+      "portugal": "pt",
+      "england": "gb-eng", "angleterre": "gb-eng",
+      "germany": "de", "allemagne": "de",
+      "netherlands": "nl", "pays-bas": "nl",
+      "senegal": "sn", "sénégal": "sn",
+      "switzerland": "ch", "suisse": "ch",
+      "usa": "us", "united states": "us", "états-unis": "us",
+      "wales": "gb-wls", "pays de galles": "gb-wls",
+      "tunisia": "tn", "tunisie": "tn",
+      "saudi arabia": "sa", "arabie saoudite": "sa",
+      "mexico": "mx", "mexique": "mx",
+      "poland": "pl", "pologne": "pl",
+      "australia": "au", "australie": "au",
+      "denmark": "dk", "danemark": "dk",
+      "costa rica": "cr",
+      "japan": "jp", "japon": "jp",
+      "canada": "ca",
+      "cameroon": "cm", "cameroun": "cm",
+      "serbia": "rs", "serbie": "rs",
+      "ghana": "gh",
+      "uruguay": "uy",
+      "south korea": "kr", "corée du sud": "kr", "republic of korea": "kr",
+      "ecuador": "ec", "équateur": "ec",
+      "qatar": "qa"
+    };
+    for (const [key, code] of Object.entries(mapping)) {
+      if (nameLower.includes(key)) {
+        return `https://flagcdn.com/w80/${code}.png`;
+      }
+    }
+    return "https://flagcdn.com/w80/un.png";
+  };
+
   useEffect(() => {
     loadData();
     if (supabase) {
@@ -147,6 +194,24 @@ export default function ChallengesView() {
     }
   }, []);
 
+  useEffect(() => {
+    if (activeModal && activeModal.type === "details" && activeModal.challenge.matchId === 0 && activeModal.challenge.competitionId) {
+      setLoadingModalMatches(true);
+      fetch(`/api/matches/${activeModal.challenge.competitionId}`)
+        .then((res) => res.json())
+        .then((data) => {
+          setModalMatches(data.matches || []);
+          setLoadingModalMatches(false);
+        })
+        .catch((err) => {
+          console.error(err);
+          setLoadingModalMatches(false);
+        });
+    } else {
+      setModalMatches([]);
+    }
+  }, [activeModal]);
+
   async function loadData() {
     if (!supabase) return;
     const {
@@ -156,13 +221,24 @@ export default function ChallengesView() {
 
     setUserId(user.id);
 
-    const [challengesRes, betsRes] = await Promise.all([
+    const [challengesRes, betsRes, profilesRes] = await Promise.all([
       supabase
         .from("challenges")
-        .select("*, profiles(username)")
+        .select("*")
         .order("created_at", { ascending: false }),
       supabase.from("bets").select("*").eq("user_id", user.id),
+      supabase.from("profiles").select("id, username"),
     ]);
+
+    const profileMap: Record<string, string> = {};
+    if (profilesRes.data) {
+      profilesRes.data.forEach((p: any) => {
+        profileMap[p.id] = p.username;
+        if (p.id === user.id) {
+          setCurrentUsername(p.username);
+        }
+      });
+    }
 
     if (challengesRes.data) {
       setChallenges(
@@ -174,7 +250,7 @@ export default function ChallengesView() {
           matchAwayTeam: c.match_away_team,
           matchDate: c.match_date,
           creatorId: c.creator_id,
-          creatorUsername: c.profiles?.username,
+          creatorUsername: profileMap[c.creator_id] || "Inconnu",
           title: c.title,
           rules: c.rules,
           pointRules:
@@ -303,7 +379,12 @@ export default function ChallengesView() {
         ? `Défi: ${competitions.find(c => c.id === selectedCompId)?.name || "Compétition"}`
         : `Défi: ${selectedMatch.homeTeam.shortName} vs ${selectedMatch.awayTeam.shortName}`;
 
-    const savedRules: PointRules = {
+    const savedRules: PointRules & {
+      match_metadata?: {
+        home_crest?: string;
+        away_crest?: string;
+      };
+    } = {
       group_stage: {
         exact_score: customRulesConfig.exact_score.enabled ? customRulesConfig.exact_score.points : 0,
         correct_winner: customRulesConfig.correct_winner.enabled ? customRulesConfig.correct_winner.points : 0,
@@ -316,6 +397,10 @@ export default function ChallengesView() {
         exact_score_penalties: customRulesConfig.exact_score_penalties.enabled ? customRulesConfig.exact_score_penalties.points : 0,
         correct_winner_penalties: customRulesConfig.correct_winner_penalties.enabled ? customRulesConfig.correct_winner_penalties.points : 0,
       },
+      match_metadata: {
+        home_crest: selectedMatch.homeTeam?.crest || "",
+        away_crest: selectedMatch.awayTeam?.crest || "",
+      }
     };
 
     const { data, error } = await supabase
@@ -344,6 +429,7 @@ export default function ChallengesView() {
         matchAwayTeam: data[0].match_away_team,
         matchDate: data[0].match_date,
         creatorId: data[0].creator_id,
+        creatorUsername: currentUsername,
         title: data[0].title,
         pointRules: data[0].point_rules,
         locked: data[0].locked,
@@ -408,6 +494,30 @@ export default function ChallengesView() {
     }));
   };
 
+  const updateCompetitionPredictionForm = (
+    challengeId: string,
+    matchId: number,
+    updates: { homeScore?: number; awayScore?: number },
+  ) => {
+    setPredictionForms((prev) => {
+      const currentChallengeForm = prev[challengeId] || {};
+      const currentMatches = currentChallengeForm.matches || {};
+      return {
+        ...prev,
+        [challengeId]: {
+          ...currentChallengeForm,
+          matches: {
+            ...currentMatches,
+            [matchId]: {
+              ...(currentMatches[matchId] || {}),
+              ...updates,
+            },
+          },
+        },
+      };
+    });
+  };
+
   const submitPrediction = async (challenge: Challenge) => {
     if (!supabase || !userId || challenge.locked || challenge.resolved) return;
 
@@ -442,6 +552,56 @@ export default function ChallengesView() {
 
     if (error) {
       console.error("Erreur lors de l'enregistrement du pari:", error);
+    }
+  };
+
+  const submitCompetitionPrediction = async (
+    challenge: Challenge,
+    matchId: number,
+    homeScore?: number,
+    awayScore?: number,
+  ) => {
+    if (!supabase || !userId || challenge.locked || challenge.resolved) return;
+
+    if (homeScore === undefined || awayScore === undefined || isNaN(homeScore) || isNaN(awayScore)) {
+      alert("Veuillez remplir les scores avant de valider !");
+      return;
+    }
+
+    // Capture the current predictions map from state if it exists
+    const currentPreds = userPredictions[challenge.id] || {};
+    const matchesPreds = currentPreds.matches || {};
+
+    const updatedMatches = {
+      ...matchesPreds,
+      [matchId]: {
+        homeScore,
+        awayScore,
+      },
+    };
+
+    const updatedChallengePreds = {
+      ...currentPreds,
+      matches: updatedMatches,
+    };
+
+    const { error } = await supabase.from("bets").upsert(
+      {
+        user_id: userId,
+        challenge_id: challenge.id,
+        predictions: updatedChallengePreds,
+      },
+      { onConflict: "user_id,challenge_id" },
+    );
+
+    if (error) {
+      console.error("Erreur l'enregistrement du pari de compétition:", error);
+      alert("Erreur lors de l'enregistrement: " + error.message);
+    } else {
+      setUserPredictions((prev) => ({
+        ...prev,
+        [challenge.id]: updatedChallengePreds,
+      }));
     }
   };
 
@@ -661,7 +821,7 @@ export default function ChallengesView() {
     return (
       <div className="space-y-4 bg-gray-50 p-4 rounded-xl border border-gray-100 mt-4">
         {!isLocked && (timeLeft > 24 * 60 * 60 * 1000) && !userPred && (
-          <div className="bg-blue-50 text-blue-700 p-3 rounded-lg text-sm font-semibold flex items-center gap-2 mb-2 border border-blue-100">
+          <div className="bg-indigo-50 text-indigo-700 p-3 rounded-lg text-xs font-semibold flex items-center gap-2 mb-2 border border-indigo-100">
             <Clock className="w-4 h-4 shrink-0" />
             Les pronostics ouvrent 24h avant le match, soit le{" "}
             {new Date(
@@ -677,8 +837,14 @@ export default function ChallengesView() {
         )}
 
         <div className="grid grid-cols-2 gap-4">
-          <div className="text-center">
-            <label className="block text-xs font-bold text-gray-700 mb-2 truncate">
+          <div className="text-center flex flex-col items-center">
+            <img 
+              src={getFlagUrl(challenge.matchHomeTeam || "", (challenge.pointRules as any)?.match_metadata?.home_crest)} 
+              alt="" 
+              className="w-10 h-10 object-contain mb-1.5 rounded-sm shadow-sm"
+              onError={(e) => { e.currentTarget.style.display = 'none'; }}
+            />
+            <label className="block text-xs font-bold text-gray-700 mb-2 truncate max-w-[120px]">
               {challenge.matchHomeTeam}
             </label>
             <input
@@ -695,8 +861,14 @@ export default function ChallengesView() {
               className="w-16 h-12 text-center text-xl font-black rounded-xl border border-gray-300 focus:ring-2 focus:ring-emerald-500 mx-auto block disabled:bg-gray-100 disabled:text-gray-500"
             />
           </div>
-          <div className="text-center">
-            <label className="block text-xs font-bold text-gray-700 mb-2 truncate">
+          <div className="text-center flex flex-col items-center">
+            <img 
+              src={getFlagUrl(challenge.matchAwayTeam || "", (challenge.pointRules as any)?.match_metadata?.away_crest)} 
+              alt="" 
+              className="w-10 h-10 object-contain mb-1.5 rounded-sm shadow-sm"
+              onError={(e) => { e.currentTarget.style.display = 'none'; }}
+            />
+            <label className="block text-xs font-bold text-gray-700 mb-2 truncate max-w-[120px]">
               {challenge.matchAwayTeam}
             </label>
             <input
@@ -721,7 +893,7 @@ export default function ChallengesView() {
                 <label className="block text-xs font-bold text-gray-700">
                    Score des Tirs au but (si égalité)
                 </label>
-                <div className="flex gap-2 justify-center">
+                <div className="flex gap-2 justify-center font-bold">
                     <input
                       type="number"
                       placeholder="Dom."
@@ -840,47 +1012,79 @@ export default function ChallengesView() {
               <div
                 id={`challenge-${challenge.id}`}
                 key={challenge.id}
-                className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 transition-all duration-500 cursor-pointer hover:shadow-md"
+                className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 transition-all duration-500 cursor-pointer hover:shadow-md hover:border-gray-200"
                 onClick={() => setActiveModal({ type: 'details', challenge })}
               >
                 <div className="flex justify-between items-start mb-1">
-                  <h3 className="font-bold text-gray-800 text-lg flex-1 mr-2">
+                  <h3 className="font-bold text-gray-800 text-lg flex-1 mr-2 capitalize">
                     {challenge.title}
                   </h3>
                   <button
                     onClick={(e) => { e.stopPropagation(); shareOnWhatsApp(challenge); }}
-                    className="text-emerald-600 hover:bg-emerald-50 p-2 rounded-full transition"
+                    className="text-emerald-600 hover:bg-emerald-50 p-2 rounded-full transition cursor-pointer shrink-0"
                     title="Partager sur WhatsApp"
                   >
                     <Share2 className="w-5 h-5" />
                   </button>
                 </div>
 
-                <div className="text-xs text-gray-400 mb-2 font-semibold">
-                  Créé par {challenge.creatorUsername || "Inconnu"}
+                <div className="text-xs text-gray-400 mb-1 font-semibold flex items-center gap-1.5">
+                  <span className="bg-gray-100 px-2 py-0.5 rounded text-gray-600 font-bold">Créateur: {challenge.creatorUsername || "Inconnu"}</span>
                 </div>
 
-                <div className="text-sm text-gray-500 mb-4 font-medium flex items-center gap-2">
-                  <Clock className="w-4 h-4" />
-                  {challenge.matchDate
-                    ? new Date(challenge.matchDate).toLocaleString("fr-FR", {
-                        weekday: "long",
-                        day: "numeric",
-                        month: "short",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })
-                    : "Date inconnue"}
-                </div>
-
-                {challenge.locked && (
-                  <div className="flex items-center gap-1 text-amber-600 text-xs font-bold uppercase tracking-wider mb-3">
-                    <Lock className="w-3 h-3" /> Paris verrouillés (Match en
-                    cours)
+                {challenge.matchId !== 0 && challenge.matchDate && (
+                  <div className="text-xs text-gray-400 mb-3 font-semibold flex items-center gap-1.5">
+                    <Clock className="w-3.5 h-3.5" />
+                    {new Date(challenge.matchDate).toLocaleString("fr-FR", {
+                      weekday: "short",
+                      day: "numeric",
+                      month: "short",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
                   </div>
                 )}
 
-                <div className="flex gap-2 mb-4">
+                {/* Flag display logic: Single Match VS Competition banners */}
+                {challenge.matchId !== 0 ? (
+                  <div className="flex items-center gap-3 my-3 bg-gray-50/60 p-3 rounded-xl border border-gray-100/60 max-w-sm">
+                    <div className="flex items-center gap-1.5 min-w-0 flex-1 justify-end">
+                      <span className="font-bold text-xs text-gray-700 truncate">{challenge.matchHomeTeam}</span>
+                      <img 
+                        src={getFlagUrl(challenge.matchHomeTeam || "", (challenge.pointRules as any)?.match_metadata?.home_crest)} 
+                        alt="" 
+                        className="w-6 h-6 object-contain rounded-sm shadow-sm"
+                        onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                      />
+                    </div>
+                    <span className="text-[10px] font-black text-gray-400 shrink-0">VS</span>
+                    <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                      <img 
+                        src={getFlagUrl(challenge.matchAwayTeam || "", (challenge.pointRules as any)?.match_metadata?.away_crest)} 
+                        alt="" 
+                        className="w-6 h-6 object-contain rounded-sm shadow-sm"
+                        onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                      />
+                      <span className="font-bold text-xs text-gray-700 truncate">{challenge.matchAwayTeam}</span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2.5 my-3 bg-emerald-50/50 p-3 rounded-xl border border-emerald-100/40 text-emerald-800 max-w-sm">
+                    <Trophy className="w-5 h-5 text-emerald-600 shrink-0" />
+                    <div>
+                      <div className="text-[10px] font-bold uppercase tracking-wider text-emerald-700">Défi Compétition</div>
+                      <div className="text-xs font-semibold text-gray-600">Comprend l'ensemble des matchs de la compétition</div>
+                    </div>
+                  </div>
+                )}
+
+                {challenge.locked && (
+                  <div className="flex items-center gap-1 text-amber-600 text-xs font-bold uppercase tracking-wider mb-3">
+                    <Lock className="w-3 h-3" /> Paris verrouillés (Match en cours)
+                  </div>
+                )}
+
+                <div className="flex gap-2 mb-3">
                   <button onClick={(e) => { e.stopPropagation(); setActiveModal({ type: 'rules', challenge }); }} className="text-xs font-bold text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-lg hover:bg-indigo-100 transition-all cursor-pointer hover:scale-[1.02]">Règles</button>
                   <button onClick={(e) => { e.stopPropagation(); setActiveModal({ type: 'participants', challenge }); }} className="text-xs font-bold text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-lg hover:bg-indigo-100 transition-all cursor-pointer hover:scale-[1.02]">Participants</button>
                 </div>
@@ -888,17 +1092,17 @@ export default function ChallengesView() {
                 {challenge.matchId !== 0 && renderPredictionForm(challenge)}
 
                 {isCreator && !challenge.locked && !challenge.resolved && (
-                  <div className="mt-3 flex gap-2">
+                  <div className="mt-3 flex gap-2 border-t border-gray-100 pt-2.5">
                     <button
-                      onClick={() => setActiveModal({ type: 'edit', challenge })}
+                      onClick={(e) => { e.stopPropagation(); setActiveModal({ type: 'edit', challenge }); }}
                       className="text-xs font-semibold text-gray-500 hover:text-gray-700 flex items-center gap-1 p-1 cursor-pointer transition-colors"
                     >
                       <Edit2 className="w-3.5 h-3.5" />
                       Éditer
                     </button>
                     <button
-                      onClick={() => setActiveModal({ type: 'confirm-delete', challenge })}
-                      className="text-xs font-semibold text-gray-400 hover:text-red-600 flex items-center gap-1 p-1 cursor-pointer transition-colors"
+                      onClick={(e) => { e.stopPropagation(); setActiveModal({ type: 'confirm-delete', challenge }); }}
+                      className="text-xs font-semibold text-gray-400 hover:text-red-600 flex items-center gap-1 p-1 cursor-pointer transition-colors animate-pulse"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                       Supprimer
@@ -912,7 +1116,9 @@ export default function ChallengesView() {
       )}
       {activeModal && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl w-full max-w-sm p-6 shadow-2xl space-y-4">
+          <div className={`bg-white rounded-3xl w-full p-6 shadow-2xl space-y-4 transition-all ${
+            activeModal.type === "details" && activeModal.challenge.matchId === 0 ? "max-w-xl" : "max-w-sm"
+          }`}>
             <h3 className="font-black text-xl text-gray-900 capitalize text-center">
               {activeModal.type === "rules" ? "Barème de Points" : activeModal.type}
             </h3>
@@ -925,8 +1131,126 @@ export default function ChallengesView() {
                  )
                ) : activeModal.type === "details" ? (
                  <>
-                   <h3 className="font-black text-lg text-gray-800 text-center mb-4">{activeModal.challenge.title}</h3>
-                   {renderPredictionForm(activeModal.challenge)}
+                   <div className="text-center border-b border-gray-100 pb-3 mb-3">
+                      <h4 className="font-extrabold text-base text-indigo-900 uppercase tracking-tight">{activeModal.challenge.title}</h4>
+                      <p className="text-[11px] text-gray-400 font-semibold mt-0.5">Créé par: {activeModal.challenge.creatorUsername || "Inconnu"}</p>
+                    </div>
+                   {activeModal.challenge.matchId === 0 ? (
+                        // Competition Challenges Details View
+                        <div className="space-y-4 pr-1 text-left">
+                          {loadingModalMatches ? (
+                            <div className="flex justify-center py-12">
+                              <Clock className="animate-spin text-emerald-500 w-8 h-8" />
+                            </div>
+                          ) : modalMatches.length === 0 ? (
+                            <p className="text-center text-gray-500 py-8 text-sm font-semibold">Aucun match programmé trouvé pour cette compétition.</p>
+                          ) : (
+                            modalMatches.map((m) => {
+                              const challengeId = activeModal.challenge.id;
+                              const userPredMap = userPredictions[challengeId]?.matches || {};
+                              const userPredMatch = userPredMap[m.id];
+                              
+                              const formMap = predictionForms[challengeId]?.matches || {};
+                              const formMatch = formMap[m.id] || {};
+                              
+                              // Check if predictions are open (less than 24h away and match hasn't started yet)
+                              const matchTime = new Date(m.utcDate).getTime();
+                              const timeLeft = matchTime - new Date().getTime();
+                              const isOpen = timeLeft <= 24 * 60 * 60 * 1000 && timeLeft > 0 && !activeModal.challenge.locked && !activeModal.challenge.resolved;
+                              
+                              const scoreHome = userPredMatch?.homeScore !== undefined ? userPredMatch.homeScore : formMatch.homeScore;
+                              const scoreAway = userPredMatch?.awayScore !== undefined ? userPredMatch.awayScore : formMatch.awayScore;
+                              
+                              const hasSubmitted = userPredMatch?.homeScore !== undefined && userPredMatch?.awayScore !== undefined;
+
+                              return (
+                                <div key={m.id} className="bg-white rounded-xl p-3.5 shadow-sm border border-gray-100 space-y-3">
+                                  <div className="flex justify-between items-center text-[10px] font-bold text-gray-400 uppercase tracking-wider border-b border-gray-50 pb-2">
+                                    <span>
+                                      {new Date(m.utcDate).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' })} • {new Date(m.utcDate).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                                    </span>
+                                    <span className={isOpen ? "text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded" : "bg-gray-100 text-gray-500 px-2 py-0.5 rounded"}>
+                                      {timeLeft < 0 ? "Expiré" : isOpen ? "Ouvert" : "À venir"}
+                                    </span>
+                                  </div>
+                                  
+                                  <div className="flex items-center justify-between">
+                                    {/* Home Team */}
+                                    <div className="flex flex-col items-center flex-1 min-w-0">
+                                      <img 
+                                        src={getFlagUrl(m.homeTeam.name, m.homeTeam.crest)} 
+                                        alt="" 
+                                        className="w-10 h-10 object-contain mb-1 rounded-sm shadow-sm"
+                                        onError={(e) => { e.currentTarget.src = "https://flagcdn.com/w80/un.png"; }}
+                                      />
+                                      <span className="font-bold text-center text-[11px] text-gray-800 truncate w-full">{m.homeTeam.shortName || m.homeTeam.name}</span>
+                                    </div>
+                                    
+                                    {/* VS Section */}
+                                    <div className="flex px-1.5 justify-center items-center gap-1">
+                                       <input 
+                                         type="number"
+                                         min="0"
+                                         value={scoreHome ?? ""}
+                                         onChange={(e) => updateCompetitionPredictionForm(challengeId, m.id, { homeScore: parseInt(e.target.value) })}
+                                         disabled={!isOpen || hasSubmitted}
+                                         className="w-9 h-9 text-center text-xs font-bold border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 disabled:bg-gray-100"
+                                       />
+                                       <span className="font-black text-gray-300 text-[10px]">VS</span>
+                                       <input 
+                                         type="number"
+                                         min="0"
+                                         value={scoreAway ?? ""}
+                                         onChange={(e) => updateCompetitionPredictionForm(challengeId, m.id, { awayScore: parseInt(e.target.value) })}
+                                         disabled={!isOpen || hasSubmitted}
+                                         className="w-9 h-9 text-center text-xs font-bold border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 disabled:bg-gray-100"
+                                       />
+                                    </div>
+                                    
+                                    {/* Away Team */}
+                                    <div className="flex flex-col items-center flex-1 min-w-0">
+                                      <img 
+                                        src={getFlagUrl(m.awayTeam.name, m.awayTeam.crest)} 
+                                        alt="" 
+                                        className="w-10 h-10 object-contain mb-1 rounded-sm shadow-sm"
+                                        onError={(e) => { e.currentTarget.src = "https://flagcdn.com/w80/un.png"; }}
+                                      />
+                                      <span className="font-bold text-center text-[11px] text-gray-800 truncate w-full">{m.awayTeam.shortName || m.awayTeam.name}</span>
+                                    </div>
+                                  </div>
+
+                                  {/* Messages/State */}
+                                  <div className="pt-2 border-t border-gray-50 text-center">
+                                    {hasSubmitted ? (
+                                      <div className="text-[10px] font-bold text-emerald-700 bg-emerald-50 py-1 rounded-lg flex items-center justify-center gap-1 border border-emerald-100">
+                                        <CheckCircle2 className="w-3.5 h-3.5" /> Pronostic validé ! ({userPredMatch?.homeScore} - {userPredMatch?.awayScore})
+                                      </div>
+                                    ) : isOpen ? (
+                                      <button
+                                        type="button"
+                                        onClick={() => submitCompetitionPrediction(activeModal.challenge, m.id, scoreHome, scoreAway)}
+                                        className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-1.5 rounded-lg text-xs transition shadow-sm cursor-pointer"
+                                      >
+                                        Valider mon pronostic
+                                      </button>
+                                    ) : timeLeft > 24 * 60 * 60 * 1000 ? (
+                                      <div className="text-[10px] text-indigo-700 bg-indigo-50/70 font-semibold p-1 rounded border border-indigo-100">
+                                        Les pronostics ouvrent 24h avant le match
+                                      </div>
+                                    ) : (
+                                      <div className="text-[10px] text-gray-400 bg-gray-50 font-bold p-1 rounded">
+                                        Pronostics fermés
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })
+                          )}
+                        </div>
+                      ) : (
+                        renderPredictionForm(activeModal.challenge)
+                      )}
                  </>
                ) : activeModal.type === "confirm-delete" ? (
                  <>
