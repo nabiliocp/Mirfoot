@@ -25,7 +25,12 @@ import {
 } from "lucide-react";
 import { supabase } from "../lib/supabase";
 
-export default function ChallengesView() {
+interface ChallengesViewProps {
+  preselectedMatch?: { match: Match; competitionId: number } | null;
+  onClearPreselectedMatch?: () => void;
+}
+
+export default function ChallengesView({ preselectedMatch, onClearPreselectedMatch }: ChallengesViewProps = {}) {
   const [activeModal, setActiveModal] = useState<{
     type: "rules" | "participants" | "confirm-delete" | "edit" | "details";
     challenge: Challenge;
@@ -244,6 +249,46 @@ export default function ChallengesView() {
       }, 500);
     }
   }, []);
+
+  // Effect to automatically pre-fill/transition when a match is preselected
+  useEffect(() => {
+    if (preselectedMatch && !loading && challenges.length > 0) {
+      // Check if there are any existing challenges for this match
+      const matchingChallenge = challenges.find((c) => c.matchId === preselectedMatch.match.id);
+      
+      if (matchingChallenge) {
+        // If an existing challenge exists, stay in "list" mode but open its details modal
+        setActiveModal({ type: "details", challenge: matchingChallenge });
+      } else {
+        // If no matching challenge exists, switch to "create" mode and auto-select this match
+        setViewMode("create");
+        setSelectedCompId(preselectedMatch.competitionId);
+        setSelectedMatch(preselectedMatch.match);
+        setIsTournamentSelected(false);
+        setNewTitle(`Défi: ${preselectedMatch.match.homeTeam.shortName} vs ${preselectedMatch.match.awayTeam.shortName}`);
+        
+        if (competitions.length === 0) {
+          loadCompetitions();
+        }
+        
+        setLoadingMatches(true);
+        fetch(`/api/matches/${preselectedMatch.competitionId}`)
+          .then((res) => res.json())
+          .then((data) => {
+            const matchesData = data.matches || [];
+            const upcomingMatches = Array.isArray(matchesData) 
+              ? matchesData.filter((m: Match) => ["TIMED", "SCHEDULED"].includes(m.status))
+              : [];
+            setMatches(upcomingMatches);
+            setLoadingMatches(false);
+          })
+          .catch((err) => {
+            console.error(err);
+            setLoadingMatches(false);
+          });
+      }
+    }
+  }, [preselectedMatch, loading, challenges.length]);
 
   useEffect(() => {
     setVisibleMatchesCount(4);
@@ -1037,7 +1082,10 @@ export default function ChallengesView() {
           </div>
         ) : (
           <button
-            onClick={() => setViewMode("list")}
+            onClick={() => {
+              setViewMode("list");
+              if (onClearPreselectedMatch) onClearPreselectedMatch();
+            }}
             className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-full transition shadow-sm text-sm font-semibold cursor-pointer"
           >
             Retour
@@ -1049,24 +1097,79 @@ export default function ChallengesView() {
         renderCreateForm()
       ) : (
         <div className="space-y-6">
+          {preselectedMatch && (
+            <div className="bg-indigo-50 border border-indigo-100 p-4 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-3 text-sm font-semibold text-indigo-950 animate-fade-in shadow-xs">
+              <div className="flex items-center gap-2">
+                <Info className="w-5 h-5 text-indigo-600 shrink-0" />
+                <span>
+                  Match ciblé : <strong className="text-indigo-950 font-bold">{preselectedMatch.match.homeTeam.shortName} vs {preselectedMatch.match.awayTeam.shortName}</strong>
+                </span>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setViewMode("create");
+                    setSelectedCompId(preselectedMatch.competitionId);
+                    setSelectedMatch(preselectedMatch.match);
+                    setIsTournamentSelected(false);
+                    setNewTitle(`Défi: ${preselectedMatch.match.homeTeam.shortName} vs ${preselectedMatch.match.awayTeam.shortName}`);
+                    if (competitions.length === 0) loadCompetitions();
+                  }}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-1.5 px-3 rounded-lg shadow-sm transition cursor-pointer select-none"
+                >
+                  Nouveau Défi
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (onClearPreselectedMatch) onClearPreselectedMatch();
+                  }}
+                  className="bg-white hover:bg-gray-100 text-indigo-600 text-xs font-bold py-1.5 px-3 rounded-lg border border-indigo-100 shadow-xs transition cursor-pointer select-none"
+                >
+                  Effacer
+                </button>
+              </div>
+            </div>
+          )}
+
           {apiError && (
             <div className="bg-red-50 text-red-700 p-4 rounded-xl border border-red-200 text-sm font-semibold">
               {apiError}
             </div>
           )}
-          {challenges.length === 0 && !apiError && (
+          {((preselectedMatch 
+              ? challenges.filter(c => c.matchId === preselectedMatch.match.id) 
+              : challenges
+            ).length === 0) && !apiError && (
             <div className="text-center p-8 text-gray-500 bg-white rounded-xl shadow-sm border border-gray-100 flex flex-col items-center">
               <Trophy className="w-12 h-12 text-gray-300 mb-3" />
-              Aucun défi en cours. Soit le premier à en créer un !
+              {preselectedMatch 
+                ? "Aucun défi en cours pour ce match."
+                : "Aucun défi en cours. Soit le premier à en créer un !"}
               <button
-                onClick={handleCreateView}
-                className="mt-4 text-emerald-600 font-bold hover:underline"
+                onClick={() => {
+                  if (preselectedMatch) {
+                    setViewMode("create");
+                    setSelectedCompId(preselectedMatch.competitionId);
+                    setSelectedMatch(preselectedMatch.match);
+                    setIsTournamentSelected(false);
+                    setNewTitle(`Défi: ${preselectedMatch.match.homeTeam.shortName} vs ${preselectedMatch.match.awayTeam.shortName}`);
+                    if (competitions.length === 0) loadCompetitions();
+                  } else {
+                    handleCreateView();
+                  }
+                }}
+                className="mt-4 text-emerald-600 font-bold hover:underline cursor-pointer"
               >
                 Créer un défi ici
               </button>
             </div>
           )}
-          {Array.isArray(challenges) && challenges.map((challenge) => {
+          {Array.isArray(challenges) && (preselectedMatch
+            ? challenges.filter((c) => c.matchId === preselectedMatch.match.id)
+            : challenges
+          ).map((challenge) => {
             const isCreator = challenge.creatorId === userId;
 
             return (

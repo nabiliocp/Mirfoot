@@ -2,7 +2,11 @@ import { useEffect, useState } from 'react';
 import { Match, Competition } from '../types';
 import { AlertCircle, Clock, Search, ChevronRight } from 'lucide-react';
 
-export default function MatchesView() {
+interface MatchesViewProps {
+  onPronoClick?: (match: Match, competitionId: number) => void;
+}
+
+export default function MatchesView({ onPronoClick }: MatchesViewProps) {
   const [competitions, setCompetitions] = useState<Competition[]>([]);
   const [selectedCompId, setSelectedCompId] = useState<number | null>(null);
   const [matches, setMatches] = useState<Match[]>([]);
@@ -113,7 +117,10 @@ export default function MatchesView() {
             </div>
 
             <div className="mt-4 pt-4 border-t border-gray-50 flex justify-center">
-              <button className="text-sm font-semibold text-emerald-600 hover:text-emerald-700 flex items-center gap-1 transition-all cursor-pointer hover:scale-105 active:scale-95">
+              <button 
+                onClick={() => onPronoClick?.(match, selectedCompId!)}
+                className="text-sm font-semibold text-emerald-600 hover:text-emerald-700 flex items-center gap-1 transition-all cursor-pointer hover:scale-105 active:scale-95"
+              >
                 Faire mon prono <ChevronRight className="w-4 h-4" />
               </button>
             </div>
