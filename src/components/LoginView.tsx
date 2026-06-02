@@ -1,34 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { supabase } from '../lib/supabase';
 import { AlertCircle, User, Mail, Lock, Shirt } from 'lucide-react';
 // @ts-ignore
 import logoImage from '../assets/images/pig_football_logo_1780308392869.png';
-
-function checkIsInAppBrowser(): boolean {
-  if (typeof window === 'undefined') return false;
-  const ua = window.navigator.userAgent || window.navigator.vendor || '';
-  
-  const rules = [
-    'FBAN', // Facebook App iOS
-    'FBAV', // Facebook App Android
-    'Instagram', // Instagram App
-    'WhatsApp', // WhatsApp App
-    'LinkedInApp', // LinkedIn App
-    'Messenger', // Messenger App
-    'Telegram', // Telegram Webview
-    'Line/', // Line App
-    'WeChat', // WeChat App
-    'wv', // Android WebView
-    // iOS WebView detection (Safari is absent but iPhone/iPad is present)
-    ((ua.includes('iPhone') || ua.includes('iPad') || ua.includes('iPod')) && !ua.includes('Safari'))
-  ];
-  
-  return rules.some(rule => {
-    if (typeof rule === 'boolean') return rule;
-    return ua.includes(rule);
-  });
-}
 
 const EMOJIS = ['👽', '🤓', '😎', '😜', '⚽', '🏆', '🔥', '👑'];
 const JERSEY_COLORS = ['#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#ffffff', '#000000'];
@@ -44,59 +19,13 @@ export default function LoginView() {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
-  const [isExchangeLoading, setIsExchangeLoading] = useState(false);
-  const [webViewWarning, setWebViewWarning] = useState(false);
-  const [generalTimeoutWarning, setGeneralTimeoutWarning] = useState(false);
-  const [isInAppBrowser, setIsInAppBrowser] = useState(false);
-
-  useEffect(() => {
-    const isAppBrowser = checkIsInAppBrowser();
-    setIsInAppBrowser(isAppBrowser);
-
-    const params = new URLSearchParams(window.location.search);
-    const hash = window.location.hash || '';
-    const hashParams = new URLSearchParams(hash.startsWith('#') ? hash.substring(1) : hash);
-    
-    const error = params.get('error') || hashParams.get('error');
-    const errorDescription = params.get('error_description') || hashParams.get('error_description');
-    
-    if (error) {
-      setErrorMsg(`Erreur d'authentification : ${decodeURIComponent(errorDescription || error)}`);
-      return;
-    }
-
-    const hasCode = params.has('code');
-    const hasToken = hashParams.has('access_token');
-
-    if (hasCode || hasToken) {
-      setIsExchangeLoading(true);
-      
-      // If we are in an in-app browser, we flag the warning after 4 seconds because session exchange will fail or get stuck
-      // If we are in a normal browser like Chrome, we DO NOT show the in-app browser warning. 
-      // We only show a gentle timeout reminder after 15 seconds.
-      const timer = setTimeout(() => {
-        setIsExchangeLoading(false);
-        if (isAppBrowser) {
-          setWebViewWarning(true);
-        } else {
-          setGeneralTimeoutWarning(true);
-        }
-      }, isAppBrowser ? 4000 : 15000);
-
-      return () => clearTimeout(timer);
-    }
-  }, []);
 
   const handleGoogleLogin = async () => {
     if (!supabase) return;
-    const cleanRedirectUrl = window.location.href.split('?')[0].split('#')[0];
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: cleanRedirectUrl,
-        queryParams: {
-          prompt: 'select_account'
-        }
+        redirectTo: window.location.origin
       }
     });
     if (error) setErrorMsg(error.message);
@@ -181,66 +110,6 @@ export default function LoginView() {
           <div className="bg-emerald-50 text-emerald-700 p-3 rounded-xl text-sm mb-4 border border-emerald-100 flex items-center gap-2 text-left">
             <Mail className="w-4 h-4 flex-shrink-0" />
             <span>{successMsg}</span>
-          </div>
-        )}
-
-        {isInAppBrowser && !isExchangeLoading && !webViewWarning && (
-          <div className="bg-amber-50 text-amber-900 p-4 rounded-2xl text-xs mb-5 border border-amber-200 text-left space-y-2 animate-in fade-in duration-300">
-            <div className="flex items-center gap-1.5 text-amber-800 font-bold">
-              <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0" />
-              <span>Attention : Navigateur WhatsApp / Instagram détecté</span>
-            </div>
-            <p className="text-gray-600 leading-relaxed">
-              Google bloque la connexion directe si tu ouvres ce lien depuis l'application elle-même. Pour vous connecter sans souci :
-            </p>
-            <div className="bg-white p-3 rounded-xl border border-amber-100 text-gray-700 space-y-1 font-semibold text-[11px] leading-relaxed">
-              <p>👉 Clique sur les <strong>3 petits points en haut à droite</strong> (ou l'icône de partage/boussole) et choisis <strong>"Ouvrir dans Chrome"</strong> ou <strong>"Ouvrir dans Safari"</strong>.</p>
-            </div>
-          </div>
-        )}
-
-        {isExchangeLoading && (
-          <div className="bg-emerald-50 text-emerald-800 p-4 rounded-xl text-sm mb-5 border border-emerald-100 flex flex-col items-center gap-2 text-center animate-pulse">
-            <svg className="animate-spin h-6 w-6 text-emerald-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
-            <span className="font-bold">Finalisation de la connexion avec Google...</span>
-            <span className="text-xs text-gray-500">Un instant, nous validons tes accès de prono !</span>
-          </div>
-        )}
-
-        {webViewWarning && (
-          <div className="bg-amber-50 text-amber-900 p-4 rounded-2xl text-xs mb-5 border border-amber-200 text-left space-y-2">
-            <div className="flex items-center gap-1.5 text-amber-700 font-bold text-sm">
-              <AlertCircle className="w-4 h-4 flex-shrink-0" />
-              <span>Connexion bloquée par ton application</span>
-            </div>
-            <p className="text-gray-600 leading-relaxed">
-              Il semble que tu sois dans le navigateur intégré de ton application (par exemple <strong>WhatsApp, Facebook ou Instagram</strong>). Ces applications bloquent par sécurité la connexion directe avec Google.
-            </p>
-            <div className="bg-white p-3 rounded-xl border border-amber-100 space-y-1 text-gray-600 font-medium my-1.5">
-              <p className="font-bold text-gray-700">👉 Pour te connecter avec Google :</p>
-              <p className="pl-2">1. Clique sur les <strong>3 points</strong> (ou l'icône de partage/boussole) en haut à droite.</p>
-              <p className="pl-2">2. Choisis <strong>"Ouvrir dans Chrome"</strong> (ou Safari, navigateur externe).</p>
-              <p className="pl-2">3. Reconnecte-toi sur ce vrai navigateur !</p>
-            </div>
-            <p className="text-gray-500 italic text-[10px] text-center pt-1 leading-normal">
-              Astuce : Tu peux aussi utiliser la connexion par <strong>Lien Magique</strong> ci-dessous qui fonctionne directement partout sans quitter WhatsApp !
-            </p>
-          </div>
-        )}
-
-        {generalTimeoutWarning && (
-          <div className="bg-amber-50 text-amber-900 p-4 rounded-xl text-sm mb-5 border border-amber-200 text-left space-y-1.5 flex flex-col">
-            <div className="flex items-center gap-1.5 text-amber-700 font-bold">
-              <AlertCircle className="w-4.5 h-4.5 flex-shrink-0" />
-              <span>La connexion prend un peu de temps...</span>
-            </div>
-            <p className="text-gray-600 text-xs leading-relaxed">
-              La validation de votre session Google prend plus de temps que prévu. 
-              Si vous n'êtes pas redirigé d'ici quelques instants, vous pouvez essayer de <strong>rafraîchir la page</strong> ou d'utiliser le <strong>Lien Magique</strong> par email ci-dessous.
-            </p>
           </div>
         )}
 
