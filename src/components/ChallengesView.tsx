@@ -49,6 +49,7 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
   const [viewMode, setViewMode] = useState<"list" | "create">("list");
   const [apiError, setApiError] = useState<string | null>(null);
   const [modalMatches, setModalMatches] = useState<Match[]>([]);
+  const [modalMatchesError, setModalMatchesError] = useState<string | null>(null);
   const [loadingModalMatches, setLoadingModalMatches] = useState(false);
   
   // Search challenge states
@@ -424,8 +425,12 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
     const targetChallenge = selectedChallenge || (activeModal && activeModal.type === "details" ? activeModal.challenge : null);
     if (targetChallenge && targetChallenge.competitionId) {
       setLoadingModalMatches(true);
+      setModalMatchesError(null);
       fetch(`/api/matches/${targetChallenge.competitionId}`)
-        .then((res) => res.json())
+        .then((res) => {
+          if (!res.ok) throw new Error("Erreur api");
+          return res.json();
+        })
         .then((data) => {
           let fetchedMatches = data.matches || [];
           if (targetChallenge.matchId && targetChallenge.matchId !== 0) {
@@ -436,10 +441,12 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
         })
         .catch((err) => {
           console.error(err);
+          setModalMatchesError("Données temporairement indisponibles.");
           setLoadingModalMatches(false);
         });
     } else {
       setModalMatches([]);
+      setModalMatchesError(null);
     }
   }, [activeModal, selectedChallenge]);
 
@@ -1503,6 +1510,8 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
                 <div className="flex justify-center py-16">
                   <Clock className="w-8 h-8 text-emerald-500 animate-spin" />
                 </div>
+              ) : modalMatchesError ? (
+                <p className="text-center py-12 text-sm text-red-500 italic bg-red-50 border border-red-100 rounded-2xl">{modalMatchesError}</p>
               ) : challenge.matchId !== 0 ? (
                 // Single match predictions
                 <div>
@@ -1748,6 +1757,8 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
                 <div className="flex justify-center py-16">
                   <Clock className="w-8 h-8 text-emerald-500 animate-spin" />
                 </div>
+              ) : modalMatchesError ? (
+                <p className="text-center py-12 text-sm text-red-500 italic bg-red-50 border border-red-100 rounded-2xl">{modalMatchesError}</p>
               ) : modalMatches.length === 0 ? (
                 <p className="text-center py-12 text-gray-400 text-sm italic">Aucune information de match disponible.</p>
               ) : (
