@@ -40,12 +40,17 @@ export default function LoginView() {
 
     if (hasCode || hasToken) {
       setIsExchangeLoading(true);
-      // Give Supabase client 3.5 seconds to validate session.
-      // If it fails or is blocked on mobile WebView, we flag the warning.
-      const timer = setTimeout(() => {
-        setIsExchangeLoading(false);
-        setWebViewWarning(true);
-      }, 3500);
+      // Give Supabase client time to validate session.
+      // If it fails or is blocked on mobile WebView, we flag the warning after a longer delay (10s).
+      const timer = setTimeout(async () => {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+          setIsExchangeLoading(false);
+          setWebViewWarning(true);
+        } else {
+          setIsExchangeLoading(false);
+        }
+      }, 10000);
 
       return () => clearTimeout(timer);
     }
