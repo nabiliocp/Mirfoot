@@ -125,9 +125,13 @@ export default function App() {
         .single()
         .then(({ data }) => {
           if (data) {
-            setInviteChallengeName(
-              `${data.title} (${data.match_home_team} vs ${data.match_away_team})`,
-            );
+            if (data.match_home_team === "Comp" && data.match_away_team === "Comp") {
+              setInviteChallengeName(`${data.title} (Compétition)`);
+            } else {
+              setInviteChallengeName(
+                `${data.title} (${data.match_home_team} vs ${data.match_away_team})`,
+              );
+            }
           }
           setLoadingInvite(false);
           // Only show invite screen if no session
