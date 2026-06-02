@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { supabase } from '../lib/supabase';
 import { AlertCircle, User, Mail, Lock, Shirt } from 'lucide-react';
@@ -19,50 +19,13 @@ export default function LoginView() {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
-  const [isExchangeLoading, setIsExchangeLoading] = useState(false);
-  const [webViewWarning, setWebViewWarning] = useState(false);
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const hash = window.location.hash || '';
-    const hashParams = new URLSearchParams(hash.startsWith('#') ? hash.substring(1) : hash);
-    
-    const error = params.get('error') || hashParams.get('error');
-    const errorDescription = params.get('error_description') || hashParams.get('error_description');
-    
-    if (error) {
-      setErrorMsg(`Erreur d'authentification : ${decodeURIComponent(errorDescription || error)}`);
-      return;
-    }
-
-    const hasCode = params.has('code');
-    const hasToken = hashParams.has('access_token');
-
-    if (hasCode || hasToken) {
-      setIsExchangeLoading(true);
-      // Give Supabase client time to validate session.
-      // If it fails or is blocked on mobile WebView, we flag the warning after a longer delay (10s).
-      const timer = setTimeout(async () => {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) {
-          setIsExchangeLoading(false);
-          setWebViewWarning(true);
-        } else {
-          setIsExchangeLoading(false);
-        }
-      }, 10000);
-
-      return () => clearTimeout(timer);
-    }
-  }, []);
 
   const handleGoogleLogin = async () => {
     if (!supabase) return;
-    const cleanRedirectUrl = window.location.href.split('?')[0].split('#')[0];
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: cleanRedirectUrl
+        redirectTo: window.location.origin
       }
     });
     if (error) setErrorMsg(error.message);
@@ -147,38 +110,6 @@ export default function LoginView() {
           <div className="bg-emerald-50 text-emerald-700 p-3 rounded-xl text-sm mb-4 border border-emerald-100 flex items-center gap-2 text-left">
             <Mail className="w-4 h-4 flex-shrink-0" />
             <span>{successMsg}</span>
-          </div>
-        )}
-
-        {isExchangeLoading && (
-          <div className="bg-emerald-50 text-emerald-800 p-4 rounded-xl text-sm mb-5 border border-emerald-100 flex flex-col items-center gap-2 text-center animate-pulse">
-            <svg className="animate-spin h-6 w-6 text-emerald-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
-            <span className="font-bold">Finalisation de la connexion avec Google...</span>
-            <span className="text-xs text-gray-500">Un instant, nous validons tes accès de prono !</span>
-          </div>
-        )}
-
-        {webViewWarning && (
-          <div className="bg-amber-50 text-amber-900 p-4 rounded-2xl text-xs mb-5 border border-amber-200 text-left space-y-2">
-            <div className="flex items-center gap-1.5 text-amber-700 font-bold text-sm">
-              <AlertCircle className="w-4 h-4 flex-shrink-0" />
-              <span>Connexion bloquée par ton application</span>
-            </div>
-            <p className="text-gray-600 leading-relaxed">
-              Il semble que tu sois dans le navigateur intégré de ton application (par exemple <strong>WhatsApp, Facebook ou Instagram</strong>). Ces applications bloquent par sécurité la connexion directe avec Google.
-            </p>
-            <div className="bg-white p-3 rounded-xl border border-amber-100 space-y-1 text-gray-600 font-medium my-1.5">
-              <p className="font-bold text-gray-700">👉 Pour te connecter avec Google :</p>
-              <p className="pl-2">1. Clique sur les <strong>3 points</strong> (ou l'icône de partage/boussole) en haut à droite.</p>
-              <p className="pl-2">2. Choisis <strong>"Ouvrir dans Chrome"</strong> (ou Safari, navigateur externe).</p>
-              <p className="pl-2">3. Reconnecte-toi sur ce vrai navigateur !</p>
-            </div>
-            <p className="text-gray-500 italic text-[10px] text-center pt-1 leading-normal">
-              Astuce : Tu peux aussi utiliser la connexion par <strong>Lien Magique</strong> ci-dessous qui fonctionne directement partout sans quitter WhatsApp !
-            </p>
           </div>
         )}
 
