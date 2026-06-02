@@ -151,56 +151,6 @@ async function startServer() {
      }
   });
 
-  // Search challenge by code (bypasses RLS utilizing the service role key)
-  app.get("/api/challenges/search/:code", async (req, res) => {
-    if (!supabase) return res.status(500).json({ error: "Configuration Supabase manquante." });
-    try {
-      const { code } = req.params;
-      if (!code) {
-        return res.status(400).json({ error: "Code requis" });
-      }
-
-      const cleanCode = code.trim().toUpperCase();
-
-      // Query challenges where rules matches cleanCode OR id matches cleanCode (if cleanCode is valid uuid)
-      let query = supabase.from("challenges").select("*");
-      
-      // If code looks like a UUID
-      const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(cleanCode);
-      if (isUUID) {
-        query = query.or(`rules.eq.${cleanCode},id.eq.${cleanCode}`);
-      } else {
-        query = query.eq("rules", cleanCode);
-      }
-
-      const { data, error } = await query;
-
-      if (error) {
-        console.error("Database error while searching challenge:", error);
-        return res.status(500).json({ error: "Erreur lors de la recherche du défi" });
-      }
-
-      if (!data || data.length === 0) {
-        return res.status(404).json({ error: "Défi introuvable avec ce code." });
-      }
-
-      // Fetch creator's username to enrich response
-      const challengeObj = data[0];
-      const { data: creatorProfile } = await supabase
-        .from("profiles")
-        .select("username")
-        .eq("id", challengeObj.creator_id)
-        .single();
-
-      res.json({
-        ...challengeObj,
-        creator_username: creatorProfile?.username || "Inconnu"
-      });
-    } catch (err: any) {
-      console.error("Error in search endpoint:", err);
-      res.status(500).json({ error: "Erreur interne du serveur: " + err.message });
-    }
-  });
 
   // Vite middleware
   if (process.env.NODE_ENV !== "production") {

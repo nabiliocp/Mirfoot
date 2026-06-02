@@ -125,5 +125,36 @@ begin
 end;
 $$ language plpgsql security definer;
 
--- 6. Insert some sample mock data (Optional)
+-- 7. Helper function to search challenge by code (bypassing RLS so anyone can search)
+create or replace function public.get_challenge_by_code(search_code text)
+returns table (
+  id uuid,
+  competition_id bigint,
+  match_id bigint,
+  match_home_team text,
+  match_away_team text,
+  match_date timestamp with time zone,
+  creator_id uuid,
+  title text,
+  rules text,
+  point_rules jsonb,
+  locked boolean,
+  resolved boolean,
+  created_at timestamp with time zone,
+  creator_username text
+) as $$
+begin
+  return query
+  select 
+    c.id, c.competition_id, c.match_id, c.match_home_team, c.match_away_team, c.match_date, 
+    c.creator_id, c.title, c.rules, c.point_rules, c.locked, c.resolved, c.created_at,
+    p.username as creator_username
+  from public.challenges c
+  left join public.profiles p on p.id = c.creator_id
+  where c.rules = search_code or c.id::text = search_code
+  limit 1;
+end;
+$$ language plpgsql security definer;
+
+-- 8. Insert some sample mock data (Optional)
 -- insert into public.challenges (match_id, title, point_rules) values ...
