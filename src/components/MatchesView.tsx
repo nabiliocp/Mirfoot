@@ -12,13 +12,15 @@ export default function MatchesView({ onPronoClick }: MatchesViewProps) {
   const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [retryTrigger, setRetryTrigger] = useState(0);
 
   useEffect(() => {
+    setLoading(true);
+    setError(null);
     fetch('/api/competitions')
       .then(res => {
         if (!res.ok) {
-          if (res.status === 401) throw new Error("Clé d'API Football Data manquante.");
-          throw new Error("Erreur réseau");
+          throw new Error("Temporairement indisponible");
         }
         return res.json();
       })
@@ -33,22 +35,26 @@ export default function MatchesView({ onPronoClick }: MatchesViewProps) {
         setLoading(false);
       })
       .catch(err => {
-        setError(err.message);
+        setError("Chargement temporairement indisponible.");
         setLoading(false);
       });
-  }, []);
+  }, [retryTrigger]);
 
   useEffect(() => {
     if (!selectedCompId) return;
     setLoading(true);
     fetch(`/api/matches/${selectedCompId}`)
-      .then(res => res.json())
+      .then(res => {
+        if (!res.ok) throw new Error("Temporairement indisponible");
+        return res.json();
+      })
       .then(data => {
         setMatches(data.matches || []);
         setLoading(false);
       })
       .catch(err => {
         console.error(err);
+        setError("Chargement temporairement indisponible.");
         setLoading(false);
       });
   }, [selectedCompId]);
@@ -59,12 +65,22 @@ export default function MatchesView({ onPronoClick }: MatchesViewProps) {
 
   if (error) {
     return (
-      <div className="bg-red-50 text-red-700 p-6 rounded-2xl border border-red-100 flex flex-col items-center text-center mt-8">
-        <AlertCircle className="w-12 h-12 mb-4 text-red-500" />
-        <h3 className="font-bold text-lg mb-2">Configuration requise</h3>
-        <p className="text-sm">
-          {error} Veuillez ajouter <span className="font-mono bg-red-100 px-1 rounded">FOOTBALL_DATA_API_KEY</span> dans les 'Secrets' via le menu de Google AI Studio pour récupérer les compétitions en direct. Vous pouvez obtenir une clé gratuite sur football-data.org.
+      <div className="bg-emerald-50/50 text-emerald-850 p-8 rounded-2xl border border-emerald-100 flex flex-col items-center text-center mt-8 space-y-4">
+        <Clock className="w-12 h-12 text-emerald-600 animate-pulse" />
+        <h3 className="font-bold text-lg text-emerald-950">Mise à jour des matchs en cours...</h3>
+        <p className="text-sm max-w-md text-emerald-800 font-medium leading-relaxed">
+          Le service de données footballistiques est momentanément surchargé par un grand nombre de connexions. Vos défis et pronostics restent actifs et sécurisés. Veuillez patienter une minute puis réessayer le chargement.
         </p>
+        <button
+          onClick={() => {
+            setLoading(true);
+            setError(null);
+            setRetryTrigger(prev => prev + 1);
+          }}
+          className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-5 rounded-xl text-sm transition-all shadow-sm shadow-emerald-700/20 active:scale-95 cursor-pointer mt-2"
+        >
+          Réessayer le chargement
+        </button>
       </div>
     );
   }

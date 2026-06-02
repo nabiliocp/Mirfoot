@@ -489,7 +489,7 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
     
     let desc = "";
     if (challenge.matchId === 0) {
-      const comp = competitions.find(c => c.id === challenge.competitionId);
+      const comp = competitions.find(c => String(c.id) === String(challenge.competitionId));
       desc = `Rejoins mon défi sur Mirfoot : "${challenge.title}" pour toute la compétition ${comp?.name || "de football"} !\n\nParticipe ici : ${inviteUrl}`;
     } else {
       desc = `Rejoins mon défi sur Mirfoot : "${challenge.title}" pour le match ${challenge.matchHomeTeam} vs ${challenge.matchAwayTeam} !\n\nParticipe ici : ${inviteUrl}`;
@@ -536,7 +536,7 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
     const title = newTitle.trim()
       ? newTitle
       : selectedMatch.id === 0 
-        ? `Défi: ${competitions.find(c => c.id === selectedCompId)?.name || "Compétition"}`
+        ? `Défi: ${competitions.find(c => String(c.id) === String(selectedCompId))?.name || "Compétition"}`
         : `Défi: ${selectedMatch.homeTeam.shortName} vs ${selectedMatch.awayTeam.shortName}`;
 
     const savedRules: PointRules & {
@@ -887,7 +887,7 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
                   </div>
                   <div className="font-bold text-gray-800">
                     {selectedMatch.id === 0 
-                      ? competitions.find(c => c.id === selectedCompId)?.name || "Toute la compétition"
+                      ? competitions.find(c => String(c.id) === String(selectedCompId))?.name || "Toute la compétition"
                       : `${selectedMatch.homeTeam.shortName} vs ${selectedMatch.awayTeam.shortName}`
                     }
                   </div>
@@ -911,7 +911,7 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
                 value={newTitle}
                 onChange={(e) => setNewTitle(e.target.value)}
                 placeholder={selectedMatch.id === 0 
-                  ? `Défi: ${competitions.find(c => c.id === selectedCompId)?.name || "Compétition"}`
+                  ? `Défi: ${competitions.find(c => String(c.id) === String(selectedCompId))?.name || "Compétition"}`
                   : `Défi: ${selectedMatch.homeTeam.shortName} vs ${selectedMatch.awayTeam.shortName}`}
                 className="w-full border border-gray-200 p-3 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none placeholder-gray-400 text-sm"
               />
@@ -960,50 +960,21 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
     // If they already subitted, use their previous subitted values, else use the active form edits
     const activeForm = userPred || predictionForms[challenge.id] || {};
 
-    const isMatchWithin24h = challenge.matchDate
-      ? new Date(challenge.matchDate).getTime() - new Date().getTime() <=
-        24 * 60 * 60 * 1000
-      : false;
-    
-    // Prediction is only open if it is within 24h before the match AND not in the past.
-    // The user said: "ne peuvent donner pronostic que 24 avant".
-    const isMatchInPast = challenge.matchDate 
-      ? new Date(challenge.matchDate).getTime() < new Date().getTime()
-      : false;
-      
-    // Wait, the user said "ne peuvent donner pronostic que 24 avant". 
-    // This usually means predictions open at 24h before.
-    // So the condition should be:
-    // isOpen = (timeLeft <= 24 hours AND timeLeft > 0)
     const timeLeft = challenge.matchDate ? new Date(challenge.matchDate).getTime() - new Date().getTime() : Infinity;
-    const isOpen = timeLeft <= 24 * 60 * 60 * 1000 && timeLeft > 0 && !isLocked;
+    const isOpen = timeLeft > 0 && !isLocked;
 
     return (
       <div className="space-y-4 bg-gray-50 p-4 rounded-xl border border-gray-100 mt-4">
-        {!isLocked && (timeLeft > 24 * 60 * 60 * 1000) && !userPred && (
-          <div className="bg-indigo-50 text-indigo-700 p-3 rounded-lg text-xs font-semibold flex items-center gap-2 mb-2 border border-indigo-100">
-            <Clock className="w-4 h-4 shrink-0" />
-            Les pronostics ouvrent 24h avant le match, soit le{" "}
-            {new Date(
-              new Date(challenge.matchDate!).getTime() - 24 * 60 * 60 * 1000,
-            ).toLocaleString("fr-FR", {
-              weekday: "short",
-              day: "numeric",
-              hour: "2-digit",
-              minute: "2-digit",
-            })}
-            .
-          </div>
-        )}
-
         <div className="grid grid-cols-2 gap-4">
           <div className="text-center flex flex-col items-center">
-            <img 
-              src={getFlagUrl(challenge.matchHomeTeam || "", (challenge.pointRules as any)?.match_metadata?.home_crest)} 
-              alt="" 
-              className="w-10 h-10 object-contain mb-1.5 rounded-sm shadow-sm"
-              onError={(e) => { e.currentTarget.style.display = 'none'; }}
-            />
+            <div className="w-10 h-10 flex items-center justify-center bg-white border border-gray-200 rounded-full overflow-hidden shrink-0 shadow-xs mb-1.5 p-1">
+              <img 
+                src={getFlagUrl(challenge.matchHomeTeam || "", (challenge.pointRules as any)?.match_metadata?.home_crest)} 
+                alt="" 
+                className="max-w-full max-h-full object-contain"
+                onError={(e) => { e.currentTarget.src = "https://flagcdn.com/w80/un.png"; }}
+              />
+            </div>
             <label className="block text-xs font-bold text-gray-700 mb-2 truncate max-w-[120px]">
               {challenge.matchHomeTeam}
             </label>
@@ -1022,12 +993,14 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
             />
           </div>
           <div className="text-center flex flex-col items-center">
-            <img 
-              src={getFlagUrl(challenge.matchAwayTeam || "", (challenge.pointRules as any)?.match_metadata?.away_crest)} 
-              alt="" 
-              className="w-10 h-10 object-contain mb-1.5 rounded-sm shadow-sm"
-              onError={(e) => { e.currentTarget.style.display = 'none'; }}
-            />
+            <div className="w-10 h-10 flex items-center justify-center bg-white border border-gray-200 rounded-full overflow-hidden shrink-0 shadow-xs mb-1.5 p-1">
+              <img 
+                src={getFlagUrl(challenge.matchAwayTeam || "", (challenge.pointRules as any)?.match_metadata?.away_crest)} 
+                alt="" 
+                className="max-w-full max-h-full object-contain"
+                onError={(e) => { e.currentTarget.src = "https://flagcdn.com/w80/un.png"; }}
+              />
+            </div>
             <label className="block text-xs font-bold text-gray-700 mb-2 truncate max-w-[120px]">
               {challenge.matchAwayTeam}
             </label>
@@ -1220,20 +1193,21 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
               </button>
             </div>
           )}
-          {Array.isArray(challenges) && (preselectedMatch
-            ? challenges.filter((c) => c.matchId === preselectedMatch.match.id)
-            : challenges
-          ).map((challenge) => {
-            const isCreator = challenge.creatorId === userId;
-            const upcomingMatch = upcomingMatchesByComp[challenge.competitionId];
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {Array.isArray(challenges) && (preselectedMatch
+              ? challenges.filter((c) => c.matchId === preselectedMatch.match.id)
+              : challenges
+            ).map((challenge) => {
+              const isCreator = challenge.creatorId === userId;
+              const upcomingMatch = upcomingMatchesByComp[challenge.competitionId];
 
-            return (
-              <div
-                id={`challenge-${challenge.id}`}
-                key={challenge.id}
-                className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 transition-all duration-500 cursor-pointer hover:shadow-md hover:border-gray-200"
-                onClick={() => setActiveModal({ type: 'details', challenge })}
-              >
+              return (
+                <div
+                  id={`challenge-${challenge.id}`}
+                  key={challenge.id}
+                  className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 transition-all duration-500 cursor-pointer hover:shadow-md hover:border-gray-200 flex flex-col justify-between h-full"
+                  onClick={() => setActiveModal({ type: 'details', challenge })}
+                >
                 <div className="flex justify-between items-start mb-1">
                   <h3 className="font-bold text-gray-800 text-lg flex-1 mr-2 capitalize">
                     {challenge.title}
@@ -1259,7 +1233,7 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
                 {/* Competition and Date Metadata (Single match or full competition) */}
                 {challenge.matchId !== 0 ? (
                   (() => {
-                    const comp = competitions.find(c => c.id === challenge.competitionId);
+                    const comp = competitions.find(c => String(c.id) === String(challenge.competitionId));
                     return (
                       <div className="text-xs text-indigo-700 bg-indigo-50/50 px-2.5 py-1.5 rounded-xl border border-indigo-100/40 font-bold mb-3 mt-1 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
                         <span className="truncate max-w-[190px] font-extrabold text-indigo-950 uppercase tracking-wide text-[10.5px]">🎮 Compétition: {comp?.name || "Match Unique"}</span>
@@ -1280,7 +1254,7 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
                   })()
                 ) : (
                   (() => {
-                    const comp = competitions.find(c => c.id === challenge.competitionId);
+                    const comp = competitions.find(c => String(c.id) === String(challenge.competitionId));
                     const startDate = (comp as any)?.currentSeason?.startDate;
                     const endDate = (comp as any)?.currentSeason?.endDate;
                     const dateStr = startDate && endDate 
@@ -1313,21 +1287,25 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
                       <div className="flex items-center gap-3">
                         <div className="flex items-center gap-1.5 min-w-0 flex-1 justify-end">
                           <span className="font-bold text-xs text-slate-800 truncate">{upcomingMatch.homeTeam.shortName || upcomingMatch.homeTeam.name}</span>
-                          <img 
-                            src={getFlagUrl(upcomingMatch.homeTeam.name, upcomingMatch.homeTeam.crest)} 
-                            alt="" 
-                            className="w-5 h-5 object-contain rounded-sm shadow-sm"
-                            onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                          />
+                          <div className="w-6 h-6 flex items-center justify-center bg-white border border-gray-200 rounded-full overflow-hidden shrink-0 shadow-[0_1px_2px_rgba(0,0,0,0.05)] p-0.5">
+                            <img 
+                              src={getFlagUrl(upcomingMatch.homeTeam.name, upcomingMatch.homeTeam.crest)} 
+                              alt="" 
+                              className="max-w-full max-h-full object-contain"
+                              onError={(e) => { e.currentTarget.src = "https://flagcdn.com/w80/un.png"; }}
+                            />
+                          </div>
                         </div>
                         <span className="text-[10px] font-black text-slate-400 shrink-0">VS</span>
                         <div className="flex items-center gap-1.5 min-w-0 flex-1">
-                          <img 
-                            src={getFlagUrl(upcomingMatch.awayTeam.name, upcomingMatch.awayTeam.crest)} 
-                            alt="" 
-                            className="w-5 h-5 object-contain rounded-sm shadow-sm"
-                            onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                          />
+                          <div className="w-6 h-6 flex items-center justify-center bg-white border border-gray-200 rounded-full overflow-hidden shrink-0 shadow-[0_1px_2px_rgba(0,0,0,0.05)] p-0.5">
+                            <img 
+                              src={getFlagUrl(upcomingMatch.awayTeam.name, upcomingMatch.awayTeam.crest)} 
+                              alt="" 
+                              className="max-w-full max-h-full object-contain"
+                              onError={(e) => { e.currentTarget.src = "https://flagcdn.com/w80/un.png"; }}
+                            />
+                          </div>
                           <span className="font-bold text-xs text-slate-800 truncate">{upcomingMatch.awayTeam.shortName || upcomingMatch.awayTeam.name}</span>
                         </div>
                       </div>
@@ -1396,6 +1374,7 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
               </div>
             );
           })}
+          </div>
         </div>
       )}
       {activeModal && (
@@ -1437,10 +1416,10 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
                               const formMap = predictionForms[challengeId]?.matches || {};
                               const formMatch = formMap[m.id] || {};
                               
-                              // Check if predictions are open (less than 24h away and match hasn't started yet)
+                              // Check if predictions are open (match hasn't started yet and challenge is not resolved/locked)
                               const matchTime = new Date(m.utcDate).getTime();
                               const timeLeft = matchTime - new Date().getTime();
-                              const isOpen = timeLeft <= 24 * 60 * 60 * 1000 && timeLeft > 0 && !activeModal.challenge.locked && !activeModal.challenge.resolved;
+                              const isOpen = timeLeft > 0 && !activeModal.challenge.locked && !activeModal.challenge.resolved;
                               
                               const scoreHome = userPredMatch?.homeScore !== undefined ? userPredMatch.homeScore : formMatch.homeScore;
                               const scoreAway = userPredMatch?.awayScore !== undefined ? userPredMatch.awayScore : formMatch.awayScore;
@@ -1478,32 +1457,19 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
                                   <div className="flex items-center justify-between">
                                     {/* Home Team */}
                                     <div className="flex flex-col items-center flex-1 min-w-0">
-                                      <img 
-                                        src={getFlagUrl(m.homeTeam.name, m.homeTeam.crest)} 
-                                        alt="" 
-                                        className="w-10 h-10 object-contain mb-1 rounded-sm shadow-sm"
-                                        onError={(e) => { e.currentTarget.src = "https://flagcdn.com/w80/un.png"; }}
-                                      />
+                                      <div className="w-10 h-10 flex items-center justify-center bg-white border border-gray-200 rounded-full overflow-hidden shrink-0 shadow-xs mb-1 p-1">
+                                        <img 
+                                          src={getFlagUrl(m.homeTeam.name, m.homeTeam.crest)} 
+                                          alt="" 
+                                          className="max-w-full max-h-full object-contain"
+                                          onError={(e) => { e.currentTarget.src = "https://flagcdn.com/w80/un.png"; }}
+                                        />
+                                      </div>
                                       <span className="font-bold text-center text-[11px] text-gray-800 truncate w-full">{m.homeTeam.shortName || m.homeTeam.name}</span>
                                     </div>
                                     
-                                    {/* VS Section with custom tooltip trigger */}
-                                    <div 
-                                      className="relative flex px-1.5 justify-center items-center gap-1 group cursor-help"
-                                      onMouseEnter={() => {
-                                        if (timeLeft > 24 * 60 * 60 * 1000) {
-                                          setActiveTooltipId(m.id);
-                                        }
-                                      }}
-                                      onMouseLeave={() => {
-                                        setActiveTooltipId(null);
-                                      }}
-                                      onClick={() => {
-                                        if (timeLeft > 24 * 60 * 60 * 1000) {
-                                          setActiveTooltipId(prev => prev === m.id ? null : m.id);
-                                        }
-                                      }}
-                                    >
+                                    {/* VS Section */}
+                                    <div className="relative flex px-1.5 justify-center items-center gap-1">
                                        <input 
                                          type="number"
                                          min="0"
@@ -1521,24 +1487,18 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
                                          disabled={!isOpen || hasSubmitted}
                                          className="w-9 h-9 text-center text-xs font-bold border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 disabled:bg-gray-100 disabled:text-gray-400 select-none animate-fade-in"
                                        />
-
-                                       {/* Interactive tooltip shown when cursor hovers/focuses the closed prediction inputs */}
-                                       {timeLeft > 24 * 60 * 60 * 1000 && activeTooltipId === m.id && (
-                                         <div className="absolute bottom-full mb-2.5 left-1/2 -translate-x-1/2 bg-slate-900 border border-slate-800 text-white text-[10px] font-bold py-1.5 px-3 rounded-lg shadow-xl z-50 pointer-events-none transition-all duration-150 whitespace-nowrap">
-                                           Les pronostics ouvrent 24h avant le match
-                                           <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-900" />
-                                         </div>
-                                       )}
                                     </div>
                                     
                                     {/* Away Team */}
                                     <div className="flex flex-col items-center flex-1 min-w-0">
-                                      <img 
-                                        src={getFlagUrl(m.awayTeam.name, m.awayTeam.crest)} 
-                                        alt="" 
-                                        className="w-10 h-10 object-contain mb-1 rounded-sm shadow-sm"
-                                        onError={(e) => { e.currentTarget.src = "https://flagcdn.com/w80/un.png"; }}
-                                      />
+                                      <div className="w-10 h-10 flex items-center justify-center bg-white border border-gray-200 rounded-full overflow-hidden shrink-0 shadow-xs mb-1 p-1">
+                                        <img 
+                                          src={getFlagUrl(m.awayTeam.name, m.awayTeam.crest)} 
+                                          alt="" 
+                                          className="max-w-full max-h-full object-contain"
+                                          onError={(e) => { e.currentTarget.src = "https://flagcdn.com/w80/un.png"; }}
+                                        />
+                                      </div>
                                       <span className="font-bold text-center text-[11px] text-gray-800 truncate w-full">{m.awayTeam.shortName || m.awayTeam.name}</span>
                                     </div>
                                   </div>
@@ -1557,10 +1517,6 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
                                       >
                                         Valider mon pronostic
                                       </button>
-                                    ) : timeLeft > 24 * 60 * 60 * 1000 ? (
-                                      <div className="text-[10px] text-indigo-500 font-bold bg-indigo-50/30 py-1.5 rounded-lg border border-indigo-100/20">
-                                        En attente (ouvre à H-24)
-                                      </div>
                                     ) : (
                                       <div className="text-[10px] text-gray-400 bg-gray-50 font-bold p-1 rounded">
                                         Pronostics fermés
