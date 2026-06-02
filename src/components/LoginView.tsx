@@ -95,7 +95,7 @@ export default function LoginView() {
         <div className="flex flex-col items-center mb-6">
           <img src={logoImage} alt="Mirfoot Logo" className="w-20 h-20 object-cover rounded-2xl shadow-md mb-3 bg-white" />
           <h1 className="text-3xl font-extrabold text-emerald-600 mb-0 tracking-tight">Mirfoot</h1>
-          <div className="font-handwriting text-xl text-emerald-500 transform -rotate-3 mb-2">Halloufa 2026</div>
+          <div className="font-handwriting text-xl text-emerald-500 transform -rotate-3 mb-2">Halloufa world cup 2026</div>
           <p className="text-gray-500 text-sm font-medium">Rejoins tes amis et fais tes pronos !</p>
         </div>
 

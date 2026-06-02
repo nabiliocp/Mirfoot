@@ -62,6 +62,8 @@ export interface Match {
   utcDate: string;
   status: string;
   matchday: number;
+  stage?: string;
+  group?: string;
   homeTeam: {
     id: number;
     name: string;

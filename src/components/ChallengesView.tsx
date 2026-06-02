@@ -21,6 +21,7 @@ import {
   Trophy,
   Trash2,
   Edit2,
+  Calendar,
 } from "lucide-react";
 import { supabase } from "../lib/supabase";
 
@@ -41,6 +42,8 @@ export default function ChallengesView() {
   const [modalMatches, setModalMatches] = useState<Match[]>([]);
   const [loadingModalMatches, setLoadingModalMatches] = useState(false);
   const [currentUsername, setCurrentUsername] = useState<string>("Moi");
+  const [visibleMatchesCount, setVisibleMatchesCount] = useState<number>(4);
+  const [activeTooltipId, setActiveTooltipId] = useState<number | null>(null);
 
   const ruleLabels: Record<string, string> = {
     exact_score: "Score Exact",
@@ -174,6 +177,54 @@ export default function ChallengesView() {
     return "https://flagcdn.com/w80/un.png";
   };
 
+  const translateStage = (stage?: string, group?: string, matchday?: number) => {
+    if (!stage) return { name: "", type: "", isKnockout: false };
+    
+    const cleanStage = stage.toUpperCase().trim();
+    let stageName = "";
+    let isKnockout = false;
+    
+    switch (cleanStage) {
+      case "GROUP_STAGE":
+        stageName = group ? `Phase de Groupes (${group.replace("GROUP_", "Groupe ")})` : "Phase de Groupes";
+        if (matchday) stageName += ` - Journée ${matchday}`;
+        isKnockout = false;
+        break;
+      case "ROUND_OF_16":
+      case "LAST_16":
+        stageName = "Huitièmes de finale";
+        isKnockout = true;
+        break;
+      case "QUARTER_FINALS":
+        stageName = "Quarts de finale";
+        isKnockout = true;
+        break;
+      case "SEMI_FINALS":
+        stageName = "Demi-finales";
+        isKnockout = true;
+        break;
+      case "FINAL":
+        stageName = "Finale";
+        isKnockout = true;
+        break;
+      case "PLAYOFFS":
+        stageName = "Barrages / Playoffs";
+        isKnockout = true;
+        break;
+      default:
+        stageName = stage.toLowerCase().replace(/_/g, " ");
+        stageName = stageName.charAt(0).toUpperCase() + stageName.slice(1);
+        isKnockout = cleanStage.includes("FINAL") || cleanStage.includes("SEMI") || cleanStage.includes("QUARTER") || cleanStage.includes("ROUND") || cleanStage.includes("PLAYOFF");
+        break;
+    }
+    
+    return {
+      name: stageName,
+      type: isKnockout ? "Éliminatoire" : "Groupe",
+      isKnockout
+    };
+  };
+
   useEffect(() => {
     loadData();
     if (supabase) {
@@ -195,6 +246,8 @@ export default function ChallengesView() {
   }, []);
 
   useEffect(() => {
+    setVisibleMatchesCount(4);
+    setActiveTooltipId(null);
     if (activeModal && activeModal.type === "details" && activeModal.challenge.matchId === 0 && activeModal.challenge.competitionId) {
       setLoadingModalMatches(true);
       fetch(`/api/matches/${activeModal.challenge.competitionId}`)
@@ -334,7 +387,15 @@ export default function ChallengesView() {
     const appUrl =
       (import.meta as any).env?.VITE_APP_URL || window.location.origin;
     const inviteUrl = `${appUrl}?invite=${challenge.id}`;
-    const desc = `Rejoins mon défi sur Mirfoot : "${challenge.title}" pour le match ${challenge.matchHomeTeam} vs ${challenge.matchAwayTeam} !\n\nParticipe ici : ${inviteUrl}`;
+    
+    let desc = "";
+    if (challenge.matchId === 0) {
+      const comp = competitions.find(c => c.id === challenge.competitionId);
+      desc = `Rejoins mon défi sur Mirfoot : "${challenge.title}" pour toute la compétition ${comp?.name || "de football"} !\n\nParticipe ici : ${inviteUrl}`;
+    } else {
+      desc = `Rejoins mon défi sur Mirfoot : "${challenge.title}" pour le match ${challenge.matchHomeTeam} vs ${challenge.matchAwayTeam} !\n\nParticipe ici : ${inviteUrl}`;
+    }
+    
     const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(desc)}`;
     window.open(url, "_blank");
   };
@@ -1028,21 +1089,50 @@ export default function ChallengesView() {
                   </button>
                 </div>
 
-                <div className="text-xs text-gray-400 mb-1 font-semibold flex items-center gap-1.5">
+                <div className="text-xs text-gray-400 mb-2 font-semibold flex items-center justify-between gap-1.5 flex-wrap">
                   <span className="bg-gray-100 px-2 py-0.5 rounded text-gray-600 font-bold">Créateur: {challenge.creatorUsername || "Inconnu"}</span>
                 </div>
 
-                {challenge.matchId !== 0 && challenge.matchDate && (
-                  <div className="text-xs text-gray-400 mb-3 font-semibold flex items-center gap-1.5">
-                    <Clock className="w-3.5 h-3.5" />
-                    {new Date(challenge.matchDate).toLocaleString("fr-FR", {
-                      weekday: "short",
-                      day: "numeric",
-                      month: "short",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </div>
+                {/* Competition and Date Metadata (Single match or full competition) */}
+                {challenge.matchId !== 0 ? (
+                  (() => {
+                    const comp = competitions.find(c => c.id === challenge.competitionId);
+                    return (
+                      <div className="text-xs text-indigo-700 bg-indigo-50/50 px-2.5 py-1.5 rounded-xl border border-indigo-100/40 font-bold mb-3 mt-1 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
+                        <span className="truncate max-w-[190px] font-extrabold text-indigo-950 uppercase tracking-wide text-[10.5px]">🎮 Compétition: {comp?.name || "Match Unique"}</span>
+                        {challenge.matchDate && (
+                          <span className="text-indigo-600/85 font-bold flex items-center gap-1 shrink-0 text-[10.5px]">
+                            <Clock className="w-3 h-3" />
+                            {new Date(challenge.matchDate).toLocaleString("fr-FR", {
+                              weekday: "short",
+                              day: "numeric",
+                              month: "short",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })()
+                ) : (
+                  (() => {
+                    const comp = competitions.find(c => c.id === challenge.competitionId);
+                    const startDate = (comp as any)?.currentSeason?.startDate;
+                    const endDate = (comp as any)?.currentSeason?.endDate;
+                    const dateStr = startDate && endDate 
+                      ? `Du ${new Date(startDate).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })} au ${new Date(endDate).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}`
+                      : "Saison 2026";
+                    return (
+                      <div className="text-xs text-emerald-800 bg-emerald-50/50 px-2.5 py-1.5 rounded-xl border border-emerald-100/40 font-bold mb-3 mt-1 flex flex-col gap-0.5">
+                        <span className="text-emerald-950 font-extrabold uppercase tracking-wide text-[10.5px]">🏆 Compétition: {comp?.name || "Ligue de Football"}</span>
+                        <span className="text-emerald-700 font-bold flex items-center gap-1 text-[10.5px]">
+                          <Calendar className="w-3 h-3" />
+                          {dateStr}
+                        </span>
+                      </div>
+                    );
+                  })()
                 )}
 
                 {/* Flag display logic: Single Match VS Competition banners */}
@@ -1137,7 +1227,7 @@ export default function ChallengesView() {
                     </div>
                    {activeModal.challenge.matchId === 0 ? (
                         // Competition Challenges Details View
-                        <div className="space-y-4 pr-1 text-left">
+                        <div className="space-y-4 pr-1 text-left max-h-[460px] overflow-y-auto">
                           {loadingModalMatches ? (
                             <div className="flex justify-center py-12">
                               <Clock className="animate-spin text-emerald-500 w-8 h-8" />
@@ -1145,7 +1235,7 @@ export default function ChallengesView() {
                           ) : modalMatches.length === 0 ? (
                             <p className="text-center text-gray-500 py-8 text-sm font-semibold">Aucun match programmé trouvé pour cette compétition.</p>
                           ) : (
-                            modalMatches.map((m) => {
+                            modalMatches.slice(0, visibleMatchesCount).map((m) => {
                               const challengeId = activeModal.challenge.id;
                               const userPredMap = userPredictions[challengeId]?.matches || {};
                               const userPredMatch = userPredMap[m.id];
@@ -1169,10 +1259,27 @@ export default function ChallengesView() {
                                     <span>
                                       {new Date(m.utcDate).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' })} • {new Date(m.utcDate).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
                                     </span>
-                                    <span className={isOpen ? "text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded" : "bg-gray-100 text-gray-500 px-2 py-0.5 rounded"}>
+                                    <span className={isOpen ? "text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded animate-pulse" : "bg-gray-100 text-gray-500 px-2 py-0.5 rounded"}>
                                       {timeLeft < 0 ? "Expiré" : isOpen ? "Ouvert" : "À venir"}
                                     </span>
                                   </div>
+
+                                  {/* API Phase and Stage Display */}
+                                  {m.stage && (() => {
+                                    const info = translateStage(m.stage, m.group, m.matchday);
+                                    return (
+                                      <div className="flex justify-between items-center text-[10px] font-semibold text-gray-500 bg-slate-50/60 p-1.5 rounded-lg border border-slate-100/40">
+                                        <span className="truncate max-w-[70%] font-bold text-indigo-950">{info.name}</span>
+                                        <span className={`px-1.5 py-0.5 rounded-md font-extrabold text-[8.5px] uppercase tracking-wider ${
+                                          info.isKnockout 
+                                            ? "bg-rose-50 text-rose-600 border border-rose-100/60" 
+                                            : "bg-indigo-50 text-indigo-600 border border-indigo-100/60"
+                                        }`}>
+                                          {info.type}
+                                        </span>
+                                      </div>
+                                    );
+                                  })()}
                                   
                                   <div className="flex items-center justify-between">
                                     {/* Home Team */}
@@ -1186,15 +1293,30 @@ export default function ChallengesView() {
                                       <span className="font-bold text-center text-[11px] text-gray-800 truncate w-full">{m.homeTeam.shortName || m.homeTeam.name}</span>
                                     </div>
                                     
-                                    {/* VS Section */}
-                                    <div className="flex px-1.5 justify-center items-center gap-1">
+                                    {/* VS Section with custom tooltip trigger */}
+                                    <div 
+                                      className="relative flex px-1.5 justify-center items-center gap-1 group cursor-help"
+                                      onMouseEnter={() => {
+                                        if (timeLeft > 24 * 60 * 60 * 1000) {
+                                          setActiveTooltipId(m.id);
+                                        }
+                                      }}
+                                      onMouseLeave={() => {
+                                        setActiveTooltipId(null);
+                                      }}
+                                      onClick={() => {
+                                        if (timeLeft > 24 * 60 * 60 * 1000) {
+                                          setActiveTooltipId(prev => prev === m.id ? null : m.id);
+                                        }
+                                      }}
+                                    >
                                        <input 
                                          type="number"
                                          min="0"
                                          value={scoreHome ?? ""}
                                          onChange={(e) => updateCompetitionPredictionForm(challengeId, m.id, { homeScore: parseInt(e.target.value) })}
                                          disabled={!isOpen || hasSubmitted}
-                                         className="w-9 h-9 text-center text-xs font-bold border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 disabled:bg-gray-100"
+                                         className="w-9 h-9 text-center text-xs font-bold border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 disabled:bg-gray-100 disabled:text-gray-400 select-none animate-fade-in"
                                        />
                                        <span className="font-black text-gray-300 text-[10px]">VS</span>
                                        <input 
@@ -1203,8 +1325,16 @@ export default function ChallengesView() {
                                          value={scoreAway ?? ""}
                                          onChange={(e) => updateCompetitionPredictionForm(challengeId, m.id, { awayScore: parseInt(e.target.value) })}
                                          disabled={!isOpen || hasSubmitted}
-                                         className="w-9 h-9 text-center text-xs font-bold border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 disabled:bg-gray-100"
+                                         className="w-9 h-9 text-center text-xs font-bold border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 disabled:bg-gray-100 disabled:text-gray-400 select-none animate-fade-in"
                                        />
+
+                                       {/* Interactive tooltip shown when cursor hovers/focuses the closed prediction inputs */}
+                                       {timeLeft > 24 * 60 * 60 * 1000 && activeTooltipId === m.id && (
+                                         <div className="absolute bottom-full mb-2.5 left-1/2 -translate-x-1/2 bg-slate-900 border border-slate-800 text-white text-[10px] font-bold py-1.5 px-3 rounded-lg shadow-xl z-50 pointer-events-none transition-all duration-150 whitespace-nowrap">
+                                           Les pronostics ouvrent 24h avant le match
+                                           <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-900" />
+                                         </div>
+                                       )}
                                     </div>
                                     
                                     {/* Away Team */}
@@ -1234,8 +1364,8 @@ export default function ChallengesView() {
                                         Valider mon pronostic
                                       </button>
                                     ) : timeLeft > 24 * 60 * 60 * 1000 ? (
-                                      <div className="text-[10px] text-indigo-700 bg-indigo-50/70 font-semibold p-1 rounded border border-indigo-100">
-                                        Les pronostics ouvrent 24h avant le match
+                                      <div className="text-[10px] text-indigo-500 font-bold bg-indigo-50/30 py-1.5 rounded-lg border border-indigo-100/20">
+                                        En attente (ouvre à H-24)
                                       </div>
                                     ) : (
                                       <div className="text-[10px] text-gray-400 bg-gray-50 font-bold p-1 rounded">
@@ -1246,6 +1376,17 @@ export default function ChallengesView() {
                                 </div>
                               );
                             })
+                          )}
+                          
+                          {/* Voir plus ("See more") CTA */}
+                          {!loadingModalMatches && modalMatches.length > visibleMatchesCount && (
+                            <button
+                              type="button"
+                              onClick={() => setVisibleMatchesCount((prev) => prev + 5)}
+                              className="w-full py-2.5 mt-2 text-xs font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 border border-indigo-100/30 rounded-xl transition duration-200 flex items-center justify-center gap-1.5 cursor-pointer shadow-sm select-none"
+                            >
+                              Voir plus ({modalMatches.length - visibleMatchesCount} restants)
+                            </button>
                           )}
                         </div>
                       ) : (

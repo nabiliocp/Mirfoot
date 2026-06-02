@@ -9,6 +9,7 @@ import LeaderboardView from "./components/LeaderboardView";
 import ChallengesView from "./components/ChallengesView";
 import LoginView from "./components/LoginView";
 import ProfileSetupView from "./components/ProfileSetupView";
+import ProfileEditModal from "./components/ProfileEditModal";
 import {
   Trophy,
   CalendarCheck,
@@ -26,6 +27,12 @@ import logoImage from "./assets/images/pig_football_logo_1780308392869.png";
 export default function App() {
   const [session, setSession] = useState<Session | null>(null);
   const [needsProfileSetup, setNeedsProfileSetup] = useState(false);
+  const [userProfile, setUserProfile] = useState<{
+    username: string;
+    avatar_type: "emoji" | "jersey";
+    avatar_value: string;
+  } | null>(null);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<
     "matches" | "leaderboard" | "challenges"
   >("matches");
@@ -63,14 +70,20 @@ export default function App() {
       if (!supabase) return;
       const { data, error } = await supabase
         .from("profiles")
-        .select("username")
+        .select("username, avatar_type, avatar_value")
         .eq("id", userId)
         .single();
       
       if (error || !data?.username) {
         setNeedsProfileSetup(true);
+        setUserProfile(null);
       } else {
         setNeedsProfileSetup(false);
+        setUserProfile({
+          username: data.username,
+          avatar_type: (data.avatar_type as "emoji" | "jersey") || "emoji",
+          avatar_value: data.avatar_value || "👽",
+        });
       }
     };
 
@@ -196,46 +209,111 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col font-sans">
-      <header className="bg-emerald-700 text-white shadow-md pt-10 pb-4 px-6 md:px-12 flex justify-between items-center rounded-b-3xl">
-        <div className="flex items-center gap-3">
-          <img
-            src={logoImage}
-            alt="Mirfoot Logo"
-            className="w-12 h-12 object-cover rounded-xl shadow-sm bg-white"
-          />
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight mb-0 text-emerald-300">
-              Mirfoot
-            </h1>
-            <div className="font-handwriting text-xl text-white transform -rotate-2 -mt-1 mb-1">
-              Halloufa 2026
+      <header className="bg-emerald-700 text-white shadow-md pt-8 pb-4 px-6 md:px-12 flex flex-col justify-between rounded-b-3xl">
+        <div className="flex justify-between items-center w-full">
+          <div className="flex items-center gap-3">
+            <img
+              src={logoImage}
+              alt="Mirfoot Logo"
+              className="w-12 h-12 object-cover rounded-xl shadow-sm bg-white"
+            />
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight mb-0 text-emerald-300">
+                Mirfoot
+              </h1>
+              <div className="font-handwriting text-xl text-white transform -rotate-2 -mt-1 mb-1">
+                Halloufa world cup 2026
+              </div>
+              <p className="text-emerald-100 text-sm font-medium">
+                Ligue des Potes
+              </p>
             </div>
-            <p className="text-emerald-100 text-sm font-medium">
-              Ligue des Potes
-            </p>
+          </div>
+          <div className="flex gap-2">
+            <a
+              href={getWhatsappLink()}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="bg-emerald-500 hover:bg-emerald-400 text-white p-2 sm:px-4 rounded-full transition shadow-sm flex items-center justify-center gap-2 shadow-emerald-900/20"
+            >
+              <UsersRound className="w-5 h-5" />
+              <span className="hidden sm:block text-sm font-semibold">
+                Inviter
+              </span>
+            </a>
+            <button
+              onClick={handleLogout}
+              className="bg-emerald-800 hover:bg-emerald-900 text-emerald-100 p-2 rounded-full transition-all cursor-pointer hover:scale-110"
+              title="Se déconnecter"
+            >
+              <LogOut className="w-5 h-5" />
+            </button>
           </div>
         </div>
-        <div className="flex gap-2">
-          <a
-            href={getWhatsappLink()}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="bg-emerald-500 hover:bg-emerald-400 text-white p-2 sm:px-4 rounded-full transition shadow-sm flex items-center justify-center gap-2 shadow-emerald-900/20"
-          >
-            <UsersRound className="w-5 h-5" />
-            <span className="hidden sm:block text-sm font-semibold">
-              Inviter
-            </span>
-          </a>
-          <button
-            onClick={handleLogout}
-            className="bg-emerald-800 hover:bg-emerald-900 text-emerald-100 p-2 rounded-full transition-all cursor-pointer hover:scale-110"
-            title="Se déconnecter"
-          >
-            <LogOut className="w-5 h-5" />
-          </button>
-        </div>
+
+        {/* Dynamic User Profile Status Bar inside Header */}
+        {userProfile && (
+          <div className="mt-3.5 pt-3.5 border-t border-emerald-600/40 flex items-center justify-between w-full">
+            <div 
+              onClick={() => setIsProfileModalOpen(true)}
+              className="flex items-center gap-3 cursor-pointer group"
+            >
+              <div className="relative flex-shrink-0">
+                {userProfile.avatar_type === "emoji" ? (
+                  <span className="text-3xl filter drop-shadow-sm select-none">{userProfile.avatar_value}</span>
+                ) : (
+                  <div 
+                    className="w-9 h-9 rounded-xl flex items-center justify-center text-white border border-white/20 shadow-xs" 
+                    style={{ backgroundColor: userProfile.avatar_value }}
+                  >
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M20.38 3.46 16 2a8.86 8.86 0 0 1-8 0L3.62 3.46a2 2 0 0 0-1.34 2.23l.58 3.47a1 1 0 0 0 .99.84H6v10c0 1.1.9 2 2 2h8a2 2 0 0 0 2-2V10h2.15a1 1 0 0 0 .99-.84l.58-3.47a2 2 0 0 0-1.34-2.23z"/></svg>
+                  </div>
+                )}
+                {/* Pencil indicator */}
+                <div className="absolute -bottom-1 -right-1 bg-emerald-500 rounded-full p-0.5 border border-emerald-700 opacity-60 group-hover:opacity-100 transition duration-150">
+                  <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" strokeWidth="3.5" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125" />
+                  </svg>
+                </div>
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5 leading-none">
+                  <span className="font-extrabold text-sm text-white group-hover:text-emerald-200 transition">{userProfile.username}</span>
+                  <span className="text-[9px] bg-emerald-800/80 text-emerald-200 border border-emerald-600/35 font-bold px-1.5 py-0.5 rounded-full uppercase tracking-wider">Joueur</span>
+                </div>
+                <div className="text-[11px] text-emerald-200/80 font-medium mt-0.5 leading-none truncate group-hover:text-white transition">
+                  {session?.user?.email}
+                </div>
+              </div>
+            </div>
+            
+            <button
+              onClick={() => setIsProfileModalOpen(true)}
+              className="text-white hover:text-emerald-100 bg-emerald-800/60 hover:bg-emerald-800/90 font-bold py-1.5 px-3 rounded-xl transition duration-150 text-[11px] flex items-center gap-1.5 select-none cursor-pointer border border-emerald-600/20"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125" />
+              </svg>
+              Modifier
+            </button>
+          </div>
+        )}
       </header>
+
+      {/* Profile Edit Modal */}
+      {userProfile && session && (
+        <ProfileEditModal
+          isOpen={isProfileModalOpen}
+          onClose={() => setIsProfileModalOpen(false)}
+          email={session.user.email || ""}
+          initialProfile={userProfile}
+          onSave={(updated) => {
+            setUserProfile(updated);
+            // Refresh components/pages where names could be hardcached
+            // (especially we can just update local userProfile state, and/or trigger a tiny refresh)
+          }}
+        />
+      )}
 
       <main className="flex-1 w-full max-w-3xl mx-auto p-4 md:p-8 mt-2 overflow-y-auto">
         {activeTab === "matches" && <MatchesView />}
