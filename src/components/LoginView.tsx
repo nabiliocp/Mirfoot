@@ -5,6 +5,31 @@ import { AlertCircle, User, Mail, Lock, Shirt } from 'lucide-react';
 // @ts-ignore
 import logoImage from '../assets/images/pig_football_logo_1780308392869.png';
 
+function checkIsInAppBrowser(): boolean {
+  if (typeof window === 'undefined') return false;
+  const ua = window.navigator.userAgent || window.navigator.vendor || '';
+  
+  const rules = [
+    'FBAN', // Facebook App iOS
+    'FBAV', // Facebook App Android
+    'Instagram', // Instagram App
+    'WhatsApp', // WhatsApp App
+    'LinkedInApp', // LinkedIn App
+    'Messenger', // Messenger App
+    'Telegram', // Telegram Webview
+    'Line/', // Line App
+    'WeChat', // WeChat App
+    'wv', // Android WebView
+    // iOS WebView detection (Safari is absent but iPhone/iPad is present)
+    ((ua.includes('iPhone') || ua.includes('iPad') || ua.includes('iPod')) && !ua.includes('Safari'))
+  ];
+  
+  return rules.some(rule => {
+    if (typeof rule === 'boolean') return rule;
+    return ua.includes(rule);
+  });
+}
+
 const EMOJIS = ['👽', '🤓', '😎', '😜', '⚽', '🏆', '🔥', '👑'];
 const JERSEY_COLORS = ['#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#ffffff', '#000000'];
 
@@ -21,8 +46,13 @@ export default function LoginView() {
   const [successMsg, setSuccessMsg] = useState('');
   const [isExchangeLoading, setIsExchangeLoading] = useState(false);
   const [webViewWarning, setWebViewWarning] = useState(false);
+  const [generalTimeoutWarning, setGeneralTimeoutWarning] = useState(false);
+  const [isInAppBrowser, setIsInAppBrowser] = useState(false);
 
   useEffect(() => {
+    const isAppBrowser = checkIsInAppBrowser();
+    setIsInAppBrowser(isAppBrowser);
+
     const params = new URLSearchParams(window.location.search);
     const hash = window.location.hash || '';
     const hashParams = new URLSearchParams(hash.startsWith('#') ? hash.substring(1) : hash);
@@ -40,12 +70,18 @@ export default function LoginView() {
 
     if (hasCode || hasToken) {
       setIsExchangeLoading(true);
-      // Give Supabase client 3.5 seconds to validate session.
-      // If it fails or is blocked on mobile WebView, we flag the warning.
+      
+      // If we are in an in-app browser, we flag the warning after 4 seconds because session exchange will fail or get stuck
+      // If we are in a normal browser like Chrome, we DO NOT show the in-app browser warning. 
+      // We only show a gentle timeout reminder after 15 seconds.
       const timer = setTimeout(() => {
         setIsExchangeLoading(false);
-        setWebViewWarning(true);
-      }, 3500);
+        if (isAppBrowser) {
+          setWebViewWarning(true);
+        } else {
+          setGeneralTimeoutWarning(true);
+        }
+      }, isAppBrowser ? 4000 : 15000);
 
       return () => clearTimeout(timer);
     }
@@ -148,6 +184,21 @@ export default function LoginView() {
           </div>
         )}
 
+        {isInAppBrowser && !isExchangeLoading && !webViewWarning && (
+          <div className="bg-amber-50 text-amber-900 p-4 rounded-2xl text-xs mb-5 border border-amber-200 text-left space-y-2 animate-in fade-in duration-300">
+            <div className="flex items-center gap-1.5 text-amber-800 font-bold">
+              <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0" />
+              <span>Attention : Navigateur WhatsApp / Instagram détecté</span>
+            </div>
+            <p className="text-gray-600 leading-relaxed">
+              Google bloque la connexion directe si tu ouvres ce lien depuis l'application elle-même. Pour vous connecter sans souci :
+            </p>
+            <div className="bg-white p-3 rounded-xl border border-amber-100 text-gray-700 space-y-1 font-semibold text-[11px] leading-relaxed">
+              <p>👉 Clique sur les <strong>3 petits points en haut à droite</strong> (ou l'icône de partage/boussole) et choisis <strong>"Ouvrir dans Chrome"</strong> ou <strong>"Ouvrir dans Safari"</strong>.</p>
+            </div>
+          </div>
+        )}
+
         {isExchangeLoading && (
           <div className="bg-emerald-50 text-emerald-800 p-4 rounded-xl text-sm mb-5 border border-emerald-100 flex flex-col items-center gap-2 text-center animate-pulse">
             <svg className="animate-spin h-6 w-6 text-emerald-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -176,6 +227,19 @@ export default function LoginView() {
             </div>
             <p className="text-gray-500 italic text-[10px] text-center pt-1 leading-normal">
               Astuce : Tu peux aussi utiliser la connexion par <strong>Lien Magique</strong> ci-dessous qui fonctionne directement partout sans quitter WhatsApp !
+            </p>
+          </div>
+        )}
+
+        {generalTimeoutWarning && (
+          <div className="bg-amber-50 text-amber-900 p-4 rounded-xl text-sm mb-5 border border-amber-200 text-left space-y-1.5 flex flex-col">
+            <div className="flex items-center gap-1.5 text-amber-700 font-bold">
+              <AlertCircle className="w-4.5 h-4.5 flex-shrink-0" />
+              <span>La connexion prend un peu de temps...</span>
+            </div>
+            <p className="text-gray-600 text-xs leading-relaxed">
+              La validation de votre session Google prend plus de temps que prévu. 
+              Si vous n'êtes pas redirigé d'ici quelques instants, vous pouvez essayer de <strong>rafraîchir la page</strong> ou d'utiliser le <strong>Lien Magique</strong> par email ci-dessous.
             </p>
           </div>
         )}
