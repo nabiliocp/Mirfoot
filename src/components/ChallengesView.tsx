@@ -485,22 +485,22 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
       console.error("Error loading created challenges:", createdError);
     }
 
-    // Fetch invitations where user accepted
+    // Fetch invitations for this user
     const { data: invitations, error: invsError } = await supabase
       .from("challenge_invitations")
-      .select("challenge_id")
-      .eq("user_id", user.id)
-      .eq("accepted", true);
+      .select("challenge_id, accepted")
+      .eq("user_id", user.id);
 
     if (invsError) {
       console.error("Error loading invitations:", invsError);
     }
 
-    // Extract unique challenge IDs from invitations
-    const invitedChallengeIds = (invitations || []).map((inv: any) => inv.challenge_id);
+    // Extract challenge IDs from accepted invitations
+    const invitedChallengeIds = (invitations || [])
+      .filter((inv: any) => inv.accepted)
+      .map((inv: any) => inv.challenge_id);
 
     // Fallback: If there is an invite parameter in URL or localStorage, make sure it is fetched!
-    // This completely resolves any race conditions where invitations aren't committed to DB yet when this runs
     const urlParams = new URLSearchParams(window.location.search);
     const inviteIdFromUrl = urlParams.get("invite") || localStorage.getItem("pending_invite_id");
     if (inviteIdFromUrl && !invitedChallengeIds.includes(inviteIdFromUrl)) {
