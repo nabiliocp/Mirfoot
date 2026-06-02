@@ -27,6 +27,7 @@ import logoImage from "./assets/images/pig_football_logo_1780308392869.png";
 
 export default function App() {
   const [session, setSession] = useState<Session | null>(null);
+  const [loadingSession, setLoadingSession] = useState(true);
   const [needsProfileSetup, setNeedsProfileSetup] = useState(false);
   const [userProfile, setUserProfile] = useState<{
     username: string;
@@ -98,6 +99,7 @@ export default function App() {
 
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
+      setLoadingSession(false);
       if (session) {
         checkProfile(session.user.id);
       }
@@ -107,6 +109,7 @@ export default function App() {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
+      setLoadingSession(false);
       if (session) {
         checkProfile(session.user.id);
       } else {
@@ -165,6 +168,14 @@ export default function App() {
     // Clean URL
     window.history.replaceState({}, document.title, window.location.pathname);
   };
+
+  if (loadingSession) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex flex-col justify-center items-center p-6">
+        <div className="animate-pulse text-emerald-700 font-bold">Connexion en cours...</div>
+      </div>
+    );
+  }
 
   if (!session) {
     if (showInviteScreen) {
