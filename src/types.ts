@@ -29,6 +29,7 @@ export interface Challenge {
   matchAwayTeam?: string;
   matchDate?: string;
   creatorId?: string;
+  creatorUsername?: string;
   title: string;
   rules?: string;
   options?: string[];

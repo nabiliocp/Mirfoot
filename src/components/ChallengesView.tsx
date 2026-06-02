@@ -26,7 +26,7 @@ import { supabase } from "../lib/supabase";
 
 export default function ChallengesView() {
   const [activeModal, setActiveModal] = useState<{
-    type: "rules" | "participants" | "confirm-delete" | "edit";
+    type: "rules" | "participants" | "confirm-delete" | "edit" | "details";
     challenge: Challenge;
   } | null>(null);
 
@@ -159,7 +159,7 @@ export default function ChallengesView() {
     const [challengesRes, betsRes] = await Promise.all([
       supabase
         .from("challenges")
-        .select("*")
+        .select("*, profiles(username)")
         .order("created_at", { ascending: false }),
       supabase.from("bets").select("*").eq("user_id", user.id),
     ]);
@@ -174,6 +174,7 @@ export default function ChallengesView() {
           matchAwayTeam: c.match_away_team,
           matchDate: c.match_date,
           creatorId: c.creator_id,
+          creatorUsername: c.profiles?.username,
           title: c.title,
           rules: c.rules,
           pointRules:
@@ -839,19 +840,24 @@ export default function ChallengesView() {
               <div
                 id={`challenge-${challenge.id}`}
                 key={challenge.id}
-                className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 transition-all duration-500"
+                className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 transition-all duration-500 cursor-pointer hover:shadow-md"
+                onClick={() => setActiveModal({ type: 'details', challenge })}
               >
                 <div className="flex justify-between items-start mb-1">
                   <h3 className="font-bold text-gray-800 text-lg flex-1 mr-2">
                     {challenge.title}
                   </h3>
                   <button
-                    onClick={() => shareOnWhatsApp(challenge)}
+                    onClick={(e) => { e.stopPropagation(); shareOnWhatsApp(challenge); }}
                     className="text-emerald-600 hover:bg-emerald-50 p-2 rounded-full transition"
                     title="Partager sur WhatsApp"
                   >
                     <Share2 className="w-5 h-5" />
                   </button>
+                </div>
+
+                <div className="text-xs text-gray-400 mb-2 font-semibold">
+                  Créé par {challenge.creatorUsername || "Inconnu"}
                 </div>
 
                 <div className="text-sm text-gray-500 mb-4 font-medium flex items-center gap-2">
@@ -874,12 +880,11 @@ export default function ChallengesView() {
                   </div>
                 )}
 
-                {challenge.matchId === 0 && (
-                  <div className="flex gap-2 mb-4">
-                    <button onClick={() => setActiveModal({ type: 'rules', challenge })} className="text-xs font-bold text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-lg hover:bg-indigo-100 transition-all cursor-pointer hover:scale-[1.02]">Règles</button>
-                    <button onClick={() => setActiveModal({ type: 'participants', challenge })} className="text-xs font-bold text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-lg hover:bg-indigo-100 transition-all cursor-pointer hover:scale-[1.02]">Participants</button>
-                  </div>
-                )}
+                <div className="flex gap-2 mb-4">
+                  <button onClick={(e) => { e.stopPropagation(); setActiveModal({ type: 'rules', challenge }); }} className="text-xs font-bold text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-lg hover:bg-indigo-100 transition-all cursor-pointer hover:scale-[1.02]">Règles</button>
+                  <button onClick={(e) => { e.stopPropagation(); setActiveModal({ type: 'participants', challenge }); }} className="text-xs font-bold text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-lg hover:bg-indigo-100 transition-all cursor-pointer hover:scale-[1.02]">Participants</button>
+                </div>
+                
                 {challenge.matchId !== 0 && renderPredictionForm(challenge)}
 
                 {isCreator && !challenge.locked && !challenge.resolved && (
@@ -918,6 +923,11 @@ export default function ChallengesView() {
                  ) : (
                    <p className="text-center italic py-4">Aucune règle définie</p>
                  )
+               ) : activeModal.type === "details" ? (
+                 <>
+                   <h3 className="font-black text-lg text-gray-800 text-center mb-4">{activeModal.challenge.title}</h3>
+                   {renderPredictionForm(activeModal.challenge)}
+                 </>
                ) : activeModal.type === "confirm-delete" ? (
                  <>
                    <p className="text-center font-semibold text-gray-800 mb-4">Êtes-vous sûr de vouloir supprimer ce défi ?</p>
