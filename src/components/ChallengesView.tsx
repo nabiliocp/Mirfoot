@@ -1406,7 +1406,12 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
                     onClick={(e) => {
                       e.stopPropagation();
                       navigator.clipboard.writeText(challenge.code as string);
-                      alert("Code copié ! " + challenge.code);
+                      // Custom feedback instead of native alert
+                      const toast = document.getElementById('copy-toast');
+                      if (toast) {
+                        toast.style.display = 'block';
+                        setTimeout(() => toast.style.display = 'none', 2000);
+                      }
                     }}
                     title="Cliquer pour copier"
                   >
@@ -1414,6 +1419,7 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
                     <span className="font-black bg-emerald-900/40 border border-emerald-500/30 text-emerald-100 px-2 py-0.5 rounded-lg text-sm select-all">
                       {challenge.code}
                     </span>
+                    <div id="copy-toast" style={{display: 'none'}} className="absolute top-10 right-4 bg-emerald-600 text-white px-4 py-2 rounded-lg text-xs font-bold shadow-lg">Code copié !</div>
                   </span>
                 )}
               </p>
