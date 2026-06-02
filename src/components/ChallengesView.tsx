@@ -1961,7 +1961,6 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
                   className="bg-white border-2 border-emerald-100 rounded-3xl p-5 shadow-sm hover:shadow-emerald-100 transition-all duration-300 cursor-pointer relative overflow-hidden flex flex-col justify-between h-full"
                   onClick={() => setSelectedChallenge(challenge)}
                 >
-                <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-gradient-to-b from-amber-300 to-emerald-500"></div>
                 <div className="flex justify-between items-start mb-1 pl-2">
                   <h3 className="font-black text-gray-950 text-xl tracking-tight flex-1 mr-2 capitalize">
                     {challenge.title}
@@ -1984,47 +1983,42 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
                   )}
                 </div>
 
-                {/* Competition and Date Metadata (Single match or full competition) */}
-                {challenge.matchId !== 0 ? (
-                  (() => {
-                    const comp = competitions.find(c => String(c.id) === String(challenge.competitionId));
-                    return (
-                      <div className="text-xs text-indigo-700 bg-indigo-50/50 px-2.5 py-1.5 rounded-xl border border-indigo-100/40 font-bold mb-3 mt-1 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
-                        <span className="truncate max-w-[190px] font-extrabold text-indigo-950 uppercase tracking-wide text-[10.5px]">🎮 Compétition: {comp?.name || "Match Unique"}</span>
-                        {challenge.matchDate && (
-                          <span className="text-indigo-600/85 font-bold flex items-center gap-1 shrink-0 text-[10.5px]">
-                            <Clock className="w-3 h-3" />
-                            {new Date(challenge.matchDate).toLocaleString("fr-FR", {
-                              weekday: "short",
-                              day: "numeric",
-                              month: "short",
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })}
-                          </span>
-                        )}
-                      </div>
-                    );
-                  })()
-                ) : (
-                  (() => {
-                    const comp = competitions.find(c => String(c.id) === String(challenge.competitionId));
-                    const startDate = (comp as any)?.currentSeason?.startDate;
-                    const endDate = (comp as any)?.currentSeason?.endDate;
-                    const dateStr = startDate && endDate 
-                      ? `Du ${new Date(startDate).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })} au ${new Date(endDate).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}`
-                      : "Saison 2026";
-                    return (
-                      <div className="text-xs text-emerald-800 bg-emerald-50/50 px-2.5 py-1.5 rounded-xl border border-emerald-100/40 font-bold mb-3 mt-1 flex flex-col gap-0.5">
-                        <span className="text-emerald-950 font-extrabold uppercase tracking-wide text-[10.5px]">🏆 Compétition: {comp?.name || "Ligue de Football"}</span>
-                        <span className="text-emerald-700 font-bold flex items-center gap-1 text-[10.5px]">
-                          <Calendar className="w-3 h-3" />
-                          {dateStr}
-                        </span>
-                      </div>
-                    );
-                  })()
-                )}
+                {/* Competition and Date Metadata (Single match or full competition) - Uniformed */}
+                <div className="mt-4 pt-4 border-t border-gray-100">
+                  <div className="flex flex-col gap-1.5">
+                    {(() => {
+                      const comp = competitions.find(c => String(c.id) === String(challenge.competitionId));
+                      const isSingleMatch = challenge.matchId !== 0;
+                      
+                      return (
+                        <>
+                          <div className="flex items-center gap-2 text-xs font-bold text-gray-800">
+                             <span className="text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md">
+                               {isSingleMatch ? "🎯 Match Unique" : "🏆 Compétition"}
+                             </span>
+                             <span className="truncate">{comp?.name || "Football"}</span>
+                          </div>
+                          
+                          <div className="text-xs text-gray-500 font-semibold flex items-center gap-1.5 mt-0.5">
+                            <Calendar className="w-3.5 h-3.5" />
+                            {challenge.matchDate ? new Date(challenge.matchDate).toLocaleDateString("fr-FR", {
+                                  weekday: "short",
+                                  day: "numeric",
+                                  month: "short",
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                }) : "Date à venir"}
+                          </div>
+                        </>
+                      );
+                    })()}
+                  </div>
+
+                  <button className="w-full mt-4 bg-amber-500 hover:bg-amber-600 text-white font-black text-xs py-2.5 rounded-xl transition shadow-sm hover:shadow-amber-100 flex items-center justify-center gap-2 cursor-pointer">
+                    <Trophy className="w-4 h-4" />
+                    Jouer mon Bonus X2
+                  </button>
+                </div>
 
                 {challenge.locked && (
                   <div className="flex items-center gap-1 text-amber-600 text-xs font-bold uppercase tracking-wider mb-2 mt-2 border border-amber-200/50 bg-amber-50 rounded-lg p-2 w-max ml-2">
