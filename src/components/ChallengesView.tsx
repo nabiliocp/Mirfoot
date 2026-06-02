@@ -25,6 +25,7 @@ import {
   ArrowLeft,
   Users,
   CheckSquare,
+  Search,
 } from "lucide-react";
 import { supabase } from "../lib/supabase";
 
@@ -49,6 +50,14 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
   const [apiError, setApiError] = useState<string | null>(null);
   const [modalMatches, setModalMatches] = useState<Match[]>([]);
   const [loadingModalMatches, setLoadingModalMatches] = useState(false);
+  
+  // Search challenge states
+  const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
+  const [searchCodeInput, setSearchCodeInput] = useState("");
+  const [searchingChallenge, setSearchingChallenge] = useState(false);
+  const [searchResult, setSearchResult] = useState<Challenge | null>(null);
+  const [searchError, setSearchError] = useState<string | null>(null);
+  const [joiningChallengeId, setJoiningChallengeId] = useState<string | null>(null);
   const [currentUsername, setCurrentUsername] = useState<string>("Moi");
   const [visibleMatchesCount, setVisibleMatchesCount] = useState<number>(4);
   const [activeTooltipId, setActiveTooltipId] = useState<number | null>(null);
@@ -472,6 +481,7 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
           creatorUsername: profileMap[c.creator_id] || "Inconnu",
           title: c.title,
           rules: c.rules,
+          code: c.rules || c.id.substring(0, 8).toUpperCase(),
           pointRules:
             typeof c.point_rules === "string"
               ? JSON.parse(c.point_rules)
@@ -494,6 +504,92 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
     }
     setLoading(false);
   }
+
+  const handleSearchByCode = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!searchCodeInput.trim()) return;
+    setSearchingChallenge(true);
+    setSearchError(null);
+    setSearchResult(null);
+    try {
+      const res = await fetch(`/api/challenges/search/${encodeURIComponent(searchCodeInput.trim())}`);
+      if (res.ok) {
+        const data = await res.json();
+        // Map backend's challenge object to local Challenge interface format
+        const foundChallenge: Challenge = {
+          id: data.id,
+          competitionId: data.competition_id,
+          matchId: data.match_id,
+          matchHomeTeam: data.match_home_team,
+          matchAwayTeam: data.match_away_team,
+          matchDate: data.match_date,
+          creatorId: data.creator_id,
+          creatorUsername: data.creator_username,
+          title: data.title,
+          rules: data.rules,
+          code: data.rules || data.id.substring(0, 8).toUpperCase(),
+          pointRules:
+            typeof data.point_rules === "string"
+              ? JSON.parse(data.point_rules)
+              : data.point_rules,
+          locked: data.locked,
+          resolved: data.resolved,
+        };
+        setSearchResult(foundChallenge);
+      } else {
+        const err = await res.json();
+        setSearchError(err.error || "Aucun défi trouvé avec ce code.");
+      }
+    } catch (err) {
+      console.error(err);
+      setSearchError("Une erreur est survenue lors de la recherche.");
+    } finally {
+      setSearchingChallenge(false);
+    }
+  };
+
+  const handleJoinChallenge = async (challengeToJoin: Challenge) => {
+    if (!supabase || !userId) {
+      alert("Vous devez être connecté pour rejoindre un défi.");
+      return;
+    }
+    setJoiningChallengeId(challengeToJoin.id);
+    try {
+      // Create invitation entry for the user so they can view and participate
+      const { error } = await supabase
+        .from("challenge_invitations")
+        .upsert(
+          {
+            challenge_id: challengeToJoin.id,
+            user_id: userId,
+            accepted: true,
+          },
+          { onConflict: "challenge_id, user_id" }
+        );
+
+      if (error) {
+        throw error;
+      }
+
+      // Reload all challenges to fetch the newly joined challenge in local list, or append if missing
+      await loadData();
+      
+      // Close the search modal
+      setIsSearchModalOpen(false);
+      setSearchCodeInput("");
+      setSearchResult(null);
+      
+      // Select the joined challenge automatically to open its detailed predictions view!
+      setSelectedChallenge(challengeToJoin);
+      
+      alert(`Félicitations! Vous avez rejoint le défi "${challengeToJoin.title}" avec succès.`);
+    } catch (err: any) {
+      console.error("Error joining challenge:", err);
+      alert("Impossible de rejoindre ce défi: " + (err.message || err));
+    } finally {
+      setJoiningChallengeId(null);
+    }
+  };
 
   const loadCompetitions = async () => {
     setLoadingComps(true);
@@ -631,6 +727,8 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
       }
     };
 
+    const generatedCode = "DEF-" + Math.random().toString(36).substring(2, 8).toUpperCase();
+
     const { data, error } = await supabase
       .from("challenges")
       .insert({
@@ -645,6 +743,7 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
         locked: false,
         resolved: false,
         type: 'match',
+        rules: generatedCode,
       })
       .select();
 
@@ -660,6 +759,8 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
         creatorUsername: currentUsername,
         title: data[0].title,
         pointRules: data[0].point_rules,
+        rules: data[0].rules,
+        code: data[0].rules || data[0].id.substring(0, 8).toUpperCase(),
         locked: data[0].locked,
         resolved: data[0].resolved,
       };
@@ -1697,8 +1798,20 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
         {viewMode === "list" ? (
           <div className="flex gap-2">
             <button
+              onClick={() => {
+                setIsSearchModalOpen(true);
+                setSearchCodeInput("");
+                setSearchResult(null);
+                setSearchError(null);
+              }}
+              className="bg-slate-50 hover:bg-slate-100 text-slate-700 p-2 px-3 sm:px-4 rounded-xl transition shadow-xs flex items-center gap-1.5 sm:gap-2 font-bold text-xs sm:text-sm cursor-pointer border border-slate-200"
+            >
+              <Search className="w-3.5 h-3.5 text-slate-500" />
+              Rechercher par code
+            </button>
+            <button
               onClick={handleCreateView}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white p-2 px-3 rounded-xl transition shadow-sm flex items-center gap-2 font-semibold text-sm cursor-pointer"
+              className="bg-emerald-600 hover:bg-emerald-700 text-white p-2 px-3 sm:px-4 rounded-xl transition shadow-xs flex items-center gap-1.5 sm:gap-2 font-bold text-xs sm:text-sm cursor-pointer"
             >
               <Plus className="w-4 h-4" />
               Créer
@@ -1822,6 +1935,19 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
 
                 <div className="text-xs text-gray-400 mb-2 font-semibold flex items-center justify-between gap-1.5 flex-wrap">
                   <span className="bg-gray-100 px-2 py-0.5 rounded text-gray-600 font-bold">Créateur: {challenge.creatorUsername || "Inconnu"}</span>
+                  <span 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (challenge.code) {
+                        navigator.clipboard.writeText(challenge.code);
+                        alert("Code défi copié ! " + challenge.code);
+                      }
+                    }}
+                    className="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200/60 px-2 py-0.5 rounded font-extrabold text-xs transition cursor-pointer select-none flex items-center gap-1"
+                    title="Cliquer pour copier le code"
+                  >
+                    Code: <span className="underline font-black">{challenge.code}</span>
+                  </span>
                   {challenge.matchId !== 0 ? (
                     <span className="bg-indigo-50 border border-indigo-100/50 text-indigo-700 px-2.5 py-0.5 rounded-full font-bold text-[9px] uppercase tracking-wider">🎯 Match Unique</span>
                   ) : (
@@ -2172,6 +2298,129 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
             >
               Fermer
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Search by Code Modal */}
+      {isSearchModalOpen && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl border border-gray-100 flex flex-col gap-4 animate-in zoom-in-95 duration-200">
+            <div className="flex justify-between items-center pb-2 border-b border-gray-100">
+              <h3 className="font-extrabold text-gray-800 text-lg flex items-center gap-2">
+                <Search className="w-5 h-5 text-emerald-600" />
+                Rechercher un Défi
+              </h3>
+              <button
+                onClick={() => {
+                  setIsSearchModalOpen(false);
+                  setSearchCodeInput("");
+                  setSearchResult(null);
+                  setSearchError(null);
+                }}
+                className="text-gray-400 hover:text-gray-600 font-bold p-1 hover:bg-gray-100 rounded-full transition text-lg"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleSearchByCode} className="space-y-3">
+              <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide">
+                Entrez le code du défi
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  placeholder="Ex: DEF-A1B2C3"
+                  value={searchCodeInput}
+                  onChange={(e) => setSearchCodeInput(e.target.value)}
+                  className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5 font-mono font-bold text-gray-800 tracking-wider placeholder:font-sans placeholder:font-normal placeholder:tracking-normal focus:ring-2 focus:ring-emerald-500 text-sm focus:bg-white uppercase outline-none"
+                  autoFocus
+                />
+                <button
+                  type="submit"
+                  disabled={searchingChallenge}
+                  className="bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-400 text-white font-bold px-4 py-2.5 rounded-xl text-sm transition shadow-sm flex items-center gap-2 cursor-pointer select-none shrink-0"
+                >
+                  {searchingChallenge ? (
+                    <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                  ) : (
+                    "Rechercher"
+                  )}
+                </button>
+              </div>
+            </form>
+
+            {searchError && (
+              <div className="bg-red-50 text-red-700 p-3.5 rounded-xl border border-red-200 text-xs font-bold animate-fade-in text-center">
+                ⚠️ {searchError}
+              </div>
+            )}
+
+            {searchResult && (
+              <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-4 animate-in slide-in-from-bottom-2 duration-300">
+                <h4 className="font-extrabold text-slate-800 text-base mb-1.5 capitalize">
+                  {searchResult.title}
+                </h4>
+                
+                <div className="space-y-2 text-xs font-semibold text-slate-600">
+                  <div className="flex justify-between border-b border-slate-200/40 pb-1.5">
+                    <span>Créateur:</span>
+                    <span className="font-black text-slate-800">{searchResult.creatorUsername || "Inconnu"}</span>
+                  </div>
+                  
+                  <div className="flex justify-between border-b border-slate-200/40 pb-1.5">
+                    <span>Type:</span>
+                    <span className="bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-full font-bold">
+                      {searchResult.matchId !== 0 ? "🎯 Match Unique" : "🏆 Compétition"}
+                    </span>
+                  </div>
+
+                  {searchResult.matchId !== 0 && (
+                    <div className="flex justify-between pb-1 flex-wrap gap-1">
+                      <span>Rencontre:</span>
+                      <span className="text-right text-indigo-950 font-bold">
+                        {searchResult.matchHomeTeam} vs {searchResult.matchAwayTeam}
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="mt-4 pt-1">
+                  {challenges.some((c) => c.id === searchResult.id) ? (
+                    <div className="text-center font-bold text-xs text-emerald-700 bg-emerald-50 py-2.5 rounded-xl border border-emerald-100">
+                      ✅ Vous participez déjà à ce défi !
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsSearchModalOpen(false);
+                          setSelectedChallenge(searchResult);
+                        }}
+                        className="mt-1.5 block mx-auto text-xs font-extrabold text-emerald-800 hover:underline cursor-pointer"
+                      >
+                        Voir les détails →
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => handleJoinChallenge(searchResult)}
+                      disabled={joiningChallengeId === searchResult.id}
+                      className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-400 text-white font-black py-3 rounded-xl text-sm transition shadow-md flex items-center justify-center gap-2 cursor-pointer select-none"
+                    >
+                      {joiningChallengeId === searchResult.id ? (
+                        <>
+                          <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                          Rejoint en cours...
+                        </>
+                      ) : (
+                        "Rejoindre le Défi"
+                      )}
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

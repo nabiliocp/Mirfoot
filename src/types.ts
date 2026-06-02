@@ -32,6 +32,7 @@ export interface Challenge {
   creatorUsername?: string;
   title: string;
   rules?: string;
+  code?: string;
   options?: string[];
   pointRules?: PointRules;
   stage?: 'group' | 'knockout';
