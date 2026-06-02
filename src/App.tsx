@@ -82,6 +82,7 @@ export default function App() {
         .eq("id", userId)
         .single();
       
+      // If error (e.g. record not found) OR no username, force setup
       if (error || !data?.username) {
         setNeedsProfileSetup(true);
         setUserProfile(null);
