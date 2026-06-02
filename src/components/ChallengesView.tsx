@@ -10,7 +10,6 @@ import {
   Match,
 } from "../types";
 import {
-  Swords,
   CheckCircle2,
   Plus,
   Info,
@@ -1632,7 +1631,7 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
                         {hasSubmitted && isOpen && (
                           <div className="mt-2 text-center">
                             <button 
-                              className="w-full text-xs font-black bg-gradient-to-r from-emerald-600 to-emerald-400 text-white py-2 rounded-lg hover:shadow-lg transition-all cursor-pointer flex items-center justify-center gap-2"
+                              className="w-full text-xs font-black bg-gradient-to-br from-amber-400 to-orange-500 text-white py-2 rounded-lg hover:shadow-lg transition-all cursor-pointer flex items-center justify-center gap-2"
                               onClick={() => { /* Need: handler to toggle bonus */}}
                             >
                                <Trophy className="w-3.5 h-3.5" />
@@ -1843,9 +1842,7 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
     <div className="space-y-6 animate-in fade-in zoom-in-95 duration-300 pb-8">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
-          <div className="bg-indigo-100 p-3 rounded-full text-indigo-600">
-            <Swords className="w-6 h-6" />
-          </div>
+
           <div>
             {viewMode === "create" ? (
               <>
