@@ -22,10 +22,13 @@ export default function LoginView() {
 
   const handleGoogleLogin = async () => {
     if (!supabase) return;
+    const origin = window.location.origin;
+    const redirectUrl = origin.endsWith('/') ? origin : `${origin}/`;
+    
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: window.location.origin
+        redirectTo: redirectUrl
       }
     });
     if (error) setErrorMsg(error.message);
@@ -38,12 +41,15 @@ export default function LoginView() {
     setErrorMsg('');
     setSuccessMsg('');
 
+    const origin = window.location.origin;
+    const redirectUrl = origin.endsWith('/') ? origin : `${origin}/`;
+
     try {
       if (isLogin) {
         const { error } = await supabase.auth.signInWithOtp({
           email,
           options: {
-            emailRedirectTo: window.location.origin
+            emailRedirectTo: redirectUrl
           }
         });
         if (error) throw error;
@@ -55,7 +61,7 @@ export default function LoginView() {
         const { error } = await supabase.auth.signInWithOtp({
           email,
           options: {
-            emailRedirectTo: window.location.origin,
+            emailRedirectTo: redirectUrl,
             data: {
               username,
               first_name: firstName,
