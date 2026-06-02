@@ -50,6 +50,7 @@ export default function App() {
   useEffect(() => {
     const storedInvite = inviteId || localStorage.getItem("pending_invite_id");
     if (session && storedInvite && supabase) {
+      console.log("Processing invite for session:", session.user.id, "invite:", storedInvite);
       // Process invite!
       supabase
         .from("challenge_invitations")
@@ -61,13 +62,18 @@ export default function App() {
           },
           { onConflict: "challenge_id, user_id" },
         )
-        .then(() => {
-          localStorage.removeItem("pending_invite_id");
-          setInviteId(null);
-          // Remove invite parameter from current URL to avoid re-triggering invite UI
-          const url = new URL(window.location.href);
-          url.searchParams.delete("invite");
-          window.history.replaceState({}, document.title, url.pathname + url.search);
+        .then(({data, error}) => {
+          if (error) {
+            console.error("Error processing invite:", error);
+          } else {
+            console.log("Invite processed successfully");
+            localStorage.removeItem("pending_invite_id");
+            setInviteId(null);
+            // Remove invite parameter from current URL to avoid re-triggering invite UI
+            const url = new URL(window.location.href);
+            url.searchParams.delete("invite");
+            window.history.replaceState({}, document.title, url.pathname + url.search);
+          }
         });
     }
   }, [session, inviteId]);
