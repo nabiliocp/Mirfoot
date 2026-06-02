@@ -49,6 +49,7 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
   const [currentUsername, setCurrentUsername] = useState<string>("Moi");
   const [visibleMatchesCount, setVisibleMatchesCount] = useState<number>(4);
   const [activeTooltipId, setActiveTooltipId] = useState<number | null>(null);
+  const [upcomingMatchesByComp, setUpcomingMatchesByComp] = useState<Record<string, Match>>({});
 
   const ruleLabels: Record<string, string> = {
     exact_score: "Score Exact",
@@ -232,6 +233,7 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
 
   useEffect(() => {
     loadData();
+    loadCompetitions();
     if (supabase) {
       supabase.auth.onAuthStateChange((_event, session) => {
         setUserId(session?.user?.id || null);
@@ -249,6 +251,58 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
       }, 500);
     }
   }, []);
+
+  // Fetch upcoming matches for competition challenges when the challenges state updates
+  useEffect(() => {
+    if (challenges.length > 0) {
+      const compIdsToFetch = Array.from(
+        new Set(
+          challenges
+            .filter((c) => c.matchId === 0)
+            .map((c) => c.competitionId)
+        )
+      ).filter(compId => !upcomingMatchesByComp[compId]);
+
+      compIdsToFetch.forEach((compId) => {
+        fetch(`/api/matches/${compId}`)
+          .then((res) => {
+            if (res.ok) return res.json();
+            throw new Error("Failed to fetch matches");
+          })
+          .then((data) => {
+            const matchesData = data.matches || [];
+            const nowStr = new Date().toISOString();
+            // Filter to get upcoming timed or scheduled matches
+            const sortedUpcoming = matchesData
+              .filter((m: Match) => {
+                return ["TIMED", "SCHEDULED"].includes(m.status) && m.utcDate >= nowStr;
+              })
+              .sort((a: Match, b: Match) => a.utcDate.localeCompare(b.utcDate));
+
+            if (sortedUpcoming.length > 0) {
+              setUpcomingMatchesByComp((prev) => ({
+                ...prev,
+                [String(compId)]: sortedUpcoming[0],
+              }));
+            } else {
+              // Fallback to latest live/finished/paused matches if none are scheduled in the future
+              const latestMatches = matchesData
+                .filter((m: Match) => ["IN_PLAY", "LIVE", "PAUSED", "FINISHED"].includes(m.status))
+                .sort((a: Match, b: Match) => b.utcDate.localeCompare(a.utcDate));
+              if (latestMatches.length > 0) {
+                setUpcomingMatchesByComp((prev) => ({
+                  ...prev,
+                  [String(compId)]: latestMatches[0],
+                }));
+              }
+            }
+          })
+          .catch((err) => {
+            console.error(`Error loading upcoming match for comp ${compId}:`, err);
+          });
+      });
+    }
+  }, [challenges]);
 
   // Effect to automatically pre-fill/transition when a match is preselected
   useEffect(() => {
@@ -1171,6 +1225,7 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
             : challenges
           ).map((challenge) => {
             const isCreator = challenge.creatorId === userId;
+            const upcomingMatch = upcomingMatchesByComp[challenge.competitionId];
 
             return (
               <div
@@ -1194,6 +1249,11 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
 
                 <div className="text-xs text-gray-400 mb-2 font-semibold flex items-center justify-between gap-1.5 flex-wrap">
                   <span className="bg-gray-100 px-2 py-0.5 rounded text-gray-600 font-bold">Créateur: {challenge.creatorUsername || "Inconnu"}</span>
+                  {challenge.matchId !== 0 ? (
+                    <span className="bg-indigo-50 border border-indigo-100/50 text-indigo-700 px-2.5 py-0.5 rounded-full font-bold text-[9px] uppercase tracking-wider">🎯 Match Unique</span>
+                  ) : (
+                    <span className="bg-emerald-50 border border-emerald-100/50 text-emerald-800 px-2.5 py-0.5 rounded-full font-bold text-[9px] uppercase tracking-wider">🏆 Compétition</span>
+                  )}
                 </div>
 
                 {/* Competition and Date Metadata (Single match or full competition) */}
@@ -1240,68 +1300,99 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
 
                 {/* Flag display logic: Single Match VS Competition banners */}
                 {challenge.matchId !== 0 ? (
-                  <div className="flex items-center gap-3 my-3 bg-gray-50/60 p-3 rounded-xl border border-gray-100/60 max-w-sm">
-                    <div className="flex items-center gap-1.5 min-w-0 flex-1 justify-end">
-                      <span className="font-bold text-xs text-gray-700 truncate">{challenge.matchHomeTeam}</span>
-                      <img 
-                        src={getFlagUrl(challenge.matchHomeTeam || "", (challenge.pointRules as any)?.match_metadata?.home_crest)} 
-                        alt="" 
-                        className="w-6 h-6 object-contain rounded-sm shadow-sm"
-                        onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                      />
-                    </div>
-                    <span className="text-[10px] font-black text-gray-400 shrink-0">VS</span>
-                    <div className="flex items-center gap-1.5 min-w-0 flex-1">
-                      <img 
-                        src={getFlagUrl(challenge.matchAwayTeam || "", (challenge.pointRules as any)?.match_metadata?.away_crest)} 
-                        alt="" 
-                        className="w-6 h-6 object-contain rounded-sm shadow-sm"
-                        onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                      />
-                      <span className="font-bold text-xs text-gray-700 truncate">{challenge.matchAwayTeam}</span>
-                    </div>
-                  </div>
+                  // No duplicate banner with flags for single match cards! That is handled by prediction inputs below.
+                  null
                 ) : (
-                  <div className="flex items-center gap-2.5 my-3 bg-emerald-50/50 p-3 rounded-xl border border-emerald-100/40 text-emerald-800 max-w-sm">
-                    <Trophy className="w-5 h-5 text-emerald-600 shrink-0" />
-                    <div>
-                      <div className="text-[10px] font-bold uppercase tracking-wider text-emerald-700">Défi Compétition</div>
-                      <div className="text-xs font-semibold text-gray-600">Comprend l'ensemble des matchs de la compétition</div>
+                  // For a tournament/competition challenge, display the next scheduled/upcoming match
+                  upcomingMatch ? (
+                    <div className="my-3 bg-emerald-50/40 p-3.5 rounded-xl border border-emerald-100/40 max-w-sm">
+                      <div className="text-[10px] uppercase font-black tracking-widest text-emerald-800 mb-2 flex items-center gap-1">
+                        <Clock className="w-3 h-3 text-emerald-600 animate-pulse" />
+                        Match à venir
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-1.5 min-w-0 flex-1 justify-end">
+                          <span className="font-bold text-xs text-slate-800 truncate">{upcomingMatch.homeTeam.shortName || upcomingMatch.homeTeam.name}</span>
+                          <img 
+                            src={getFlagUrl(upcomingMatch.homeTeam.name, upcomingMatch.homeTeam.crest)} 
+                            alt="" 
+                            className="w-5 h-5 object-contain rounded-sm shadow-sm"
+                            onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                          />
+                        </div>
+                        <span className="text-[10px] font-black text-slate-400 shrink-0">VS</span>
+                        <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                          <img 
+                            src={getFlagUrl(upcomingMatch.awayTeam.name, upcomingMatch.awayTeam.crest)} 
+                            alt="" 
+                            className="w-5 h-5 object-contain rounded-sm shadow-sm"
+                            onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                          />
+                          <span className="font-bold text-xs text-slate-800 truncate">{upcomingMatch.awayTeam.shortName || upcomingMatch.awayTeam.name}</span>
+                        </div>
+                      </div>
+                      <div className="text-[10px] text-emerald-700/80 font-bold mt-2 bg-emerald-100/30 px-2 py-0.5 rounded text-center">
+                        {new Date(upcomingMatch.utcDate).toLocaleString("fr-FR", {
+                          weekday: "short",
+                          day: "numeric",
+                          month: "short",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </div>
                     </div>
-                  </div>
+                  ) : (
+                    <div className="my-3 bg-gray-50/65 p-3 rounded-xl border border-gray-100/60 text-gray-400 max-w-sm flex items-center gap-2">
+                      <Clock className="w-3.5 h-3.5 text-gray-300 animate-spin" />
+                      <span className="text-[11px] font-semibold text-gray-500">Chargement du match à venir...</span>
+                    </div>
+                  )
                 )}
 
                 {challenge.locked && (
-                  <div className="flex items-center gap-1 text-amber-600 text-xs font-bold uppercase tracking-wider mb-3">
+                  <div className="flex items-center gap-1 text-amber-600 text-xs font-bold uppercase tracking-wider mb-2 mt-2">
                     <Lock className="w-3 h-3" /> Paris verrouillés (Match en cours)
                   </div>
                 )}
-
-                <div className="flex gap-2 mb-3">
-                  <button onClick={(e) => { e.stopPropagation(); setActiveModal({ type: 'rules', challenge }); }} className="text-xs font-bold text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-lg hover:bg-indigo-100 transition-all cursor-pointer hover:scale-[1.02]">Règles</button>
-                  <button onClick={(e) => { e.stopPropagation(); setActiveModal({ type: 'participants', challenge }); }} className="text-xs font-bold text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-lg hover:bg-indigo-100 transition-all cursor-pointer hover:scale-[1.02]">Participants</button>
-                </div>
                 
                 {challenge.matchId !== 0 && renderPredictionForm(challenge)}
 
-                {isCreator && !challenge.locked && !challenge.resolved && (
-                  <div className="mt-3 flex gap-2 border-t border-gray-100 pt-2.5">
-                    <button
-                      onClick={(e) => { e.stopPropagation(); setActiveModal({ type: 'edit', challenge }); }}
-                      className="text-xs font-semibold text-gray-500 hover:text-gray-700 flex items-center gap-1 p-1 cursor-pointer transition-colors"
+                {/* Always at the bottom: Rules, Participants, and Optional Admin Controls */}
+                <div className="flex flex-wrap items-center justify-between gap-2 mt-4 pt-3.5 border-t border-gray-100">
+                  <div className="flex gap-2">
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); setActiveModal({ type: 'rules', challenge }); }} 
+                      className="text-xs font-bold text-indigo-700 bg-indigo-50 px-3 py-1.5 rounded-lg hover:bg-indigo-100 transition-all cursor-pointer hover:scale-[1.02]"
                     >
-                      <Edit2 className="w-3.5 h-3.5" />
-                      Éditer
+                      Règles
                     </button>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); setActiveModal({ type: 'confirm-delete', challenge }); }}
-                      className="text-xs font-semibold text-gray-400 hover:text-red-600 flex items-center gap-1 p-1 cursor-pointer transition-colors animate-pulse"
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); setActiveModal({ type: 'participants', challenge }); }} 
+                      className="text-xs font-bold text-indigo-700 bg-indigo-50 px-3 py-1.5 rounded-lg hover:bg-indigo-100 transition-all cursor-pointer hover:scale-[1.02]"
                     >
-                      <Trash2 className="w-3.5 h-3.5" />
-                      Supprimer
+                      Participants
                     </button>
                   </div>
-                )}
+
+                  {isCreator && !challenge.locked && !challenge.resolved && (
+                    <div className="flex gap-2.5 items-center">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setActiveModal({ type: 'edit', challenge }); }}
+                        className="text-xs font-semibold text-gray-500 hover:text-gray-700 flex items-center gap-1 p-1 cursor-pointer transition-colors"
+                      >
+                        <Edit2 className="w-3.5 h-3.5" />
+                        Éditer
+                      </button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setActiveModal({ type: 'confirm-delete', challenge }); }}
+                        className="text-xs font-semibold text-gray-400 hover:text-red-600 flex items-center gap-1 p-1 cursor-pointer transition-colors"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        Supprimer
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             );
           })}

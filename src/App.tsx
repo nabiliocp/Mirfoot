@@ -258,9 +258,9 @@ export default function App() {
                     </svg>
                   </div>
                 </div>
-                <div className="min-w-0 pr-0.5 hidden xs:block">
+                <div className="min-w-0 pr-0.5">
                   <div className="flex items-center gap-1.5 leading-none">
-                    <span className="font-extrabold text-xs sm:text-sm text-white group-hover:text-emerald-200 transition truncate max-w-[70px] sm:max-w-[120px]">
+                    <span className="font-extrabold text-xs sm:text-sm text-white group-hover:text-emerald-200 transition truncate max-w-[80px] sm:max-w-[130px]">
                       {userProfile.username}
                     </span>
                   </div>
@@ -270,18 +270,6 @@ export default function App() {
                 </div>
               </div>
             )}
-
-            {/* Quick Invite on WhatsApp */}
-            <a
-              href={getWhatsappLink()}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="bg-emerald-500 hover:bg-emerald-400 text-white p-2 sm:p-2.5 rounded-full transition shadow-sm flex items-center justify-center gap-1.5 shadow-emerald-900/20"
-              title="Inviter un ami"
-            >
-              <UsersRound className="w-4 h-4 sm:w-5 sm:h-5" />
-              <span className="hidden md:block text-xs font-bold leading-none pr-1">Inviter</span>
-            </a>
 
             {/* Logout button */}
             <button
