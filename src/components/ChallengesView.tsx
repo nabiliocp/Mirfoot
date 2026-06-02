@@ -1770,13 +1770,20 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
 
                         {hasSubmitted && isOpen && (
                           <div className="mt-2 text-center">
-                            <button 
-                              className={`w-full text-xs font-black py-2 rounded-lg hover:shadow-lg transition-all cursor-pointer flex items-center justify-center gap-2 ${predictionForms[challengeId]?.matches?.[m.id]?.bonus ? 'bg-gradient-to-br from-emerald-500 to-emerald-700' : 'bg-gradient-to-br from-amber-400 to-orange-500'} text-white`}
-                              onClick={() => toggleBonus(challengeId, m.id)}
-                            >
-                               <Trophy className="w-3.5 h-3.5" />
-                               Jouer Bonus X2
-                            </button>
+                            {predictionForms[challengeId]?.matches?.[m.id]?.bonus ? (
+                              <div className="w-full text-xs font-black bg-amber-100 text-amber-800 py-2 rounded-lg flex items-center justify-center gap-2 border border-amber-200">
+                                <Trophy className="w-3.5 h-3.5" />
+                                Bonus X2 activé !
+                              </div>
+                            ) : (
+                              <button 
+                                className="w-full text-xs font-black bg-gradient-to-br from-amber-400 to-orange-500 text-white py-2 rounded-lg hover:shadow-lg transition-all cursor-pointer flex items-center justify-center gap-2"
+                                onClick={() => toggleBonus(challengeId, m.id)}
+                              >
+                                 <Trophy className="w-3.5 h-3.5" />
+                                 Jouer Bonus X2
+                              </button>
+                            )}
                             <p className="text-[9px] text-gray-400 mt-1">Si juste : Score x2 | Si faux : -4 pts</p>
                           </div>
                         )}
