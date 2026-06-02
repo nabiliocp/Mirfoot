@@ -47,20 +47,26 @@ export default function App() {
   const [loadingInvite, setLoadingInvite] = useState(true);
 
   useEffect(() => {
-    if (session && inviteId && supabase) {
+    const storedInvite = inviteId || localStorage.getItem("pending_invite_id");
+    if (session && storedInvite && supabase) {
       // Process invite!
       supabase
         .from("challenge_invitations")
         .upsert(
           {
-            challenge_id: inviteId,
+            challenge_id: storedInvite,
             user_id: session.user.id,
             accepted: true,
           },
           { onConflict: "challenge_id, user_id" },
         )
         .then(() => {
+          localStorage.removeItem("pending_invite_id");
           setInviteId(null);
+          // Remove invite parameter from current URL to avoid re-triggering invite UI
+          const url = new URL(window.location.href);
+          url.searchParams.delete("invite");
+          window.history.replaceState({}, document.title, url.pathname + url.search);
         });
     }
   }, [session, inviteId]);
@@ -115,6 +121,7 @@ export default function App() {
     const invite = params.get("invite");
     if (invite && supabase) {
       setInviteId(invite);
+      localStorage.setItem("pending_invite_id", invite);
       setActiveTab("challenges");
 
       // Fetch challenge details
@@ -153,6 +160,7 @@ export default function App() {
 
   const handleDeclineInvite = () => {
     setShowInviteScreen(false);
+    localStorage.removeItem("pending_invite_id");
     // Clean URL
     window.history.replaceState({}, document.title, window.location.pathname);
   };

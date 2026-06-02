@@ -499,6 +499,14 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
     // Extract unique challenge IDs from invitations
     const invitedChallengeIds = (invitations || []).map((inv: any) => inv.challenge_id);
 
+    // Fallback: If there is an invite parameter in URL or localStorage, make sure it is fetched!
+    // This completely resolves any race conditions where invitations aren't committed to DB yet when this runs
+    const urlParams = new URLSearchParams(window.location.search);
+    const inviteIdFromUrl = urlParams.get("invite") || localStorage.getItem("pending_invite_id");
+    if (inviteIdFromUrl && !invitedChallengeIds.includes(inviteIdFromUrl)) {
+      invitedChallengeIds.push(inviteIdFromUrl);
+    }
+
     // If there are invited challenge IDs, fetch those challenges too
     let joinedChallenges: any[] = [];
     if (invitedChallengeIds.length > 0) {
@@ -545,27 +553,34 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
     }
 
     if (challengesRes) {
-      setChallenges(
-        (Array.isArray(challengesRes) ? challengesRes : []).map((c: any) => ({
-          id: c.id,
-          competitionId: c.competition_id,
-          matchId: c.match_id,
-          matchHomeTeam: c.match_home_team,
-          matchAwayTeam: c.match_away_team,
-          matchDate: c.match_date,
-          creatorId: c.creator_id,
-          creatorUsername: profileMap[c.creator_id] || "Inconnu",
-          title: c.title,
-          rules: c.rules,
-          code: c.rules || c.id.substring(0, 8).toUpperCase(),
-          pointRules:
-            typeof c.point_rules === "string"
-              ? JSON.parse(c.point_rules)
-              : c.point_rules,
-          locked: c.locked,
-          resolved: c.resolved,
-        }))
-      );
+      const mapped = (Array.isArray(challengesRes) ? challengesRes : []).map((c: any) => ({
+        id: c.id,
+        competitionId: c.competition_id,
+        matchId: c.match_id,
+        matchHomeTeam: c.match_home_team,
+        matchAwayTeam: c.match_away_team,
+        matchDate: c.match_date,
+        creatorId: c.creator_id,
+        creatorUsername: profileMap[c.creator_id] || "Inconnu",
+        title: c.title,
+        rules: c.rules,
+        code: c.rules || c.id.substring(0, 8).toUpperCase(),
+        pointRules:
+          typeof c.point_rules === "string"
+            ? JSON.parse(c.point_rules)
+            : c.point_rules,
+        locked: c.locked,
+        resolved: c.resolved,
+      }));
+      setChallenges(mapped);
+
+      // Auto-open/select the invited challenge to immediately display its predictions
+      if (inviteIdFromUrl) {
+        const foundInvited = mapped.find((c) => c.id === inviteIdFromUrl);
+        if (foundInvited) {
+          setSelectedChallenge(foundInvited);
+        }
+      }
     }
 
     if (betsRes.data) {
