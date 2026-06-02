@@ -1958,11 +1958,12 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
                 <div
                   id={`challenge-${challenge.id}`}
                   key={challenge.id}
-                  className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 transition-all duration-500 cursor-pointer hover:shadow-md hover:border-gray-200 flex flex-col justify-between h-full"
+                  className="bg-white border-2 border-emerald-100 rounded-3xl p-5 shadow-sm hover:shadow-emerald-100 transition-all duration-300 cursor-pointer relative overflow-hidden flex flex-col justify-between h-full"
                   onClick={() => setSelectedChallenge(challenge)}
                 >
-                <div className="flex justify-between items-start mb-1">
-                  <h3 className="font-bold text-gray-800 text-lg flex-1 mr-2 capitalize">
+                <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-gradient-to-b from-amber-300 to-emerald-500"></div>
+                <div className="flex justify-between items-start mb-1 pl-2">
+                  <h3 className="font-black text-gray-950 text-xl tracking-tight flex-1 mr-2 capitalize">
                     {challenge.title}
                   </h3>
                   <button
@@ -2026,47 +2027,10 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
                 )}
 
                 {challenge.locked && (
-                  <div className="flex items-center gap-1 text-amber-600 text-xs font-bold uppercase tracking-wider mb-2 mt-2 border border-amber-200/50 bg-amber-50 rounded-lg p-2 w-max">
+                  <div className="flex items-center gap-1 text-amber-600 text-xs font-bold uppercase tracking-wider mb-2 mt-2 border border-amber-200/50 bg-amber-50 rounded-lg p-2 w-max ml-2">
                     <Lock className="w-3 h-3" /> Paris verrouillés
                   </div>
                 )}
-                
-                {/* Always at the bottom: Rules, Participants, and Optional Admin Controls */}
-                <div className="flex flex-wrap items-center justify-between gap-2 mt-4 pt-3.5 border-t border-gray-100">
-                  <div className="flex gap-2">
-                    <button 
-                      onClick={(e) => { e.stopPropagation(); setActiveModal({ type: 'rules', challenge }); }} 
-                      className="text-xs font-bold text-indigo-700 bg-indigo-50 px-3 py-1.5 rounded-lg hover:bg-indigo-100 transition-all cursor-pointer hover:scale-[1.02]"
-                    >
-                      Règles
-                    </button>
-                    <button 
-                      onClick={(e) => { e.stopPropagation(); setActiveModal({ type: 'participants', challenge }); }} 
-                      className="text-xs font-bold text-indigo-700 bg-indigo-50 px-3 py-1.5 rounded-lg hover:bg-indigo-100 transition-all cursor-pointer hover:scale-[1.02]"
-                    >
-                      Participants
-                    </button>
-                  </div>
-
-                  {isCreator && !challenge.locked && !challenge.resolved && (
-                    <div className="flex gap-2.5 items-center">
-                      <button
-                        onClick={(e) => { e.stopPropagation(); setActiveModal({ type: 'edit', challenge }); }}
-                        className="text-xs font-semibold text-gray-500 hover:text-gray-700 flex items-center gap-1 p-1 cursor-pointer transition-colors"
-                      >
-                        <Edit2 className="w-3.5 h-3.5" />
-                        Éditer
-                      </button>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); setActiveModal({ type: 'confirm-delete', challenge }); }}
-                        className="text-xs font-semibold text-gray-400 hover:text-red-600 flex items-center gap-1 p-1 cursor-pointer transition-colors"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                        Supprimer
-                      </button>
-                    </div>
-                  )}
-                </div>
               </div>
             );
           })}
