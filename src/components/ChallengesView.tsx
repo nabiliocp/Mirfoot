@@ -115,6 +115,17 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
             ))}
           </div>
         </div>
+
+        <div>
+          <h4 className="font-bold text-amber-700 text-sm mb-2 flex items-center gap-2">
+            <div className="w-2 h-2 bg-amber-500 rounded-full" />
+            Bonus
+          </h4>
+          <div className="pl-4 border-l-2 border-amber-100 text-amber-800 text-xs font-medium space-y-1">
+            <p><strong>Bonus X2 :</strong> Si juste, les points sont doublés. Sinon, -4 pts.</p>
+          </div>
+        </div>
+
       </div>
     );
   };
@@ -523,47 +534,37 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
     setSearchError(null);
     setSearchResult(null);
     try {
-      const { data, error } = await supabase.rpc('get_challenge_by_code', {
-        search_code: searchCodeInput.trim().toUpperCase()
-      });
-
-      if (error) {
-        throw error;
+      const res = await fetch(`/api/challenges/search/${encodeURIComponent(searchCodeInput.trim())}`);
+      if (res.ok) {
+        const data = await res.json();
+        // Map backend's challenge object to local Challenge interface format
+        const foundChallenge: Challenge = {
+          id: data.id,
+          competitionId: data.competition_id,
+          matchId: data.match_id,
+          matchHomeTeam: data.match_home_team,
+          matchAwayTeam: data.match_away_team,
+          matchDate: data.match_date,
+          creatorId: data.creator_id,
+          creatorUsername: data.creator_username,
+          title: data.title,
+          rules: data.rules,
+          code: data.rules || data.id.substring(0, 8).toUpperCase(),
+          pointRules:
+            typeof data.point_rules === "string"
+              ? JSON.parse(data.point_rules)
+              : data.point_rules,
+          locked: data.locked,
+          resolved: data.resolved,
+        };
+        setSearchResult(foundChallenge);
+      } else {
+        const err = await res.json();
+        setSearchError(err.error || "Aucun défi trouvé avec ce code.");
       }
-
-      if (!data || data.length === 0) {
-        setSearchError("Aucun défi trouvé avec ce code.");
-        setSearchingChallenge(false);
-        return;
-      }
-
-      const challengeData = data[0];
-
-      // Map RPC result back to local Challenge interface format
-      const foundChallenge: Challenge = {
-        id: challengeData.id,
-        competitionId: challengeData.competition_id,
-        matchId: challengeData.match_id,
-        matchHomeTeam: challengeData.match_home_team,
-        matchAwayTeam: challengeData.match_away_team,
-        matchDate: challengeData.match_date,
-        creatorId: challengeData.creator_id,
-        creatorUsername: challengeData.creator_username,
-        title: challengeData.title,
-        rules: challengeData.rules,
-        code: challengeData.rules || challengeData.id.substring(0, 8).toUpperCase(),
-        pointRules:
-          typeof challengeData.point_rules === "string"
-            ? JSON.parse(challengeData.point_rules)
-            : challengeData.point_rules,
-        locked: challengeData.locked,
-        resolved: challengeData.resolved,
-      };
-      
-      setSearchResult(foundChallenge);
     } catch (err: any) {
       console.error(err);
-      setSearchError("Une erreur est survenue: " + err.message);
+      setSearchError("Une erreur est survenue lors de la recherche.");
     } finally {
       setSearchingChallenge(false);
     }
@@ -1210,6 +1211,17 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
           </div>
         </div>
 
+        {/* Penalties Prediction for Knockout */}
+        {(challenge.pointRules as any)?.knockout_stage && (
+            <div className="mt-4 pt-4 border-t border-gray-200">
+                <p className="text-xs font-bold text-gray-500 mb-2 text-center">Prolongation / Penaltys</p>
+                <div className="grid grid-cols-2 gap-4">
+                    <input type="number" placeholder="Pen Home" className="text-center p-2 rounded-lg" value={activeForm.penaltiesHomeScore ?? ""} onChange={(e) => updatePredictionForm(challenge.id, {penaltiesHomeScore: parseInt(e.target.value)})} />
+                    <input type="number" placeholder="Pen Away" className="text-center p-2 rounded-lg" value={activeForm.penaltiesAwayScore ?? ""} onChange={(e) => updatePredictionForm(challenge.id, {penaltiesAwayScore: parseInt(e.target.value)})} />
+                </div>
+            </div>
+        )}
+
         <div className="space-y-3 pt-2">
           {challenge.pointRules?.knockout_stage.exact_score_penalties! > 0 && (
             <div className="flex border-t border-gray-100 pt-3 flex-col gap-2">
@@ -1619,8 +1631,12 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
 
                         {hasSubmitted && isOpen && (
                           <div className="mt-2 text-center">
-                            <button className="w-full text-xs font-black bg-amber-500 text-white py-2 rounded-lg hover:bg-amber-600 transition cursor-pointer">
-                               Jouer mon Bonus X2
+                            <button 
+                              className="w-full text-xs font-black bg-gradient-to-r from-emerald-600 to-emerald-400 text-white py-2 rounded-lg hover:shadow-lg transition-all cursor-pointer flex items-center justify-center gap-2"
+                              onClick={() => { /* Need: handler to toggle bonus */}}
+                            >
+                               <Trophy className="w-3.5 h-3.5" />
+                               Jouer Bonus X2
                             </button>
                             <p className="text-[9px] text-gray-400 mt-1">Si juste : Score x2 | Si faux : -4 pts</p>
                           </div>
