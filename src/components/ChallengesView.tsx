@@ -427,7 +427,11 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
       fetch(`/api/matches/${targetChallenge.competitionId}`)
         .then((res) => res.json())
         .then((data) => {
-          setModalMatches(data.matches || []);
+          let fetchedMatches = data.matches || [];
+          if (targetChallenge.matchId && targetChallenge.matchId !== 0) {
+            fetchedMatches = fetchedMatches.filter((m: Match) => m.id === targetChallenge.matchId);
+          }
+          setModalMatches(fetchedMatches);
           setLoadingModalMatches(false);
         })
         .catch((err) => {
@@ -1387,8 +1391,24 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
                 {challenge.matchId !== 0 ? "🎯 Match Unique" : "🏆 Compétition"}
               </div>
               <h2 className="text-2xl font-black tracking-tight capitalize">{challenge.title}</h2>
-              <p className="text-emerald-100/90 text-xs font-semibold mt-1 flex items-center gap-1">
-                Créé par : <span className="font-extrabold">{challenge.creatorUsername}</span>
+              <p className="text-emerald-100/90 text-sm font-semibold mt-1 flex flex-wrap items-center gap-2">
+                Créé par : <span className="font-extrabold bg-white/10 px-2 py-0.5 rounded-md">{challenge.creatorUsername}</span>
+                {challenge.code && (
+                  <span 
+                    className="flex flex-wrap items-center gap-1.5 cursor-pointer hover:text-white transition"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigator.clipboard.writeText(challenge.code as string);
+                      alert("Code copié ! " + challenge.code);
+                    }}
+                    title="Cliquer pour copier"
+                  >
+                    <span>Code Invite:</span>
+                    <span className="font-black bg-emerald-900/40 border border-emerald-500/30 text-emerald-100 px-2 py-0.5 rounded-lg text-sm select-all">
+                      {challenge.code}
+                    </span>
+                  </span>
+                )}
               </p>
             </div>
             
@@ -1945,19 +1965,6 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
 
                 <div className="text-xs text-gray-400 mb-2 font-semibold flex items-center justify-between gap-1.5 flex-wrap">
                   <span className="bg-gray-100 px-2 py-0.5 rounded text-gray-600 font-bold">Créateur: {challenge.creatorUsername || "Inconnu"}</span>
-                  <span 
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (challenge.code) {
-                        navigator.clipboard.writeText(challenge.code);
-                        alert("Code défi copié ! " + challenge.code);
-                      }
-                    }}
-                    className="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200/60 px-2 py-0.5 rounded font-extrabold text-xs transition cursor-pointer select-none flex items-center gap-1"
-                    title="Cliquer pour copier le code"
-                  >
-                    Code: <span className="underline font-black">{challenge.code}</span>
-                  </span>
                   {challenge.matchId !== 0 ? (
                     <span className="bg-indigo-50 border border-indigo-100/50 text-indigo-700 px-2.5 py-0.5 rounded-full font-bold text-[9px] uppercase tracking-wider">🎯 Match Unique</span>
                   ) : (
@@ -2007,79 +2014,12 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
                   })()
                 )}
 
-                {/* Flag display logic: Single Match VS Competition banners */}
-                {challenge.matchId !== 0 ? (
-                  // No duplicate banner with flags for single match cards! That is handled by prediction inputs below.
-                  null
-                ) : (
-                  // For a tournament/competition challenge, display the next scheduled/upcoming match
-                  upcomingMatch && upcomingMatch.id !== -1 ? (
-                    <div className="my-3 bg-emerald-50/40 p-3.5 rounded-xl border border-emerald-100/40 max-w-sm">
-                      <div className="text-[10px] uppercase font-black tracking-widest text-emerald-800 mb-2 flex items-center gap-1">
-                        <Clock className="w-3 h-3 text-emerald-600 animate-pulse" />
-                        Match à venir
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <div className="flex items-center gap-1.5 min-w-0 flex-1 justify-end">
-                          <span className="font-bold text-xs text-slate-800 truncate">{upcomingMatch.homeTeam.shortName || upcomingMatch.homeTeam.name}</span>
-                          <div className="w-6 h-6 flex items-center justify-center bg-white border border-gray-200 rounded-full overflow-hidden shrink-0 shadow-[0_1px_2px_rgba(0,0,0,0.05)] p-0.5">
-                            <img 
-                              src={getFlagUrl(upcomingMatch.homeTeam.name, upcomingMatch.homeTeam.crest)} 
-                              alt="" 
-                              className="max-w-full max-h-full object-contain"
-                              onError={(e) => { e.currentTarget.src = "https://flagcdn.com/w80/un.png"; }}
-                            />
-                          </div>
-                        </div>
-                        <span className="text-[10px] font-black text-slate-400 shrink-0">VS</span>
-                        <div className="flex items-center gap-1.5 min-w-0 flex-1">
-                          <div className="w-6 h-6 flex items-center justify-center bg-white border border-gray-200 rounded-full overflow-hidden shrink-0 shadow-[0_1px_2px_rgba(0,0,0,0.05)] p-0.5">
-                            <img 
-                              src={getFlagUrl(upcomingMatch.awayTeam.name, upcomingMatch.awayTeam.crest)} 
-                              alt="" 
-                              className="max-w-full max-h-full object-contain"
-                              onError={(e) => { e.currentTarget.src = "https://flagcdn.com/w80/un.png"; }}
-                            />
-                          </div>
-                          <span className="font-bold text-xs text-slate-800 truncate">{upcomingMatch.awayTeam.shortName || upcomingMatch.awayTeam.name}</span>
-                        </div>
-                      </div>
-                      <div className="text-[10px] text-emerald-700/80 font-bold mt-2 bg-emerald-100/30 px-2 py-0.5 rounded text-center">
-                        {upcomingMatch.utcDate ? new Date(upcomingMatch.utcDate).toLocaleString("fr-FR", {
-                          weekday: "short",
-                          day: "numeric",
-                          month: "short",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        }) : ""}
-                      </div>
-                    </div>
-                  ) : upcomingMatch && (upcomingMatch as any).status === "ERROR" ? (
-                    <div className="my-3 bg-amber-50/40 p-3 rounded-xl border border-amber-100/30 text-amber-800 max-w-sm flex items-center gap-2">
-                      <Clock className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-                      <span className="text-[11px] font-semibold">Consulter tous les matchs pour parier</span>
-                    </div>
-                  ) : upcomingMatch && (upcomingMatch as any).status === "NO_MATCH" ? (
-                    <div className="my-3 bg-gray-50 p-3 rounded-xl border border-gray-100 text-gray-500 max-w-sm flex items-center gap-2">
-                      <Calendar className="w-3.5 h-3.5 text-gray-400 shrink-0" />
-                      <span className="text-[11px] font-semibold">Aucun match programmé cette semaine</span>
-                    </div>
-                  ) : (
-                    <div className="my-3 bg-gray-50/65 p-3 rounded-xl border border-gray-100/60 text-gray-400 max-w-sm flex items-center gap-2">
-                      <Clock className="w-3.5 h-3.5 text-gray-300 animate-spin" />
-                      <span className="text-[11px] font-semibold text-gray-500">Chargement du match à venir...</span>
-                    </div>
-                  )
-                )}
-
                 {challenge.locked && (
-                  <div className="flex items-center gap-1 text-amber-600 text-xs font-bold uppercase tracking-wider mb-2 mt-2">
-                    <Lock className="w-3 h-3" /> Paris verrouillés (Match en cours)
+                  <div className="flex items-center gap-1 text-amber-600 text-xs font-bold uppercase tracking-wider mb-2 mt-2 border border-amber-200/50 bg-amber-50 rounded-lg p-2 w-max">
+                    <Lock className="w-3 h-3" /> Paris verrouillés
                   </div>
                 )}
                 
-                {challenge.matchId !== 0 && renderPredictionForm(challenge)}
-
                 {/* Always at the bottom: Rules, Participants, and Optional Admin Controls */}
                 <div className="flex flex-wrap items-center justify-between gap-2 mt-4 pt-3.5 border-t border-gray-100">
                   <div className="flex gap-2">
