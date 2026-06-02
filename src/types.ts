@@ -57,6 +57,7 @@ export interface Prediction {
   penaltiesHomeScore?: number;
   penaltiesAwayScore?: number;
   customAnswer?: string;
+  bonus?: boolean;
 }
 
 export interface Competition {

@@ -941,6 +941,31 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
     });
   };
 
+  const toggleBonus = (
+    challengeId: string,
+    matchId: number,
+  ) => {
+    setPredictionForms((prev) => {
+      const currentChallengeForm = prev[challengeId] || {};
+      const currentMatches = currentChallengeForm.matches || {};
+      const currentMatchPred = currentMatches[matchId] || {};
+      
+      return {
+        ...prev,
+        [challengeId]: {
+          ...currentChallengeForm,
+          matches: {
+            ...currentMatches,
+            [matchId]: {
+              ...currentMatchPred,
+              bonus: !currentMatchPred.bonus,
+            },
+          },
+        },
+      };
+    });
+  };
+
   const submitPrediction = async (challenge: Challenge) => {
     if (!supabase) { alert("Erreur de connexion"); return; }
     if (!userId) { alert("Vous devez être connecté"); return; }
@@ -1002,12 +1027,16 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
     // Capture the current predictions map from state if it exists
     const currentPreds = userPredictions[challenge.id] || {};
     const matchesPreds = currentPreds.matches || {};
+    
+    // Get bonus from predictionForms
+    const formMatch = predictionForms[challenge.id]?.matches?.[matchId] || {};
 
     const updatedMatches = {
       ...matchesPreds,
       [matchId]: {
         homeScore: hScore,
         awayScore: aScore,
+        bonus: formMatch.bonus,
       },
     };
 
@@ -1742,8 +1771,8 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
                         {hasSubmitted && isOpen && (
                           <div className="mt-2 text-center">
                             <button 
-                              className="w-full text-xs font-black bg-gradient-to-br from-amber-400 to-orange-500 text-white py-2 rounded-lg hover:shadow-lg transition-all cursor-pointer flex items-center justify-center gap-2"
-                              onClick={() => { /* Need: handler to toggle bonus */}}
+                              className={`w-full text-xs font-black py-2 rounded-lg hover:shadow-lg transition-all cursor-pointer flex items-center justify-center gap-2 ${predictionForms[challengeId]?.matches?.[m.id]?.bonus ? 'bg-gradient-to-br from-emerald-500 to-emerald-700' : 'bg-gradient-to-br from-amber-400 to-orange-500'} text-white`}
+                              onClick={() => toggleBonus(challengeId, m.id)}
                             >
                                <Trophy className="w-3.5 h-3.5" />
                                Jouer Bonus X2
