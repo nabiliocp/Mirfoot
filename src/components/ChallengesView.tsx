@@ -641,6 +641,7 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
     }
 
     // Check if user is already a participant
+    console.log("Checking participation for user:", userId, "challenge:", challengeToJoin.id);
     const { data: existingInvite, error: checkError } = await supabase
       .from("challenge_invitations")
       .select("id")
@@ -648,6 +649,7 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
       .eq("user_id", userId)
       .maybeSingle();
 
+    console.log("Existing invite:", existingInvite, "Error:", checkError);
     if (existingInvite) {
       alert("Vous avez déjà rejoint ce défi !");
       return;

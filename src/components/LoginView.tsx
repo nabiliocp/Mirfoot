@@ -37,15 +37,20 @@ export default function LoginView() {
         return;
     }
 
+    console.log("Challenge data fetched:", data);
+    
     let compName = 'Compétition';
     if (data.competition_id) {
-        const { data: compData } = await supabase
+        console.log("Fetching competition for id:", data.competition_id);
+        const { data: compData, error: compError } = await supabase
             .from("competitions")
             .select("name")
             .eq("id", data.competition_id)
             .single();
+        console.log("Competition fetch result:", compData, compError);
         if (compData) compName = compData.name;
     }
+    console.log("Final compName:", compName);
     
     setSearchedChallenge({
         id: data.id,
