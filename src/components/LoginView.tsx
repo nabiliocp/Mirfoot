@@ -21,6 +21,7 @@ export default function LoginView() {
   const [successMsg, setSuccessMsg] = useState('');
   const [searchCode, setSearchCode] = useState('');
   const [searchedChallenge, setSearchedChallenge] = useState<{ id: string; title: string, home: string, away: string, compName: string } | null>(null);
+  const [inviteEmail, setInviteEmail] = useState('');
 
   const handleSearchCode = async () => {
     setErrorMsg('');
@@ -66,15 +67,33 @@ export default function LoginView() {
     });
   };
 
-  const handleGoogleLogin = async () => {
+  const handleInviteJoin = async (emailToUse: string) => {
     if (!supabase) return;
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: window.location.href
+    if (!emailToUse.trim()) {
+      setErrorMsg("Veuillez saisir votre email.");
+      return;
+    }
+    setLoading(true);
+    setErrorMsg('');
+    setSuccessMsg('');
+    try {
+      if (searchedChallenge) {
+        localStorage.setItem("pending_invite_id", searchedChallenge.id);
       }
-    });
-    if (error) setErrorMsg(error.message);
+      const { error } = await supabase.auth.signInWithOtp({
+        email: emailToUse.trim(),
+        options: {
+          emailRedirectTo: window.location.origin
+        }
+      });
+      if (error) throw error;
+      setSuccessMsg(`Lien magique envoyé à ${emailToUse} ! Connecte-toi via cet email pour rejoindre le défi automatiquement.`);
+      setSearchedChallenge(null);
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Une erreur est survenue');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleAuth = async (e: FormEvent) => {
@@ -156,26 +175,36 @@ export default function LoginView() {
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
             <div className="bg-white p-6 rounded-3xl shadow-xl max-w-sm w-full">
               <h2 className="text-xl font-bold mb-2">Défi trouvé !</h2>
-              <div className="bg-emerald-50 p-4 rounded-xl mb-6 text-emerald-900 border border-emerald-100">
+              <div className="bg-emerald-50 p-4 rounded-xl mb-4 text-emerald-900 border border-emerald-100">
                 <p className="font-bold">{searchedChallenge.title}</p>
                 <p className="text-sm font-semibold text-emerald-700">{searchedChallenge.compName}</p>
                 {searchedChallenge.home && searchedChallenge.home !== 'Comp' && searchedChallenge.away && searchedChallenge.away !== 'Comp' && (
                     <p className="text-sm">{searchedChallenge.home} vs {searchedChallenge.away}</p>
                 )}
               </div>
-              <div className="space-y-3">
+              <div className="text-left mb-4">
+                <label className="block text-xs font-semibold text-gray-600 mb-1">
+                  Saisis ton email pour recevoir un lien magique :
+                </label>
+                <input
+                  type="email"
+                  required
+                  value={inviteEmail}
+                  onChange={(e) => setInviteEmail(e.target.value)}
+                  className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                  placeholder="ton@email.com"
+                />
+              </div>
+              <div className="space-y-2">
                 <button
-                  onClick={() => {
-                    localStorage.setItem("pending_invite_id", searchedChallenge.id);
-                    handleGoogleLogin();
-                  }}
-                  className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-4 rounded-xl transition cursor-pointer"
+                  onClick={() => handleInviteJoin(inviteEmail)}
+                  className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-4 rounded-xl transition cursor-pointer text-sm"
                 >
-                  Se connecter pour rejoindre
+                  Recevoir le lien & rejoindre
                 </button>
                 <button
                   onClick={() => setSearchedChallenge(null)}
-                  className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-3 px-4 rounded-xl transition cursor-pointer"
+                  className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-3 px-4 rounded-xl transition cursor-pointer text-sm"
                 >
                   Annuler
                 </button>
@@ -207,25 +236,6 @@ export default function LoginView() {
             >
               Rechercher
             </button>
-          </div>
-        </div>
-
-        <button 
-          onClick={handleGoogleLogin}
-          className="w-full flex justify-center items-center gap-3 bg-white border-2 border-gray-200 text-gray-700 font-bold py-3.5 px-4 rounded-xl hover:bg-gray-50 active:bg-gray-100 transition-all shadow-sm mb-6 cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
-        >
-          <svg className="w-5 h-5" viewBox="0 0 24 24">
-            <path fill="currentColor" d="M21.35,11.1H12.18V13.83H18.69C18.36,17.64 15.19,19.27 12.19,19.27C8.36,19.27 5,16.25 5,12C5,7.9 8.2,4.73 12.2,4.73C15.29,4.73 17.1,6.7 17.1,6.7L19,4.72C19,4.72 16.56,2 12.1,2C6.42,2 2.03,6.8 2.03,12C2.03,17.05 6.16,22 12.25,22C17.6,22 21.5,18.33 21.5,12.91C21.5,11.76 21.35,11.1 21.35,11.1V11.1Z" />
-          </svg>
-          Continuer avec Google
-        </button>
-        
-        <div className="relative mb-6">
-          <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-gray-200"></div>
-          </div>
-          <div className="relative flex justify-center text-sm">
-            <span className="px-2 bg-white text-gray-500">Ou avec un Lien Magique</span>
           </div>
         </div>
 

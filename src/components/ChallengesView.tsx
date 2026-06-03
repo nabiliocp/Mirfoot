@@ -413,6 +413,9 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
         if (betsRes.data) betsRes.data.forEach((b: any) => participantIds.add(b.user_id));
         if (invsRes.data) invsRes.data.forEach((i: any) => participantIds.add(i.user_id));
         
+        if (userId) participantIds.add(userId);
+        if (selectedChallenge && selectedChallenge.creatorId) participantIds.add(selectedChallenge.creatorId);
+        
         setParticipants(Array.from(participantIds));
     } catch (err) {
         console.error("Error loading challenge data:", err);
