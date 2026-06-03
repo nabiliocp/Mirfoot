@@ -194,7 +194,7 @@ export default function App() {
             <h1 className="text-2xl font-bold text-gray-800 mb-2">
               Tu as été invité !
             </h1>
-            <p className="text-gray-500 mb-6">Rejoins le défi :</p>
+            <p className="text-gray-500 mb-6">Connecte-toi pour rejoindre le défi :</p>
             <div className="bg-emerald-50 p-4 rounded-xl mb-8 font-bold text-emerald-800 border border-emerald-100">
               {inviteChallengeName || "Défi en cours..."}
             </div>
@@ -204,7 +204,7 @@ export default function App() {
                 onClick={handleAcceptInvite}
                 className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 rounded-xl transition-all shadow-sm cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
               >
-                Rejoindre le défi
+                Se connecter pour rejoindre
               </button>
               <button
                 onClick={handleDeclineInvite}

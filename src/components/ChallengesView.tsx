@@ -574,13 +574,8 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
       }));
       setChallenges(mapped);
 
-      // Auto-open/select the invited challenge to immediately display its predictions
-      if (inviteIdFromUrl) {
-        const foundInvited = mapped.find((c) => c.id === inviteIdFromUrl);
-        if (foundInvited) {
-          setSelectedChallenge(foundInvited);
-        }
-      }
+      // Removed automatic selection of challenged found from URL
+      // If there are invited challenge IDs, fetch those challenges too
     }
 
     if (betsRes.data) {
