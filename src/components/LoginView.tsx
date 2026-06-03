@@ -203,7 +203,7 @@ export default function LoginView() {
             />
             <button
               onClick={handleSearchCode}
-              className="bg-emerald-600 text-white font-bold py-2.5 px-4 rounded-xl text-sm cursor-pointer hover:bg-emerald-700 transition"
+              className="bg-emerald-600 text-white font-bold py-2.5 px-4 rounded-xl text-sm cursor-pointer hover:bg-emerald-700 transition shrink-0"
             >
               Rechercher
             </button>
