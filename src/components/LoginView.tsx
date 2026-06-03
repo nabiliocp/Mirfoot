@@ -39,16 +39,19 @@ export default function LoginView() {
 
     console.log("Challenge data fetched:", data);
     
+    // ... challenge found
     let compName = 'Compétition';
     if (data.competition_id) {
-        console.log("Fetching competition for id:", data.competition_id);
-        const { data: compData, error: compError } = await supabase
-            .from("competitions")
-            .select("name")
-            .eq("id", data.competition_id)
-            .single();
-        console.log("Competition fetch result:", compData, compError);
-        if (compData) compName = compData.name;
+        try {
+            const resp = await fetch("/api/competitions");
+            const compData = await resp.json();
+            // Football-data API returns { competitions: [...] }
+            const competitions = compData.competitions || [];
+            const competition = competitions.find((c: any) => c.id === Number(data.competition_id));
+            if (competition) compName = competition.name;
+        } catch (e) {
+            console.error("Failed to fetch competitions", e);
+        }
     }
     console.log("Final compName:", compName);
     
