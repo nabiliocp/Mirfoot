@@ -20,10 +20,29 @@ export default function LoginView() {
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   const [searchCode, setSearchCode] = useState('');
+  const [searchedChallenge, setSearchedChallenge] = useState<{ id: string; title: string, home: string, away: string } | null>(null);
 
-  const handleSearchCode = () => {
+  const handleSearchCode = async () => {
+    setErrorMsg('');
     if (!searchCode.trim()) return;
-    window.location.href = `/?search=${encodeURIComponent(searchCode.trim())}`;
+    
+    const { data, error } = await supabase
+        .from("challenges")
+        .select("id, title, match_home_team, match_away_team")
+        .eq("id", searchCode.trim())
+        .single();
+    
+    if (error || !data) {
+        setErrorMsg("Défi non trouvé");
+        return;
+    }
+    
+    setSearchedChallenge({
+        id: data.id,
+        title: data.title,
+        home: data.match_home_team,
+        away: data.match_away_team
+    });
   };
 
   const handleGoogleLogin = async () => {
@@ -112,6 +131,35 @@ export default function LoginView() {
           </div>
         )}
 
+        {searchedChallenge && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white p-6 rounded-3xl shadow-xl max-w-sm w-full">
+              <h2 className="text-xl font-bold mb-2">Défi trouvé !</h2>
+              <div className="bg-emerald-50 p-4 rounded-xl mb-6 text-emerald-900 border border-emerald-100">
+                <p className="font-bold">{searchedChallenge.title}</p>
+                <p className="text-sm">{searchedChallenge.home} vs {searchedChallenge.away}</p>
+              </div>
+              <div className="space-y-3">
+                <button
+                  onClick={() => {
+                    localStorage.setItem("pending_invite_id", searchedChallenge.id);
+                    handleGoogleLogin();
+                  }}
+                  className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-4 rounded-xl transition cursor-pointer"
+                >
+                  Se connecter pour rejoindre
+                </button>
+                <button
+                  onClick={() => setSearchedChallenge(null)}
+                  className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-3 px-4 rounded-xl transition cursor-pointer"
+                >
+                  Annuler
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {successMsg && (
           <div className="bg-emerald-50 text-emerald-700 p-3 rounded-xl text-sm mb-4 border border-emerald-100 flex items-center gap-2 text-left">
             <Mail className="w-4 h-4 flex-shrink-0" />
@@ -126,14 +174,14 @@ export default function LoginView() {
               type="text"
               value={searchCode}
               onChange={(e) => setSearchCode(e.target.value)}
-              className="flex-1 px-3 py-2.5 bg-white border border-emerald-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+              className="flex-1 px-3 py-2.5 bg-white border border-emerald-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none cursor-text"
               placeholder="Code du défi..."
             />
             <button
               onClick={handleSearchCode}
-              className="bg-emerald-600 text-white font-bold py-2.5 px-4 rounded-xl text-sm"
+              className="bg-emerald-600 text-white font-bold py-2.5 px-4 rounded-xl text-sm cursor-pointer hover:bg-emerald-700 transition"
             >
-              Rejoindre
+              Rechercher
             </button>
           </div>
         </div>
