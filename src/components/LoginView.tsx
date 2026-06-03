@@ -29,7 +29,7 @@ export default function LoginView() {
     const { data, error } = await supabase
         .from("challenges")
         .select("id, title, match_home_team, match_away_team")
-        .eq("id", searchCode.trim())
+        .eq("rules", searchCode.trim())
         .single();
     
     if (error || !data) {
