@@ -193,17 +193,17 @@ export default function LoginView() {
 
         <div className="bg-emerald-50 rounded-2xl p-4 border border-emerald-100 mb-6 w-full text-left">
           <label className="block text-xs font-semibold text-emerald-800 mb-2">Rejoindre un défi par code</label>
-          <div className="flex gap-2">
+          <div className="flex flex-col sm:flex-row gap-2">
             <input
               type="text"
               value={searchCode}
               onChange={(e) => setSearchCode(e.target.value)}
-              className="flex-1 px-3 py-2.5 bg-white border border-emerald-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none cursor-text"
+              className="w-full sm:flex-1 min-w-0 px-3 py-2.5 bg-white border border-emerald-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none cursor-text"
               placeholder="Code du défi..."
             />
             <button
               onClick={handleSearchCode}
-              className="bg-emerald-600 text-white font-bold py-2.5 px-4 rounded-xl text-sm cursor-pointer hover:bg-emerald-700 transition shrink-0"
+              className="w-full sm:w-auto bg-emerald-600 text-white font-bold py-2.5 px-5 rounded-xl text-sm cursor-pointer hover:bg-emerald-700 transition shrink-0"
             >
               Rechercher
             </button>
