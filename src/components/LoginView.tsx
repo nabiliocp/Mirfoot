@@ -19,6 +19,12 @@ export default function LoginView() {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+  const [searchCode, setSearchCode] = useState('');
+
+  const handleSearchCode = () => {
+    if (!searchCode.trim()) return;
+    window.location.href = `/?invite=${encodeURIComponent(searchCode.trim())}`;
+  };
 
   const handleGoogleLogin = async () => {
     if (!supabase) return;
@@ -112,6 +118,25 @@ export default function LoginView() {
             <span>{successMsg}</span>
           </div>
         )}
+
+        <div className="bg-emerald-50 rounded-2xl p-4 border border-emerald-100 mb-6 w-full text-left">
+          <label className="block text-xs font-semibold text-emerald-800 mb-2">Rejoindre un défi par code</label>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={searchCode}
+              onChange={(e) => setSearchCode(e.target.value)}
+              className="flex-1 px-3 py-2.5 bg-white border border-emerald-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+              placeholder="Code du défi..."
+            />
+            <button
+              onClick={handleSearchCode}
+              className="bg-emerald-600 text-white font-bold py-2.5 px-4 rounded-xl text-sm"
+            >
+              Rejoindre
+            </button>
+          </div>
+        </div>
 
         <button 
           onClick={handleGoogleLogin}
