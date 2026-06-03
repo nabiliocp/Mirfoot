@@ -639,6 +639,20 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
       alert("Vous devez être connecté pour rejoindre un défi.");
       return;
     }
+
+    // Check if user is already a participant
+    const { data: existingInvite, error: checkError } = await supabase
+      .from("challenge_invitations")
+      .select("id")
+      .eq("challenge_id", challengeToJoin.id)
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (existingInvite) {
+      alert("Vous avez déjà rejoint ce défi !");
+      return;
+    }
+
     setJoiningChallengeId(challengeToJoin.id);
     try {
       // Create invitation entry for the user so they can view and participate
