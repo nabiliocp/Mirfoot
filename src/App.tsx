@@ -129,6 +129,8 @@ export default function App() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const invite = params.get("invite");
+    const search = params.get("search");
+    
     if (invite && supabase) {
       setInviteId(invite);
       localStorage.setItem("pending_invite_id", invite);
@@ -158,6 +160,9 @@ export default function App() {
             }
           });
         });
+    } else if (search && supabase) {
+      setActiveTab("challenges");
+      setLoadingInvite(false);
     } else {
       setLoadingInvite(false);
     }

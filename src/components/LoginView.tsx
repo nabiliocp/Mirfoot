@@ -23,7 +23,7 @@ export default function LoginView() {
 
   const handleSearchCode = () => {
     if (!searchCode.trim()) return;
-    window.location.href = `/?invite=${encodeURIComponent(searchCode.trim())}`;
+    window.location.href = `/?search=${encodeURIComponent(searchCode.trim())}`;
   };
 
   const handleGoogleLogin = async () => {
