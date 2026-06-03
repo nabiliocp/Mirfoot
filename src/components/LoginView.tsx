@@ -47,7 +47,9 @@ export default function LoginView() {
             const compData = await resp.json();
             // Football-data API returns { competitions: [...] }
             const competitions = compData.competitions || [];
+            console.log("Competitions found:", competitions);
             const competition = competitions.find((c: any) => c.id === Number(data.competition_id));
+            console.log("Competition match:", competition);
             if (competition) compName = competition.name;
         } catch (e) {
             console.error("Failed to fetch competitions", e);
@@ -58,8 +60,8 @@ export default function LoginView() {
     setSearchedChallenge({
         id: data.id,
         title: data.title,
-        home: data.match_home_team,
-        away: data.match_away_team,
+        home: data.match_home_team === "Comp" && compName !== 'Compétition' ? compName : data.match_home_team,
+        away: data.match_away_team === "Comp" ? '' : data.match_away_team,
         compName: compName
     });
   };
@@ -157,7 +159,7 @@ export default function LoginView() {
               <div className="bg-emerald-50 p-4 rounded-xl mb-6 text-emerald-900 border border-emerald-100">
                 <p className="font-bold">{searchedChallenge.title}</p>
                 <p className="text-sm font-semibold text-emerald-700">{searchedChallenge.compName}</p>
-                {searchedChallenge.home !== "Comp" && (
+                {searchedChallenge.home && searchedChallenge.home !== 'Comp' && searchedChallenge.away && searchedChallenge.away !== 'Comp' && (
                     <p className="text-sm">{searchedChallenge.home} vs {searchedChallenge.away}</p>
                 )}
               </div>
