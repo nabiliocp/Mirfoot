@@ -67,6 +67,7 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
   const [selectedChallenge, setSelectedChallenge] = useState<Challenge | null>(null);
   const [detailTab, setDetailTab] = useState<"matches" | "leaderboard" | "participants" | "results">("matches");
   const [challengeBets, setChallengeBets] = useState<any[]>([]);
+  const [participants, setParticipants] = useState<string[]>([]);
   const [allProfiles, setAllProfiles] = useState<any[]>([]);
   const [loadingChallengeDetails, setLoadingChallengeDetails] = useState(false);
 
@@ -399,25 +400,29 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
     setDetailTab("matches");
     setLoadingChallengeDetails(true);
 
-    async function loadChallengeBets() {
+    async function loadChallengeData() {
       if (!supabase) return;
       try {
-        const { data, error } = await supabase
-          .from("bets")
-          .select("*")
-          .eq("challenge_id", selectedChallenge.id);
+        const [betsRes, invsRes] = await Promise.all([
+          supabase.from("bets").select("*").eq("challenge_id", selectedChallenge.id),
+          supabase.from("challenge_invitations").select("user_id").eq("challenge_id", selectedChallenge.id)
+        ]);
 
-        if (!error && data) {
-          setChallengeBets(data);
+        if (betsRes.data) {
+          setChallengeBets(betsRes.data);
+        }
+        if (invsRes.data) {
+            // Use invitations as the source of truth for participants
+            setParticipants(invsRes.data.map(i => i.user_id));
         }
       } catch (err) {
-        console.error("Error loading challenge bets:", err);
+        console.error("Error loading challenge data:", err);
       } finally {
         setLoadingChallengeDetails(false);
       }
     }
 
-    loadChallengeBets();
+    loadChallengeData();
   }, [selectedChallenge]);
 
   const refreshChallengeBets = async () => {
@@ -1903,21 +1908,21 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
             <div className="space-y-4">
               <h3 className="font-bold text-gray-800 text-sm border-b border-gray-100 pb-3 mb-3 flex items-center gap-2">
                 <Users className="w-4 h-4 text-emerald-600" />
-                Liste des Participants réels ({challengeBets.length})
+                Liste des Participants ({participants.length})
               </h3>
               
               {loadingChallengeDetails ? (
                 <div className="flex justify-center py-16">
                   <Clock className="w-8 h-8 text-emerald-500 animate-spin" />
                 </div>
-              ) : challengeBets.length === 0 ? (
+              ) : participants.length === 0 ? (
                 <p className="text-center py-12 text-gray-400 text-sm italic">Aucun participant n'a encore rejoint ce défi.</p>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {challengeBets.map(bet => {
-                    const profile = allProfiles.find(p => p.id === bet.user_id) || { username: "Joueur", first_name: "", last_name: "", points: 0, avatar_type: "emoji", avatar_value: "⚽" };
+                  {participants.map(userId => {
+                    const profile = allProfiles.find(p => p.id === userId) || { username: "Joueur", first_name: "", last_name: "", points: 0, avatar_type: "emoji", avatar_value: "⚽" };
                     return (
-                      <div key={bet.user_id} className="bg-gray-50/50 p-3 rounded-xl border border-gray-100 flex items-center gap-3">
+                      <div key={userId} className="bg-gray-50/50 p-3 rounded-xl border border-gray-100 flex items-center gap-3">
                         <div className="w-9 h-9 flex items-center justify-center bg-white border border-gray-100 rounded-lg text-lg shrink-0">
                           {profile.avatar_type === "emoji" ? profile.avatar_value : "⚽"}
                         </div>

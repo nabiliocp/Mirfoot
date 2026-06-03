@@ -154,7 +154,9 @@ export default function LoginView() {
               <div className="bg-emerald-50 p-4 rounded-xl mb-6 text-emerald-900 border border-emerald-100">
                 <p className="font-bold">{searchedChallenge.title}</p>
                 <p className="text-sm font-semibold text-emerald-700">{searchedChallenge.compName}</p>
-                <p className="text-sm">{searchedChallenge.home} vs {searchedChallenge.away}</p>
+                {searchedChallenge.home !== "Comp" && (
+                    <p className="text-sm">{searchedChallenge.home} vs {searchedChallenge.away}</p>
+                )}
               </div>
               <div className="space-y-3">
                 <button
