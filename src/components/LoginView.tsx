@@ -20,7 +20,7 @@ export default function LoginView() {
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   const [searchCode, setSearchCode] = useState('');
-  const [searchedChallenge, setSearchedChallenge] = useState<{ id: string; title: string, home: string, away: string } | null>(null);
+  const [searchedChallenge, setSearchedChallenge] = useState<{ id: string; title: string, home: string, away: string, compName: string } | null>(null);
 
   const handleSearchCode = async () => {
     setErrorMsg('');
@@ -28,7 +28,7 @@ export default function LoginView() {
     
     const { data, error } = await supabase
         .from("challenges")
-        .select("id, title, match_home_team, match_away_team")
+        .select("id, title, match_home_team, match_away_team, competition_id")
         .eq("rules", searchCode.trim())
         .single();
     
@@ -36,12 +36,23 @@ export default function LoginView() {
         setErrorMsg("Défi non trouvé");
         return;
     }
+
+    let compName = 'Compétition';
+    if (data.competition_id) {
+        const { data: compData } = await supabase
+            .from("competitions")
+            .select("name")
+            .eq("id", data.competition_id)
+            .single();
+        if (compData) compName = compData.name;
+    }
     
     setSearchedChallenge({
         id: data.id,
         title: data.title,
         home: data.match_home_team,
-        away: data.match_away_team
+        away: data.match_away_team,
+        compName: compName
     });
   };
 
@@ -137,6 +148,7 @@ export default function LoginView() {
               <h2 className="text-xl font-bold mb-2">Défi trouvé !</h2>
               <div className="bg-emerald-50 p-4 rounded-xl mb-6 text-emerald-900 border border-emerald-100">
                 <p className="font-bold">{searchedChallenge.title}</p>
+                <p className="text-sm font-semibold text-emerald-700">{searchedChallenge.compName}</p>
                 <p className="text-sm">{searchedChallenge.home} vs {searchedChallenge.away}</p>
               </div>
               <div className="space-y-3">

@@ -1,0 +1,5 @@
+38:    type: "rules" | "participants" | "confirm-delete" | "edit" | "details";
+68:  const [detailTab, setDetailTab] = useState<"matches" | "leaderboard" | "participants" | "results">("matches");
+1624:            onClick={() => setDetailTab("participants")}
+1626:              detailTab === "participants"
+1886:          {detailTab === "participants" && (

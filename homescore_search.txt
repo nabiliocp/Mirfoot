@@ -1,0 +1,21 @@
+918:    updates: { homeScore?: number; awayScore?: number },
+979:        pred.homeScore === undefined ||
+1007:    homeScore?: number,
+1014:    const hScore = homeScore !== undefined ? Number(homeScore) : NaN;
+1032:        homeScore: hScore,
+1279:              value={activeForm.homeScore ?? ""}
+1282:                  homeScore: parseInt(e.target.value),
+1320:         activeForm.homeScore !== undefined && 
+1321:         activeForm.homeScore === activeForm.awayScore && (
+1434:          const pHome = predVal?.homeScore;
+1481:          if (pMatch && pMatch.homeScore !== undefined && pMatch.awayScore !== undefined) {
+1491:                const isExact = pMatch.homeScore === rHome && pMatch.awayScore === rAway;
+1493:                const predWinner = pMatch.homeScore > pMatch.awayScore ? 'home' : pMatch.homeScore < pMatch.awayScore ? 'away' : 'draw';
+1502:                  const diff = Math.abs(pMatch.homeScore - rHome) + Math.abs(pMatch.awayScore - rAway);
+1688:                    const scoreHome = userPredMatch?.homeScore !== undefined ? userPredMatch.homeScore : formMatch.homeScore;
+1691:                    const hasSubmitted = userPredMatch?.homeScore !== undefined && userPredMatch?.awayScore !== undefined;
+1738:                              onChange={(e) => updateCompetitionPredictionForm(challengeId, m.id, { homeScore: parseInt(e.target.value) })}
+2243:                              const scoreHome = userPredMatch?.homeScore !== undefined ? userPredMatch.homeScore : formMatch.homeScore;
+2246:                              const hasSubmitted = userPredMatch?.homeScore !== undefined && userPredMatch?.awayScore !== undefined;
+2296:                                         onChange={(e) => updateCompetitionPredictionForm(challengeId, m.id, { homeScore: parseInt(e.target.value) })}
+2329:                                        <CheckCircle2 className="w-3.5 h-3.5" /> Pronostic validé ! ({userPredMatch?.homeScore} - {userPredMatch?.awayScore})

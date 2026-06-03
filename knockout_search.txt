@@ -1,0 +1,23 @@
+7:  KnockoutRulesSet,
+77:    exact_score_penalties: "Score Exact Tab (Knockout)",
+78:    correct_winner_penalties: "Vainqueur Tab (Knockout)",
+152:    exact_score_penalties: { enabled: false, points: 5, label: "Score Exact Tab (Knockout)" },
+153:    correct_winner_penalties: { enabled: false, points: 2, label: "Vainqueur Tab (Knockout)" },
+223:    if (!stage) return { name: "", type: "", isKnockout: false };
+227:    let isKnockout = false;
+233:        isKnockout = false;
+238:        isKnockout = true;
+242:        isKnockout = true;
+246:        isKnockout = true;
+250:        isKnockout = true;
+254:        isKnockout = true;
+259:        isKnockout = cleanStage.includes("FINAL") || cleanStage.includes("SEMI") || cleanStage.includes("QUARTER") || cleanStage.includes("ROUND") || cleanStage.includes("PLAYOFF");
+265:      type: isKnockout ? "Éliminatoire" : "Groupe",
+266:      isKnockout
+1318:        {/* Knockout Match Prediction Fields */}
+1430:          const isKnockout = ["OCTOFINAL", "QUARTERFINAL", "SEMIFINAL", "FINAL"].includes(singleMatch.stage || "");
+1431:          const rules = isKnockout && challenge.pointRules?.knockout_stage ? challenge.pointRules.knockout_stage : challenge.pointRules?.group_stage;
+1487:              const isKnockout = ["OCTOFINAL", "QUARTERFINAL", "SEMIFINAL", "FINAL"].includes(m.stage || "");
+1488:              const rules = isKnockout && challenge.pointRules?.knockout_stage ? challenge.pointRules.knockout_stage : challenge.pointRules?.group_stage;
+1710:                                info.isKnockout 
+2266:                                          info.isKnockout 
