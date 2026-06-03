@@ -396,33 +396,35 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
       setChallengeBets([]);
       return;
     }
+  }, [selectedChallenge]);
 
-    setDetailTab("matches");
+  const loadChallengeData = async (challengeId: string) => {
+    if (!supabase) return;
     setLoadingChallengeDetails(true);
-
-    async function loadChallengeData() {
-      if (!supabase) return;
-      try {
+    try {
         const [betsRes, invsRes] = await Promise.all([
-          supabase.from("bets").select("*").eq("challenge_id", selectedChallenge.id),
-          supabase.from("challenge_invitations").select("user_id").eq("challenge_id", selectedChallenge.id)
+          supabase.from("bets").select("user_id").eq("challenge_id", challengeId),
+          supabase.from("challenge_invitations").select("user_id").eq("challenge_id", challengeId)
         ]);
-
-        if (betsRes.data) {
-          setChallengeBets(betsRes.data);
-        }
-        if (invsRes.data) {
-            // Use invitations as the source of truth for participants
-            setParticipants(invsRes.data.map(i => i.user_id));
-        }
-      } catch (err) {
+        if (betsRes.data) setChallengeBets(betsRes.data);
+        
+        // Combine user IDs from bets and invitations to workaround RLS on invitations
+        const participantIds = new Set<string>();
+        if (betsRes.data) betsRes.data.forEach((b: any) => participantIds.add(b.user_id));
+        if (invsRes.data) invsRes.data.forEach((i: any) => participantIds.add(i.user_id));
+        
+        setParticipants(Array.from(participantIds));
+    } catch (err) {
         console.error("Error loading challenge data:", err);
-      } finally {
+    } finally {
         setLoadingChallengeDetails(false);
-      }
     }
+  };
 
-    loadChallengeData();
+  useEffect(() => {
+    if (!selectedChallenge) return;
+    setDetailTab("matches");
+    loadChallengeData(selectedChallenge.id);
   }, [selectedChallenge]);
 
   const refreshChallengeBets = async () => {
@@ -688,6 +690,7 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
       
       // Select the joined challenge automatically to open its detailed predictions view!
       setSelectedChallenge(challengeToJoin);
+      await loadChallengeData(challengeToJoin.id);
       
       alert(`Félicitations! Vous avez rejoint le défi "${challengeToJoin.title}" avec succès.`);
     } catch (err: any) {
@@ -1906,6 +1909,7 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
 
           {detailTab === "participants" && (
             <div className="space-y-4">
+              {console.log("Rendering participants tab. Participants state:", participants)}
               <h3 className="font-bold text-gray-800 text-sm border-b border-gray-100 pb-3 mb-3 flex items-center gap-2">
                 <Users className="w-4 h-4 text-emerald-600" />
                 Liste des Participants ({participants.length})

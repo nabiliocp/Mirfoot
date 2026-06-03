@@ -1,0 +1,5 @@
+71:  const [allProfiles, setAllProfiles] = useState<any[]>([]);
+1433:    const creatorProfile = allProfiles.find(p => p.id === challenge.creatorId);
+1447:        const profile = allProfiles.find(p => p.id === bet.user_id) || { username: "Joueur", avatar_type: "emoji", avatar_value: "⚽" };
+1495:        const profile = allProfiles.find(p => p.id === bet.user_id) || { username: "Joueur", avatar_type: "emoji", avatar_value: "⚽" };
+1927:                    const profile = allProfiles.find(p => p.id === userId) || { username: "Joueur", first_name: "", last_name: "", points: 0, avatar_type: "emoji", avatar_value: "⚽" };
