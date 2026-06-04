@@ -668,14 +668,11 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
       // Create invitation entry for the user so they can view and participate
       const { error } = await supabase
         .from("challenge_invitations")
-        .upsert(
-          {
-            challenge_id: challengeToJoin.id,
-            user_id: userId,
-            accepted: true,
-          },
-          { onConflict: "challenge_id, user_id" }
-        );
+        .insert({
+          challenge_id: challengeToJoin.id,
+          user_id: userId,
+          accepted: true,
+        });
 
       if (error) {
         throw error;

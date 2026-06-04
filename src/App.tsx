@@ -104,27 +104,47 @@ export default function App() {
     if (session && storedInvite && supabase) {
       console.log("Processing invite for session:", session.user.id, "invite:", storedInvite);
       // Process invite!
+      
+      const proceedWithCleanup = () => {
+        console.log("Invite processed successfully");
+        localStorage.removeItem("pending_invite_id");
+        setInviteId(null);
+        // Remove invite parameter from current URL to avoid re-triggering invite UI
+        const url = new URL(window.location.href);
+        url.searchParams.delete("invite");
+        window.history.replaceState({}, document.title, url.pathname + url.search);
+      };
+
+      // Check if invitation already exists first to avoid duplicate inserts or RLS update issues
       supabase
         .from("challenge_invitations")
-        .upsert(
-          {
-            challenge_id: storedInvite,
-            user_id: session.user.id,
-            accepted: true,
-          },
-          { onConflict: "challenge_id, user_id" },
-        )
-        .then(({data, error}) => {
-          if (error) {
-            console.error("Error processing invite:", error);
+        .select("id")
+        .eq("challenge_id", storedInvite)
+        .eq("user_id", session.user.id)
+        .maybeSingle()
+        .then(({ data: existing, error: checkError }) => {
+          if (checkError) {
+            console.error("Checking existing invite failed:", checkError);
+          }
+          if (existing) {
+            console.log("User already accepted/invited to this challenge.");
+            proceedWithCleanup();
           } else {
-            console.log("Invite processed successfully");
-            localStorage.removeItem("pending_invite_id");
-            setInviteId(null);
-            // Remove invite parameter from current URL to avoid re-triggering invite UI
-            const url = new URL(window.location.href);
-            url.searchParams.delete("invite");
-            window.history.replaceState({}, document.title, url.pathname + url.search);
+            // Insert new invitation
+            supabase
+              .from("challenge_invitations")
+              .insert({
+                challenge_id: storedInvite,
+                user_id: session.user.id,
+                accepted: true,
+              })
+              .then(({ error: insertError }) => {
+                if (insertError) {
+                  console.error("Error processing invite:", insertError);
+                } else {
+                  proceedWithCleanup();
+                }
+              });
           }
         });
     }
