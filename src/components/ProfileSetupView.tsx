@@ -19,6 +19,7 @@ export default function ProfileSetupView({
   onComplete: () => void;
 }) {
   const [username, setUsername] = useState("");
+  const [favoriteClub, setFavoriteClub] = useState("");
   const [avatarType, setAvatarType] = useState<"emoji" | "jersey">("emoji");
   const [avatarValue, setAvatarValue] = useState("👽");
   const [loading, setLoading] = useState(false);
@@ -31,6 +32,10 @@ export default function ProfileSetupView({
       setErrorMsg("Le pseudo est obligatoire.");
       return;
     }
+    if (!favoriteClub.trim()) {
+      setErrorMsg("Le club de cœur est obligatoire.");
+      return;
+    }
 
     setLoading(true);
     setErrorMsg("");
@@ -41,6 +46,7 @@ export default function ProfileSetupView({
         username,
         avatar_type: avatarType,
         avatar_value: avatarValue,
+        favorite_club: favoriteClub,
       },
     });
 
@@ -57,7 +63,8 @@ export default function ProfileSetupView({
         id: authData.user.id,
         username,
         avatar_type: avatarType,
-        avatar_value: avatarValue
+        avatar_value: avatarValue,
+        favorite_club: favoriteClub,
       }, { onConflict: 'id' });
 
     setLoading(false);
@@ -102,6 +109,20 @@ export default function ProfileSetupView({
               onChange={(e) => setUsername(e.target.value)}
               className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none"
               placeholder="Ton pseudo (ex: Zizou98)"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-1">
+              Club de cœur
+            </label>
+            <input
+              type="text"
+              required
+              value={favoriteClub}
+              onChange={(e) => setFavoriteClub(e.target.value)}
+              className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none"
+              placeholder="Ton club (ex: PSG, OM, Real)"
             />
           </div>
 

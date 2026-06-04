@@ -133,20 +133,25 @@ export default function App() {
       return;
     }
 
-    const checkProfile = async (userId: string) => {
+      const checkProfile = async (userId: string) => {
       try {
         if (!supabase) return;
+        console.log("Checking profile for", userId);
         const { data, error } = await supabase
           .from("profiles")
-          .select("username, avatar_type, avatar_value")
+          .select("username, avatar_type, avatar_value, favorite_club")
           .eq("id", userId)
           .single();
         
         console.log("CheckProfile result for", userId, ":", { data, error });
 
         // If error (e.g. record not found) OR no username, force setup
-        if (error || !data?.username) {
-          console.log("No profile found or username empty, forcing setup", { error, data });
+        if (error) {
+           console.log("Profile lookup error, forcing setup", error);
+           setNeedsProfileSetup(true);
+           setUserProfile(null);
+        } else if (!data?.username) {
+          console.log("No profile found or username empty, forcing setup", { data });
           setNeedsProfileSetup(true);
           setUserProfile(null);
         } else {
