@@ -1427,25 +1427,31 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
             </div>
 
             <div className="border-t border-gray-100 pt-4">
-              <h3 className="font-bold text-lg text-emerald-800 mb-3 border-b border-gray-100 pb-2">
-                Configuration des Règles
+              <h3 className="font-bold text-sm text-emerald-800 mb-3 border-b border-gray-100 pb-2 uppercase tracking-wide">
+                Règles Unifiées du Défi
               </h3>
               <div className="text-sm space-y-2">
-                {Object.entries(customRulesConfig).map(([key, rule]: [string, any]) => (
-                  <div key={key} className="flex justify-between items-center bg-gray-50 p-3 rounded-xl border border-gray-100">
-                    <label className="flex items-center gap-2 cursor-pointer font-semibold text-gray-700">
-                      <input type="checkbox" checked={rule.enabled} onChange={() => toggleRule(key)} className="accent-emerald-600" />
-                      <span className="text-xs">{rule.label}</span>
-                    </label>
-                    <input
-                      type="number"
-                      value={rule.points}
-                      onChange={(e) => updateRulePoints(key, parseInt(e.target.value))}
-                      className="w-16 p-1 rounded-lg border border-gray-200 text-center text-xs"
-                      disabled={!rule.enabled}
-                    />
+                <div className="bg-gray-50 p-3 rounded-xl border border-gray-100 space-y-2">
+                  <div className="flex justify-between text-xs font-semibold text-gray-700">
+                    <span>Score Exact</span>
+                    <span className="text-emerald-600">+5 pts</span>
                   </div>
-                ))}
+                  <div className="flex justify-between text-xs font-semibold text-gray-700">
+                    <span>Score Proche</span>
+                    <span className="text-emerald-600">+3 pts</span>
+                  </div>
+                  <div className="flex justify-between text-xs font-semibold text-gray-700">
+                    <span>Bon Vainqueur</span>
+                    <span className="text-emerald-600">+2 pts</span>
+                  </div>
+                  <div className="flex justify-between text-xs font-semibold text-gray-700">
+                    <span>Qualification</span>
+                    <span className="text-emerald-600">+2 pts</span>
+                  </div>
+                </div>
+                <p className="text-[10px] text-gray-500 italic px-1">
+                  Les règles sont identiques pour tous les matchs. 
+                </p>
               </div>
             </div>
 
@@ -2806,50 +2812,26 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
                         )}
 
                         {editPointRules && (
-                          <div>
-                            <label className="block text-xs font-black text-gray-700 uppercase tracking-wider mb-1.5">
-                              Barème de points {hasCompetitionStarted && "(Verrouillé)"}
+                          <div className="bg-gray-50 p-3 rounded-xl border border-gray-100">
+                            <label className="block text-xs font-black text-gray-700 uppercase tracking-wider mb-2">
+                              Règles Unifiées du Défi
                             </label>
-                            <div className="grid grid-cols-2 gap-2">
-                              <div className="space-y-1">
-                                <label className="text-[10px] text-gray-500">Score Exact</label>
-                                <input
-                                  type="number"
-                                  disabled={hasCompetitionStarted}
-                                  value={editPointRules.exact_score}
-                                  onChange={(e) => setEditPointRules({...editPointRules, exact_score: parseInt(e.target.value) || 0})}
-                                  className="w-full p-2 rounded-lg border border-gray-300 disabled:bg-gray-100"
-                                />
+                            <div className="space-y-1.5 pt-1">
+                              <div className="flex justify-between text-[11px] font-semibold text-gray-700">
+                                <span>Score Exact</span>
+                                <span className="text-emerald-600">+{editPointRules.exact_score} pts</span>
                               </div>
-                              <div className="space-y-1">
-                                <label className="text-[10px] text-gray-500">Score Proche</label>
-                                <input
-                                  type="number"
-                                  disabled={hasCompetitionStarted}
-                                  value={editPointRules.close_score}
-                                  onChange={(e) => setEditPointRules({...editPointRules, close_score: parseInt(e.target.value) || 0})}
-                                  className="w-full p-2 rounded-lg border border-gray-300 disabled:bg-gray-100"
-                                />
+                              <div className="flex justify-between text-[11px] font-semibold text-gray-700">
+                                <span>Score Proche</span>
+                                <span className="text-emerald-600">+{editPointRules.close_score} pts</span>
                               </div>
-                              <div className="space-y-1">
-                                <label className="text-[10px] text-gray-500">Bon Vainqueur</label>
-                                <input
-                                  type="number"
-                                  disabled={hasCompetitionStarted}
-                                  value={editPointRules.correct_winner}
-                                  onChange={(e) => setEditPointRules({...editPointRules, correct_winner: parseInt(e.target.value) || 0})}
-                                  className="w-full p-2 rounded-lg border border-gray-300 disabled:bg-gray-100"
-                                />
+                              <div className="flex justify-between text-[11px] font-semibold text-gray-700">
+                                <span>Bon Vainqueur</span>
+                                <span className="text-emerald-600">+{editPointRules.correct_winner} pts</span>
                               </div>
-                              <div className="space-y-1">
-                                <label className="text-[10px] text-gray-500">Qualification</label>
-                                <input
-                                  type="number"
-                                  disabled={hasCompetitionStarted}
-                                  value={editPointRules.qualification || 0}
-                                  onChange={(e) => setEditPointRules({...editPointRules, qualification: parseInt(e.target.value) || 0})}
-                                  className="w-full p-2 rounded-lg border border-gray-300 disabled:bg-gray-100"
-                                />
+                              <div className="flex justify-between text-[11px] font-semibold text-gray-700">
+                                <span>Qualification</span>
+                                <span className="text-emerald-600">+{editPointRules.qualification || 0} pts</span>
                               </div>
                             </div>
                           </div>
