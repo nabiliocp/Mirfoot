@@ -29,6 +29,74 @@ import {
 } from "lucide-react";
 import { supabase } from "../lib/supabase";
 
+const isTeamsNotDefinedYet = (homeTeam?: { name?: string; shortName?: string }, awayTeam?: { name?: string; shortName?: string }) => {
+  if (!homeTeam || !awayTeam) return true;
+  const homeName = homeTeam.name || homeTeam.shortName || "";
+  const awayName = awayTeam.name || awayTeam.shortName || "";
+  
+  if (!homeName.trim() || !awayName.trim()) return true;
+
+  const isMatchPlaceholder = (name: string) => {
+    const n = name.toLowerCase().trim();
+    if (
+      n === "" || 
+      n === "..." || 
+      n === "tbd" || 
+      n === "tbc" || 
+      n === "à définir" || 
+      n === "a definir" || 
+      n === "non deﬁni" || 
+      n === "non defini" || 
+      n === "non défini" || 
+      n === "qualifié" || 
+      n === "qualifie" ||
+      n === "aucun match" ||
+      n === "programmé"
+    ) return true;
+
+    // Direct prefix checks
+    if (
+      n.startsWith("vainqueur") || 
+      n.startsWith("winner") || 
+      n.startsWith("perdant") || 
+      n.startsWith("loser") || 
+      n.startsWith("groupe") || 
+      n.startsWith("group") ||
+      n.startsWith("v. match") ||
+      n.startsWith("p. match") ||
+      n.startsWith("v. ") ||
+      n.startsWith("p. ") ||
+      n.startsWith("w. ") ||
+      n.startsWith("l. ") ||
+      n.startsWith("w_") ||
+      n.startsWith("l_") ||
+      n.startsWith("tbd") ||
+      /^[wlp]\d+$/i.test(n) || // like w1, w12, l3, p5
+      /^(winner\s|loser\s|vainqueur\s|perdant\s)/i.test(n)
+    ) {
+      return true;
+    }
+
+    // Checking broad keyword containment
+    if (
+      n.includes("vainqueur de") || 
+      n.includes("winner of") || 
+      n.includes("perdant de") || 
+      n.includes("loser of") ||
+      n.includes("tbd") ||
+      n.includes("tbc") ||
+      n.includes("à définir") ||
+      n.includes("a definir")
+    ) {
+      return true;
+    }
+
+    return false;
+  };
+
+  return isMatchPlaceholder(homeName) || isMatchPlaceholder(awayName);
+};
+
 interface ChallengesViewProps {
   preselectedMatch?: { match: Match; competitionId: number } | null;
   onClearPreselectedMatch?: () => void;
@@ -1437,8 +1505,9 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
       (draftForm.penaltiesHomeScore !== undefined && draftForm.penaltiesHomeScore !== userPred?.penaltiesHomeScore) ||
       (draftForm.penaltiesAwayScore !== undefined && draftForm.penaltiesAwayScore !== userPred?.penaltiesAwayScore);
 
+    const isNotDefinedYet = isTeamsNotDefinedYet({ name: challenge.matchHomeTeam }, { name: challenge.matchAwayTeam });
     const timeLeft = challenge.matchDate ? new Date(challenge.matchDate).getTime() - new Date().getTime() : Infinity;
-    const isOpen = timeLeft > 0 && !isLocked;
+    const isOpen = timeLeft > 0 && !isLocked && !isNotDefinedYet;
 
     return (
       <div className="space-y-4 bg-gray-50 p-4 rounded-xl border border-gray-100 mt-4">
@@ -1569,7 +1638,12 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
           )}
         </div>
 
-        {userPred ? (
+        {isNotDefinedYet ? (
+          <div className="text-xs text-amber-850 bg-amber-50 border border-amber-200 text-center font-bold p-3.5 rounded-xl mt-4 flex flex-col items-center justify-center gap-1.5 shadow-xs">
+            <Lock className="w-4 h-4 text-amber-600 animate-pulse" />
+            <span>Pronostics indisponibles tant que les équipes qualifiées ne sont pas connues.</span>
+          </div>
+        ) : userPred ? (
           <div className="space-y-2 mt-4">
             <div className="flex items-center justify-center gap-2 text-indigo-700 font-bold bg-indigo-50 p-3 rounded-xl border border-indigo-100">
               <CheckCircle2 className="w-5 h-5 text-indigo-500" /> Ton prono est enregistré ! ({userPred.homeScore} - {userPred.awayScore})
@@ -1891,9 +1965,10 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
                     
                     const formMap = predictionForms[challengeId]?.matches || {};
                     const formMatch = formMap[m.id] || {};
+                    const isNotDefinedYet = isTeamsNotDefinedYet(m.homeTeam, m.awayTeam);
                     const matchTime = new Date(m.utcDate).getTime();
                     const timeLeft = matchTime - new Date().getTime();
-                    const isOpen = timeLeft > 0 && !challenge.locked && !challenge.resolved;
+                    const isOpen = timeLeft > 0 && !challenge.locked && !challenge.resolved && !isNotDefinedYet;
                     
                     const scoreHome = formMatch?.homeScore !== undefined ? formMatch.homeScore : userPredMatch?.homeScore;
                     const scoreAway = formMatch?.awayScore !== undefined ? formMatch.awayScore : userPredMatch?.awayScore;
@@ -2052,6 +2127,11 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
                             >
                               Valider mon pronostic
                             </button>
+                          ) : isNotDefinedYet ? (
+                            <div className="text-[10px] text-amber-850 bg-amber-50 border border-amber-200 text-center font-bold p-3 rounded-xl flex items-center justify-center gap-1.5 shadow-xs">
+                              <Lock className="w-3.5 h-3.5 text-amber-600 animate-pulse" />
+                              <span>Pronostic indisponible tant que les équipes qualifiées ne sont pas connues.</span>
+                            </div>
                           ) : (
                             <div className="text-[10px] text-gray-400 bg-gray-100 text-center font-bold p-1 rounded-lg">
                               Pronostics fermés
@@ -2493,9 +2573,10 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
                               const formMatch = formMap[m.id] || {};
                               
                               // Check if predictions are open (match hasn't started yet and challenge is not resolved/locked)
+                              const isNotDefinedYet = isTeamsNotDefinedYet(m.homeTeam, m.awayTeam);
                               const matchTime = new Date(m.utcDate).getTime();
                               const timeLeft = matchTime - new Date().getTime();
-                              const isOpen = timeLeft > 0 && !activeModal.challenge.locked && !activeModal.challenge.resolved;
+                              const isOpen = timeLeft > 0 && !activeModal.challenge.locked && !activeModal.challenge.resolved && !isNotDefinedYet;
                               
                               const scoreHome = formMatch?.homeScore !== undefined ? formMatch.homeScore : userPredMatch?.homeScore;
                               const scoreAway = formMatch?.awayScore !== undefined ? formMatch.awayScore : userPredMatch?.awayScore;
@@ -2656,6 +2737,11 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
                                       >
                                         Valider mon pronostic
                                       </button>
+                                    ) : isNotDefinedYet ? (
+                                      <div className="text-[10px] text-amber-850 bg-amber-50 border border-amber-200 text-center font-bold p-2.5 rounded-lg flex items-center justify-center gap-1 shadow-xs">
+                                        <Lock className="w-3.5 h-3.5 text-amber-600 animate-pulse" />
+                                        <span>Pronostic indisponible tant que les équipes qualifiées ne sont pas connues.</span>
+                                      </div>
                                     ) : (
                                       <div className="text-[10px] text-gray-400 bg-gray-50 font-bold p-1 rounded">
                                         Pronostics fermés
