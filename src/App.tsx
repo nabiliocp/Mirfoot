@@ -26,38 +26,6 @@ import { Match } from "./types";
 import logoImage from "./assets/images/pig_football_logo_1780308392869.png";
 
 export default function App() {
-  // Fix double hash immediately on component render to ensure Supabase SDK can parse the parameters
-  if (typeof window !== "undefined" && window.location.href.includes("##")) {
-    const cleanUrl = window.location.href.replace("##", "#");
-    window.history.replaceState({}, document.title, cleanUrl);
-  }
-
-  // Purely cosmetic URL cleaner to wipe magic link tokens after Supabase consumes them (delayed by 1.5s)
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const url = new URL(window.location.href);
-      if (
-        url.hash.includes("access_token") || 
-        url.hash.includes("id_token") || 
-        url.searchParams.has("code") ||
-        url.searchParams.has("type")
-      ) {
-        const cleanTimer = setTimeout(() => {
-          const freshUrl = new URL(window.location.href);
-          freshUrl.hash = "";
-          freshUrl.searchParams.delete("code");
-          freshUrl.searchParams.delete("type");
-          freshUrl.searchParams.delete("error");
-          freshUrl.searchParams.delete("error_description");
-          // Maintain other params like invite code if necessary, or just clear
-          window.history.replaceState({}, document.title, freshUrl.pathname + freshUrl.search);
-          console.log("[App] Cleared auth tokens from address bar to avoid reload loops");
-        }, 1500);
-        return () => clearTimeout(cleanTimer);
-      }
-    }
-  }, []);
-
   const [session, setSession] = useState<Session | null>(null);
   const [loadingSession, setLoadingSession] = useState(true);
   const [needsProfileSetup, setNeedsProfileSetup] = useState(false);
@@ -66,6 +34,55 @@ export default function App() {
     avatar_type: "emoji" | "jersey";
     avatar_value: string;
   } | null>(null);
+
+  // Fix double hash immediately on component render to ensure Supabase SDK can parse the parameters
+  if (typeof window !== "undefined" && window.location.href.includes("##")) {
+    const cleanUrl = window.location.href.replace("##", "#");
+    window.history.replaceState({}, document.title, cleanUrl);
+  }
+
+  // Safe URL cleaner: only clears the authentication tokens from the address bar
+  // AFTER Supabase has successfully processed them and established a session
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const url = new URL(window.location.href);
+      const hasTokens =
+        url.hash.includes("access_token") || 
+        url.hash.includes("id_token") || 
+        url.searchParams.has("code") ||
+        url.searchParams.has("type") || 
+        url.searchParams.has("error");
+
+      if (hasTokens) {
+        if (session) {
+          // Session is established! We can safely and immediately clear the tokens from the URL.
+          const freshUrl = new URL(window.location.href);
+          freshUrl.hash = "";
+          freshUrl.searchParams.delete("code");
+          freshUrl.searchParams.delete("type");
+          freshUrl.searchParams.delete("error");
+          freshUrl.searchParams.delete("error_description");
+          window.history.replaceState({}, document.title, freshUrl.pathname + freshUrl.search);
+          console.log("[App] Session established! Cleared auth tokens from address bar safely.");
+        } else {
+          // If there's an auth error in the URL, let's clear it on a fallback delay
+          if (url.searchParams.has("error") || url.hash.includes("error")) {
+            const errorTimer = setTimeout(() => {
+              const freshUrl = new URL(window.location.href);
+              freshUrl.hash = "";
+              freshUrl.searchParams.delete("code");
+              freshUrl.searchParams.delete("type");
+              freshUrl.searchParams.delete("error");
+              freshUrl.searchParams.delete("error_description");
+              window.history.replaceState({}, document.title, freshUrl.pathname + freshUrl.search);
+              console.log("[App] Cleared auth errors from address bar after fallback timeout.");
+            }, 5000);
+            return () => clearTimeout(errorTimer);
+          }
+        }
+      }
+    }
+  }, [session]);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<
     "matches" | "leaderboard" | "challenges"
@@ -149,10 +166,10 @@ export default function App() {
     let resolved = false;
     const timeout = setTimeout(() => {
       if (!resolved) {
-        console.warn("Auth check taking longer than 2.5s! Forcing loadingSession to false for stability.");
+        console.warn("Auth check taking longer than 5s! Forcing loadingSession to false for stability.");
         setLoadingSession(false);
       }
-    }, 2500);
+    }, 5000);
 
     supabase.auth.getSession().then(({ data: { session } }) => {
       resolved = true;

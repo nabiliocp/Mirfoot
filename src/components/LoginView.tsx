@@ -22,6 +22,7 @@ export default function LoginView() {
   const [searchCode, setSearchCode] = useState('');
   const [searchedChallenge, setSearchedChallenge] = useState<{ id: string; title: string, home: string, away: string, compName: string } | null>(null);
   const [inviteEmail, setInviteEmail] = useState('');
+  const [showSearch, setShowSearch] = useState(false);
 
   const handleSearchCode = async () => {
     setErrorMsg('');
@@ -220,24 +221,42 @@ export default function LoginView() {
           </div>
         )}
 
-        <div className="bg-emerald-50 rounded-2xl p-4 border border-emerald-100 mb-6 w-full text-left">
-          <label className="block text-xs font-semibold text-emerald-800 mb-2">Rejoindre un défi par code</label>
-          <div className="flex flex-col sm:flex-row gap-2">
-            <input
-              type="text"
-              value={searchCode}
-              onChange={(e) => setSearchCode(e.target.value)}
-              className="w-full sm:flex-1 min-w-0 px-3 py-2.5 bg-white border border-emerald-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none cursor-text"
-              placeholder="Code du défi..."
-            />
+        {!showSearch ? (
+          <button
+            type="button"
+            onClick={() => setShowSearch(true)}
+            className="w-full bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-800 font-bold py-3 px-4 rounded-xl transition-all duration-200 mb-6 flex justify-center items-center gap-2 cursor-pointer shadow-sm hover:scale-[1.01] active:scale-[0.99] text-sm"
+          >
+            🤝 Rejoindre un défi par code
+          </button>
+        ) : (
+          <div className="bg-emerald-50 rounded-2xl p-4 border border-emerald-100 mb-6 w-full text-left relative animate-in fade-in slide-in-from-top-2 duration-200">
             <button
-              onClick={handleSearchCode}
-              className="w-full sm:w-auto bg-emerald-600 text-white font-bold py-2.5 px-5 rounded-xl text-sm cursor-pointer hover:bg-emerald-700 transition shrink-0"
+              type="button"
+              onClick={() => setShowSearch(false)}
+              className="absolute right-3 top-3 text-emerald-800 hover:text-emerald-950 text-xs font-semibold"
             >
-              Rechercher
+              Fermer
             </button>
+            <label className="block text-xs font-semibold text-emerald-800 mb-2">Rejoindre un défi par code</label>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <input
+                type="text"
+                value={searchCode}
+                onChange={(e) => setSearchCode(e.target.value)}
+                className="w-full sm:flex-1 min-w-0 px-3 py-2.5 bg-white border border-emerald-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none cursor-text"
+                placeholder="Code du défi..."
+              />
+              <button
+                type="button"
+                onClick={handleSearchCode}
+                className="w-full sm:w-auto bg-emerald-600 text-white font-bold py-2.5 px-5 rounded-xl text-sm cursor-pointer hover:bg-emerald-700 transition shrink-0"
+              >
+                Rechercher
+              </button>
+            </div>
           </div>
-        </div>
+        )}
 
         <form onSubmit={handleAuth} className="space-y-4 text-left">
           {!isLogin && (
