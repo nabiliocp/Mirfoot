@@ -136,26 +136,22 @@ export default function App() {
       const checkProfile = async (userId: string) => {
       try {
         if (!supabase) return;
-        console.log("Checking profile for", userId);
+        console.log("Forcing profile check for", userId);
         const { data, error } = await supabase
           .from("profiles")
           .select("username, avatar_type, avatar_value, favorite_club")
           .eq("id", userId)
           .single();
         
-        console.log("CheckProfile result for", userId, ":", { data, error });
+        console.log("Resultat verif profil:", { data, error });
 
-        // If error (e.g. record not found) OR no username, force setup
-        if (error) {
-           console.log("Profile lookup error, forcing setup", error);
-           setNeedsProfileSetup(true);
-           setUserProfile(null);
-        } else if (!data?.username) {
-          console.log("No profile found or username empty, forcing setup", { data });
+        // Si erreur ou si données manquantes, FORCER le setup
+        if (error || !data?.username || !data?.favorite_club) {
+          console.log("Profil incomplet ou inexistant, affichage FORCÉ du setup.");
           setNeedsProfileSetup(true);
           setUserProfile(null);
         } else {
-          console.log("Profile resolved perfectly:", data.username);
+          console.log("Profil valide trouvé pour:", data.username);
           setNeedsProfileSetup(false);
           setUserProfile({
             username: data.username,
@@ -164,7 +160,7 @@ export default function App() {
           });
         }
       } catch (err) {
-        console.error("Exception checking profile:", err);
+        console.error("Erreur critique verif profil:", err);
         setNeedsProfileSetup(true);
       }
     };
