@@ -1011,6 +1011,7 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
   const toggleBonus = (
     challengeId: string,
     matchId: number,
+    currentActive: boolean,
   ) => {
     setPredictionForms((prev) => {
       const currentChallengeForm = prev[challengeId] || {};
@@ -1025,7 +1026,7 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
             ...currentMatches,
             [matchId]: {
               ...currentMatchPred,
-              bonus: !currentMatchPred.bonus,
+              bonus: !currentActive,
             },
           },
         },
@@ -1103,7 +1104,7 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
       [matchId]: {
         homeScore: hScore,
         awayScore: aScore,
-        bonus: formMatch.bonus,
+        bonus: formMatch.bonus !== undefined ? formMatch.bonus : !!matchesPreds[matchId]?.bonus,
       },
     };
 
@@ -1808,8 +1809,12 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
                     const scoreHome = formMatch?.homeScore !== undefined ? formMatch.homeScore : userPredMatch?.homeScore;
                     const scoreAway = formMatch?.awayScore !== undefined ? formMatch.awayScore : userPredMatch?.awayScore;
                     
+                    const isBonusActive = formMatch?.bonus !== undefined ? formMatch.bonus : !!userPredMatch?.bonus;
                     const hasSubmitted = userPredMatch?.homeScore !== undefined && userPredMatch?.awayScore !== undefined;
-                    const hasFormChange = (formMatch?.homeScore !== undefined && formMatch.homeScore !== userPredMatch?.homeScore) || (formMatch?.awayScore !== undefined && formMatch.awayScore !== userPredMatch?.awayScore);
+                    const hasFormChange = 
+                      (formMatch?.homeScore !== undefined && formMatch.homeScore !== userPredMatch?.homeScore) || 
+                      (formMatch?.awayScore !== undefined && formMatch.awayScore !== userPredMatch?.awayScore) ||
+                      (formMatch?.bonus !== undefined && formMatch.bonus !== !!userPredMatch?.bonus);
 
                     return (
                       <div key={m.id} className="bg-gray-50/50 rounded-2xl p-4 border border-gray-100 space-y-3.5">
@@ -1886,15 +1891,25 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
 
                         {hasSubmitted && isOpen && (
                           <div className="mt-2 text-center">
-                            {predictionForms[challengeId]?.matches?.[m.id]?.bonus ? (
-                              <div className="w-full text-xs font-black bg-amber-100 text-amber-800 py-2 rounded-lg flex items-center justify-center gap-2 border border-amber-200">
-                                <Trophy className="w-3.5 h-3.5" />
-                                Bonus X2 activé !
+                            {isBonusActive ? (
+                              <div className="space-y-2">
+                                <div className="w-full text-xs font-black bg-amber-100/80 text-amber-800 py-2 rounded-lg flex items-center justify-center gap-2 border border-amber-200">
+                                  <Trophy className="w-3.5 h-3.5 text-amber-600 animate-bounce" />
+                                  Bonus X2 activé !
+                                </div>
+                                <button 
+                                  type="button"
+                                  className="w-full text-xs font-bold bg-white text-rose-600 border border-rose-200/60 py-1.5 rounded-lg hover:bg-rose-50 hover:text-rose-700 transition cursor-pointer flex items-center justify-center gap-1.5"
+                                  onClick={() => toggleBonus(challengeId, m.id, isBonusActive)}
+                                >
+                                   Annuler le Bonus X2
+                                </button>
                               </div>
                             ) : (
                               <button 
-                                className="w-full text-xs font-black bg-gradient-to-br from-amber-400 to-orange-500 text-white py-2 rounded-lg hover:shadow-lg transition-all cursor-pointer flex items-center justify-center gap-2"
-                                onClick={() => toggleBonus(challengeId, m.id)}
+                                type="button"
+                                className="w-full text-xs font-black bg-gradient-to-br from-amber-400 to-orange-500 text-white py-2 rounded-lg hover:shadow-lg transition-all cursor-pointer flex items-center justify-center gap-2 hover:scale-[1.01] active:scale-[0.99]"
+                                onClick={() => toggleBonus(challengeId, m.id, isBonusActive)}
                               >
                                  <Trophy className="w-3.5 h-3.5" />
                                  Jouer Bonus X2
@@ -2386,8 +2401,12 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
                               const scoreHome = formMatch?.homeScore !== undefined ? formMatch.homeScore : userPredMatch?.homeScore;
                               const scoreAway = formMatch?.awayScore !== undefined ? formMatch.awayScore : userPredMatch?.awayScore;
                               
+                              const isBonusActive = formMatch?.bonus !== undefined ? formMatch.bonus : !!userPredMatch?.bonus;
                               const hasSubmitted = userPredMatch?.homeScore !== undefined && userPredMatch?.awayScore !== undefined;
-                              const hasFormChange = (formMatch?.homeScore !== undefined && formMatch.homeScore !== userPredMatch?.homeScore) || (formMatch?.awayScore !== undefined && formMatch.awayScore !== userPredMatch?.awayScore);
+                              const hasFormChange = 
+                                (formMatch?.homeScore !== undefined && formMatch.homeScore !== userPredMatch?.homeScore) || 
+                                (formMatch?.awayScore !== undefined && formMatch.awayScore !== userPredMatch?.awayScore) ||
+                                (formMatch?.bonus !== undefined && formMatch.bonus !== !!userPredMatch?.bonus);
 
                               return (
                                 <div key={m.id} className="bg-white rounded-xl p-3.5 shadow-sm border border-gray-100 space-y-3">
@@ -2465,6 +2484,35 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
                                       <span className="font-bold text-center text-[11px] text-gray-800 truncate w-full">{m.awayTeam.shortName || m.awayTeam.name}</span>
                                     </div>
                                   </div>
+
+                                  {hasSubmitted && isOpen && (
+                                    <div className="text-center">
+                                      {isBonusActive ? (
+                                        <div className="space-y-1.5">
+                                          <div className="w-full text-[10px] font-black bg-amber-100/80 text-amber-800 py-1.5 rounded-lg flex items-center justify-center gap-1 border border-amber-200">
+                                            <Trophy className="w-3 h-3 text-amber-600 animate-bounce" />
+                                            Bonus X2 activé !
+                                          </div>
+                                          <button 
+                                            type="button"
+                                            className="w-full text-[10px] font-bold bg-white text-rose-600 border border-rose-200/60 py-1 rounded-lg hover:bg-rose-50 hover:text-rose-700 transition cursor-pointer flex items-center justify-center gap-1"
+                                            onClick={() => toggleBonus(challengeId, m.id, isBonusActive)}
+                                          >
+                                             Annuler le Bonus X2
+                                          </button>
+                                        </div>
+                                      ) : (
+                                        <button 
+                                          type="button"
+                                          className="w-full text-[10px] font-black bg-gradient-to-br from-amber-400 to-orange-500 text-white py-1.5 rounded-lg hover:shadow-lg transition-all cursor-pointer flex items-center justify-center gap-1 hover:scale-[1.01] active:scale-[0.99]"
+                                          onClick={() => toggleBonus(challengeId, m.id, isBonusActive)}
+                                        >
+                                           <Trophy className="w-3 h-3" />
+                                           Jouer Bonus X2
+                                        </button>
+                                      )}
+                                    </div>
+                                  )}
 
                                   {/* Messages/State */}
                                   <div className="pt-2 border-t border-gray-50 text-center">
