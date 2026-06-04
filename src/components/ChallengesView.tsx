@@ -648,34 +648,29 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
       return;
     }
 
-    // Check if user is already a participant
-    console.log("Checking participation for user:", userId, "challenge:", challengeToJoin.id);
-    const { data: existingInvite, error: checkError } = await supabase
-      .from("challenge_invitations")
-      .select("id")
-      .eq("challenge_id", challengeToJoin.id)
-      .eq("user_id", userId)
-      .maybeSingle();
-
-    console.log("Existing invite:", existingInvite, "Error:", checkError);
-    if (existingInvite) {
-      alert("Vous avez déjà rejoint ce défi !");
-      return;
-    }
-
     setJoiningChallengeId(challengeToJoin.id);
     try {
-      // Create invitation entry for the user so they can view and participate
-      const { error } = await supabase
-        .from("challenge_invitations")
-        .insert({
-          challenge_id: challengeToJoin.id,
-          user_id: userId,
-          accepted: true,
-        });
+      // Call the server API endpoint to safely insert/join the challenge
+      const response = await fetch("/api/challenges/join", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          challengeId: challengeToJoin.id,
+          userId,
+        }),
+      });
 
-      if (error) {
-        throw error;
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Erreur lors de l'enregistrement");
+      }
+
+      const result = await response.json();
+      if (result.wasAlreadyParticipant) {
+        alert("Vous avez déjà rejoint ce défi !");
+        return;
       }
 
       // Reload all challenges to fetch the newly joined challenge in local list, or append if missing

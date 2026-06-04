@@ -103,7 +103,6 @@ export default function App() {
     const storedInvite = inviteId || localStorage.getItem("pending_invite_id");
     if (session && storedInvite && supabase) {
       console.log("Processing invite for session:", session.user.id, "invite:", storedInvite);
-      // Process invite!
       
       const proceedWithCleanup = () => {
         console.log("Invite processed successfully");
@@ -115,38 +114,32 @@ export default function App() {
         window.history.replaceState({}, document.title, url.pathname + url.search);
       };
 
-      // Check if invitation already exists first to avoid duplicate inserts or RLS update issues
-      supabase
-        .from("challenge_invitations")
-        .select("id")
-        .eq("challenge_id", storedInvite)
-        .eq("user_id", session.user.id)
-        .maybeSingle()
-        .then(({ data: existing, error: checkError }) => {
-          if (checkError) {
-            console.error("Checking existing invite failed:", checkError);
-          }
-          if (existing) {
-            console.log("User already accepted/invited to this challenge.");
-            proceedWithCleanup();
-          } else {
-            // Insert new invitation
-            supabase
-              .from("challenge_invitations")
-              .insert({
-                challenge_id: storedInvite,
-                user_id: session.user.id,
-                accepted: true,
-              })
-              .then(({ error: insertError }) => {
-                if (insertError) {
-                  console.error("Error processing invite:", insertError);
-                } else {
-                  proceedWithCleanup();
-                }
-              });
-          }
-        });
+      // Safe API call to join challenge via server (bypassing Client RLS)
+      fetch("/api/challenges/join", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          challengeId: storedInvite,
+          userId: session.user.id,
+        })
+      })
+      .then((res) => {
+        if (!res.ok) {
+          throw new Error("HTTP error while joining");
+        }
+        return res.json();
+      })
+      .then((result) => {
+        console.log("Joined challenge via server endpoint:", result);
+        proceedWithCleanup();
+      })
+      .catch((err) => {
+        console.error("Error processing invite through endpoint:", err);
+        // Clean up even if failed to avoid infinite alerts/retries
+        proceedWithCleanup();
+      });
     }
   }, [session, inviteId]);
 

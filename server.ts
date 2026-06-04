@@ -203,6 +203,54 @@ async function startServer() {
     }
   });
 
+  // Join a challenge by inserting into challenge_invitations (bypasses RLS utilizing the service role key)
+  app.post("/api/challenges/join", async (req, res) => {
+    if (!supabase) return res.status(500).json({ error: "Configuration Supabase manquante." });
+    try {
+      const { challengeId, userId } = req.body;
+      if (!challengeId || !userId) {
+        return res.status(400).json({ error: "challengeId et userId sont requis." });
+      }
+
+      // Check if invitation already exists
+      const { data: existingInvite, error: checkError } = await supabase
+        .from("challenge_invitations")
+        .select("id")
+        .eq("challenge_id", challengeId)
+        .eq("user_id", userId)
+        .maybeSingle();
+
+      if (checkError) {
+        console.error("Error checking existing invite:", checkError);
+        return res.status(500).json({ error: "Erreur lors de la vérification de l'invitation" });
+      }
+
+      if (existingInvite) {
+        return res.json({ success: true, message: "Défi déjà rejoint !", wasAlreadyParticipant: true });
+      }
+
+      // Insert the invitation
+      const { data, error: insertError } = await supabase
+        .from("challenge_invitations")
+        .insert({
+          challenge_id: challengeId,
+          user_id: userId,
+          accepted: true
+        })
+        .select();
+
+      if (insertError) {
+        console.error("Error inserting invitation via service role:", insertError);
+        return res.status(500).json({ error: "Erreur lors de l'enregistrement du défi: " + insertError.message });
+      }
+
+      return res.json({ success: true, data });
+    } catch (err: any) {
+      console.error("Error in join endpoint:", err);
+      res.status(500).json({ error: "Erreur interne du serveur: " + err.message });
+    }
+  });
+
   // Vite middleware
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
