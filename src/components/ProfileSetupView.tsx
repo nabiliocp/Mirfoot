@@ -1,5 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { supabase } from "../lib/supabase";
+// @ts-ignore
+import logoImage from "../assets/images/pig_football_logo_1780308392869.png";
 
 const EMOJIS = ["👽", "🤓", "😎", "😜", "⚽", "🏆", "🔥", "👑", "🦁", "🦖", "🦄", "🍕"];
 const JERSEY_COLORS = [
@@ -162,6 +164,9 @@ export default function ProfileSetupView({
   return (
     <div className="flex flex-col items-center justify-center min-h-screen p-3 sm:p-4 bg-gray-50 flex-1">
       <div className="bg-white p-5 sm:p-7 rounded-3xl shadow-sm border border-gray-100 max-w-sm w-full text-center">
+        <div className="flex flex-col items-center mb-3">
+          <img src={logoImage} alt="Mirfoot Logo" className="w-16 h-16 object-cover rounded-xl shadow-xs bg-white border border-gray-100" />
+        </div>
         <h2 className="text-xl sm:text-2xl font-bold mb-1 text-emerald-800">
           Complète ton profil !
         </h2>
