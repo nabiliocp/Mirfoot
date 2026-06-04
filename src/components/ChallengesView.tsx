@@ -1324,8 +1324,28 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
   const renderPredictionForm = (challenge: Challenge) => {
     const isLocked = challenge.locked || challenge.resolved;
     const userPred = userPredictions[challenge.id];
-    // If they already subitted, use their previous subitted values, else use the active form edits
-    const activeForm = userPred || predictionForms[challenge.id] || {};
+    const draftForm = predictionForms[challenge.id] || {};
+
+    const activeForm = {
+      homeScore: draftForm.homeScore !== undefined ? draftForm.homeScore : userPred?.homeScore,
+      awayScore: draftForm.awayScore !== undefined ? draftForm.awayScore : userPred?.awayScore,
+      endStage: draftForm.endStage !== undefined ? draftForm.endStage : userPred?.endStage,
+      prolongationHomeScore: draftForm.prolongationHomeScore !== undefined ? draftForm.prolongationHomeScore : userPred?.prolongationHomeScore,
+      prolongationAwayScore: draftForm.prolongationAwayScore !== undefined ? draftForm.prolongationAwayScore : userPred?.prolongationAwayScore,
+      winner: draftForm.winner !== undefined ? draftForm.winner : userPred?.winner,
+      penaltiesHomeScore: draftForm.penaltiesHomeScore !== undefined ? draftForm.penaltiesHomeScore : userPred?.penaltiesHomeScore,
+      penaltiesAwayScore: draftForm.penaltiesAwayScore !== undefined ? draftForm.penaltiesAwayScore : userPred?.penaltiesAwayScore,
+    };
+
+    const hasFormChange = 
+      (draftForm.homeScore !== undefined && draftForm.homeScore !== userPred?.homeScore) ||
+      (draftForm.awayScore !== undefined && draftForm.awayScore !== userPred?.awayScore) ||
+      (draftForm.endStage !== undefined && draftForm.endStage !== userPred?.endStage) ||
+      (draftForm.prolongationHomeScore !== undefined && draftForm.prolongationHomeScore !== userPred?.prolongationHomeScore) ||
+      (draftForm.prolongationAwayScore !== undefined && draftForm.prolongationAwayScore !== userPred?.prolongationAwayScore) ||
+      (draftForm.winner !== undefined && draftForm.winner !== userPred?.winner) ||
+      (draftForm.penaltiesHomeScore !== undefined && draftForm.penaltiesHomeScore !== userPred?.penaltiesHomeScore) ||
+      (draftForm.penaltiesAwayScore !== undefined && draftForm.penaltiesAwayScore !== userPred?.penaltiesAwayScore);
 
     const timeLeft = challenge.matchDate ? new Date(challenge.matchDate).getTime() - new Date().getTime() : Infinity;
     const isOpen = timeLeft > 0 && !isLocked;
@@ -1354,8 +1374,7 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
                   homeScore: parseInt(e.target.value),
                 })
               }
-              disabled={!isOpen && !userPred}
-              readOnly={!!userPred}
+              disabled={!isOpen}
               className="w-16 h-12 text-center text-xl font-black rounded-xl border border-gray-300 focus:ring-2 focus:ring-emerald-500 mx-auto block disabled:bg-gray-100 disabled:text-gray-500"
             />
           </div>
@@ -1380,8 +1399,7 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
                   awayScore: parseInt(e.target.value),
                 })
               }
-              disabled={!isOpen && !userPred}
-              readOnly={!!userPred}
+              disabled={!isOpen}
               className="w-16 h-12 text-center text-xl font-black rounded-xl border border-gray-300 focus:ring-2 focus:ring-emerald-500 mx-auto block disabled:bg-gray-100 disabled:text-gray-500"
             />
           </div>
@@ -1395,20 +1413,24 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
             <p className="text-xs font-bold text-gray-500 mb-3 text-center">Le match se termine en :</p>
             <div className="grid grid-cols-2 gap-2 mb-3">
               <button
+                type="button"
                 className={`p-2 rounded-lg text-xs font-bold ${activeForm.endStage === 'prolongation' ? 'bg-emerald-600 text-white' : 'bg-gray-200'}`}
+                disabled={!isOpen}
                 onClick={() => updatePredictionForm(challenge.id, {endStage: 'prolongation'})}
               >Prolongation</button>
               <button
+                type="button"
                 className={`p-2 rounded-lg text-xs font-bold ${activeForm.endStage === 'penalties' ? 'bg-emerald-600 text-white' : 'bg-gray-200'}`}
+                disabled={!isOpen}
                 onClick={() => updatePredictionForm(challenge.id, {endStage: 'penalties'})}
               >Penalty</button>
             </div>
             
             {activeForm.endStage === 'prolongation' && (
                 <div className="grid grid-cols-3 gap-2">
-                    <input type="number" placeholder="Pr. Home Sc." className="text-center p-2 rounded-lg text-xs" value={activeForm.prolongationHomeScore ?? ""} onChange={(e) => updatePredictionForm(challenge.id, {prolongationHomeScore: parseInt(e.target.value)})} />
-                    <input type="number" placeholder="Pr. Away Sc." className="text-center p-2 rounded-lg text-xs" value={activeForm.prolongationAwayScore ?? ""} onChange={(e) => updatePredictionForm(challenge.id, {prolongationAwayScore: parseInt(e.target.value)})} />
-                    <select className="text-center p-2 rounded-lg text-xs" value={activeForm.winner ?? ""} onChange={(e) => updatePredictionForm(challenge.id, {winner: e.target.value as any})}>
+                    <input type="number" placeholder="Pr. Home Sc." className="text-center p-2 rounded-lg text-xs" value={activeForm.prolongationHomeScore ?? ""} disabled={!isOpen} onChange={(e) => updatePredictionForm(challenge.id, {prolongationHomeScore: parseInt(e.target.value)})} />
+                    <input type="number" placeholder="Pr. Away Sc." className="text-center p-2 rounded-lg text-xs" value={activeForm.prolongationAwayScore ?? ""} disabled={!isOpen} onChange={(e) => updatePredictionForm(challenge.id, {prolongationAwayScore: parseInt(e.target.value)})} />
+                    <select className="text-center p-2 rounded-lg text-xs text-gray-800 bg-white border font-bold" value={activeForm.winner ?? ""} disabled={!isOpen} onChange={(e) => updatePredictionForm(challenge.id, {winner: e.target.value as any})}>
                         <option value="">Vainqueur</option>
                         <option value="home">{challenge.matchHomeTeam}</option>
                         <option value="away">{challenge.matchAwayTeam}</option>
@@ -1418,7 +1440,7 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
             
             {activeForm.endStage === 'penalties' && (
                 <div className="grid grid-cols-1 gap-2">
-                    <select className="text-center p-2 rounded-lg text-xs" value={activeForm.winner ?? ""} onChange={(e) => updatePredictionForm(challenge.id, {winner: e.target.value as any})}>
+                    <select className="text-center p-2 rounded-lg text-xs text-gray-800 bg-white border font-bold" value={activeForm.winner ?? ""} disabled={!isOpen} onChange={(e) => updatePredictionForm(challenge.id, {winner: e.target.value as any})}>
                         <option value="">Vainqueur Penalty</option>
                         <option value="home">{challenge.matchHomeTeam}</option>
                         <option value="away">{challenge.matchAwayTeam}</option>
@@ -1440,7 +1462,7 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
                       placeholder="Dom."
                       value={activeForm.penaltiesHomeScore ?? ""}
                       onChange={(e) => updatePredictionForm(challenge.id, { penaltiesHomeScore: parseInt(e.target.value) })}
-                      disabled={!isOpen && !userPred}
+                      disabled={!isOpen}
                       className="w-12 h-10 text-center border rounded-lg"
                     />
                     <span className="self-center">-</span>
@@ -1449,7 +1471,7 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
                         placeholder="Ext."
                         value={activeForm.penaltiesAwayScore ?? ""}
                         onChange={(e) => updatePredictionForm(challenge.id, { penaltiesAwayScore: parseInt(e.target.value) })}
-                        disabled={!isOpen && !userPred}
+                        disabled={!isOpen}
                         className="w-12 h-10 text-center border rounded-lg"
                     />
                 </div>
@@ -1457,18 +1479,32 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
           )}
         </div>
 
-        {!userPred && isOpen && (
+        {userPred ? (
+          <div className="space-y-2 mt-4">
+            <div className="flex items-center justify-center gap-2 text-indigo-700 font-bold bg-indigo-50 p-3 rounded-xl border border-indigo-100">
+              <CheckCircle2 className="w-5 h-5 text-indigo-500" /> Ton prono est enregistré ! ({userPred.homeScore} - {userPred.awayScore})
+            </div>
+            {isOpen && hasFormChange && (
+              <button
+                type="button"
+                onClick={() => submitPrediction(challenge)}
+                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl transition-all shadow-sm cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
+              >
+                Modifier mon pronostic
+              </button>
+            )}
+          </div>
+        ) : isOpen ? (
           <button
             type="button"
             onClick={() => submitPrediction(challenge)}
-            className="w-full mt-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl transition-all shadow-sm cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
+            className="w-full mt-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl transition-all shadow-sm cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
           >
             Valider mon pronostic
           </button>
-        )}
-        {userPred && (
-          <div className="mt-4 flex items-center justify-center gap-2 text-indigo-700 font-bold bg-indigo-50 p-3 rounded-xl border border-indigo-100">
-            <CheckCircle2 className="w-5 h-5" /> Ton prono est validé !
+        ) : (
+          <div className="text-xs text-secondary bg-gray-100 text-center font-bold p-3 rounded-xl mt-4">
+            Pronostics fermés
           </div>
         )}
       </div>
@@ -1769,10 +1805,11 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
                     const timeLeft = matchTime - new Date().getTime();
                     const isOpen = timeLeft > 0 && !challenge.locked && !challenge.resolved;
                     
-                    const scoreHome = userPredMatch?.homeScore !== undefined ? userPredMatch.homeScore : formMatch.homeScore;
-                    const scoreAway = userPredMatch?.awayScore !== undefined ? userPredMatch.awayScore : formMatch.awayScore;
+                    const scoreHome = formMatch?.homeScore !== undefined ? formMatch.homeScore : userPredMatch?.homeScore;
+                    const scoreAway = formMatch?.awayScore !== undefined ? formMatch.awayScore : userPredMatch?.awayScore;
                     
                     const hasSubmitted = userPredMatch?.homeScore !== undefined && userPredMatch?.awayScore !== undefined;
+                    const hasFormChange = (formMatch?.homeScore !== undefined && formMatch.homeScore !== userPredMatch?.homeScore) || (formMatch?.awayScore !== undefined && formMatch.awayScore !== userPredMatch?.awayScore);
 
                     return (
                       <div key={m.id} className="bg-gray-50/50 rounded-2xl p-4 border border-gray-100 space-y-3.5">
@@ -1820,7 +1857,7 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
                               min="0"
                               value={scoreHome ?? ""}
                               onChange={(e) => updateCompetitionPredictionForm(challengeId, m.id, { homeScore: parseInt(e.target.value) })}
-                              disabled={!isOpen || hasSubmitted}
+                              disabled={!isOpen}
                               className="w-10 h-10 text-center text-sm font-bold border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 disabled:bg-gray-100 disabled:text-gray-400 select-none"
                             />
                             <span className="font-black text-gray-300 text-xs">VS</span>
@@ -1829,7 +1866,7 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
                               min="0"
                               value={scoreAway ?? ""}
                               onChange={(e) => updateCompetitionPredictionForm(challengeId, m.id, { awayScore: parseInt(e.target.value) })}
-                              disabled={!isOpen || hasSubmitted}
+                              disabled={!isOpen}
                               className="w-10 h-10 text-center text-sm font-bold border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 disabled:bg-gray-100 disabled:text-gray-400 select-none"
                             />
                           </div>
@@ -1870,9 +1907,24 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
                         {/* Submit Button for Competition Match bet */}
                         <div className="mt-3">
                           {hasSubmitted ? (
-                            <div className="bg-emerald-50/50 border border-emerald-100/50 py-2 rounded-xl text-[11px] font-black text-emerald-800 text-center flex items-center justify-center gap-1">
-                              <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                              Pronostic validé ({scoreHome} - {scoreAway})
+                            <div className="space-y-2">
+                              <div className="bg-indigo-50 border border-indigo-100/50 py-2 rounded-xl text-[11px] font-bold text-indigo-700 text-center flex items-center justify-center gap-1">
+                                <CheckCircle2 className="w-4 h-4 text-indigo-600" />
+                                Pronostic enregistré ! ({userPredMatch.homeScore} - {userPredMatch.awayScore})
+                              </div>
+                              {isOpen && hasFormChange && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    submitCompetitionPrediction(challenge, m.id, scoreHome, scoreAway).then(() => {
+                                      refreshChallengeBets();
+                                    });
+                                  }}
+                                  className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 rounded-xl text-xs transition duration-200 active:scale-[0.98] cursor-pointer"
+                                >
+                                  Modifier mon pronostic
+                                </button>
+                              )}
                             </div>
                           ) : isOpen ? (
                             <button
@@ -2331,10 +2383,11 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
                               const timeLeft = matchTime - new Date().getTime();
                               const isOpen = timeLeft > 0 && !activeModal.challenge.locked && !activeModal.challenge.resolved;
                               
-                              const scoreHome = userPredMatch?.homeScore !== undefined ? userPredMatch.homeScore : formMatch.homeScore;
-                              const scoreAway = userPredMatch?.awayScore !== undefined ? userPredMatch.awayScore : formMatch.awayScore;
+                              const scoreHome = formMatch?.homeScore !== undefined ? formMatch.homeScore : userPredMatch?.homeScore;
+                              const scoreAway = formMatch?.awayScore !== undefined ? formMatch.awayScore : userPredMatch?.awayScore;
                               
                               const hasSubmitted = userPredMatch?.homeScore !== undefined && userPredMatch?.awayScore !== undefined;
+                              const hasFormChange = (formMatch?.homeScore !== undefined && formMatch.homeScore !== userPredMatch?.homeScore) || (formMatch?.awayScore !== undefined && formMatch.awayScore !== userPredMatch?.awayScore);
 
                               return (
                                 <div key={m.id} className="bg-white rounded-xl p-3.5 shadow-sm border border-gray-100 space-y-3">
@@ -2385,7 +2438,7 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
                                          min="0"
                                          value={scoreHome ?? ""}
                                          onChange={(e) => updateCompetitionPredictionForm(challengeId, m.id, { homeScore: parseInt(e.target.value) })}
-                                         disabled={!isOpen || hasSubmitted}
+                                         disabled={!isOpen}
                                          className="w-9 h-9 text-center text-xs font-bold border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 disabled:bg-gray-100 disabled:text-gray-400 select-none animate-fade-in"
                                        />
                                        <span className="font-black text-gray-300 text-[10px]">VS</span>
@@ -2394,7 +2447,7 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
                                          min="0"
                                          value={scoreAway ?? ""}
                                          onChange={(e) => updateCompetitionPredictionForm(challengeId, m.id, { awayScore: parseInt(e.target.value) })}
-                                         disabled={!isOpen || hasSubmitted}
+                                         disabled={!isOpen}
                                          className="w-9 h-9 text-center text-xs font-bold border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 disabled:bg-gray-100 disabled:text-gray-400 select-none animate-fade-in"
                                        />
                                     </div>
@@ -2416,13 +2469,32 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
                                   {/* Messages/State */}
                                   <div className="pt-2 border-t border-gray-50 text-center">
                                     {hasSubmitted ? (
-                                      <div className="text-[10px] font-bold text-emerald-700 bg-emerald-50 py-1 rounded-lg flex items-center justify-center gap-1 border border-emerald-100">
-                                        <CheckCircle2 className="w-3.5 h-3.5" /> Pronostic validé ! ({userPredMatch?.homeScore} - {userPredMatch?.awayScore})
+                                      <div className="space-y-1.5">
+                                        <div className="text-[10px] font-bold text-indigo-700 bg-indigo-50 py-1 rounded-lg flex items-center justify-center gap-1 border border-indigo-100">
+                                          <CheckCircle2 className="w-3.5 h-3.5 text-indigo-500" /> Pronostic enregistré ! ({userPredMatch?.homeScore} - {userPredMatch?.awayScore})
+                                        </div>
+                                        {isOpen && hasFormChange && (
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              submitCompetitionPrediction(activeModal.challenge, m.id, scoreHome, scoreAway).then(() => {
+                                                refreshChallengeBets();
+                                              });
+                                            }}
+                                            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-1.5 rounded-lg text-xs transition shadow-sm cursor-pointer"
+                                          >
+                                            Modifier mon pronostic
+                                          </button>
+                                        )}
                                       </div>
                                     ) : isOpen ? (
                                       <button
                                         type="button"
-                                        onClick={() => submitCompetitionPrediction(activeModal.challenge, m.id, scoreHome, scoreAway)}
+                                        onClick={() => {
+                                          submitCompetitionPrediction(activeModal.challenge, m.id, scoreHome, scoreAway).then(() => {
+                                            refreshChallengeBets();
+                                          });
+                                        }}
                                         className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-1.5 rounded-lg text-xs transition shadow-sm cursor-pointer"
                                       >
                                         Valider mon pronostic

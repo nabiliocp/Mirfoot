@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import MatchesView from "./components/MatchesView";
 import LeaderboardView from "./components/LeaderboardView";
 import ChallengesView from "./components/ChallengesView";
@@ -37,6 +37,8 @@ export default function App() {
     favorite_club?: string;
     favorite_national?: string;
   } | null>(null);
+
+  const profileCheckedRef = useRef(false);
 
   // Fix double hash immediately on component render to ensure Supabase SDK can parse the parameters
   if (typeof window !== "undefined" && window.location.href.includes("##")) {
@@ -149,12 +151,16 @@ export default function App() {
       return;
     }
 
-      const checkProfile = async (userId: string) => {
+    const checkProfile = async (userId: string, silent = false) => {
       try {
         if (!supabase) return;
-        setLoadingProfile(true);
-        // Wait 1s for potential async trigger to populate profile
-        await new Promise((resolve) => setTimeout(resolve, 1000));
+        if (!silent && !profileCheckedRef.current) {
+          setLoadingProfile(true);
+        }
+        // Only wait 1s if we haven't successfully loaded/checked a profile yet
+        if (!profileCheckedRef.current) {
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+        }
         console.log("Forcing profile check for", userId);
         const { data, error } = await supabase
           .from("profiles")
@@ -182,6 +188,7 @@ export default function App() {
             favorite_club: data.first_name || "",
             favorite_national: data.last_name || "",
           });
+          profileCheckedRef.current = true;
         }
       } catch (err) {
         console.error("Erreur critique verif profil:", err);
@@ -215,8 +222,11 @@ export default function App() {
       if (session) {
         setSession(session);
         setLoadingSession(false);
-        setLoadingProfile(true);
-        checkProfile(session.user.id);
+        const shouldSkipLoader = profileCheckedRef.current;
+        if (!shouldSkipLoader) {
+          setLoadingProfile(true);
+        }
+        checkProfile(session.user.id, shouldSkipLoader);
       } else if (!hasAuthParams) {
         // Only set loading to false if we don't have active oauth/magic link handshake params in URL
         setLoadingSession(false);
@@ -239,11 +249,15 @@ export default function App() {
       setSession(session);
       setLoadingSession(false);
       if (session) {
-        setLoadingProfile(true);
-        checkProfile(session.user.id);
+        const shouldSkipLoader = profileCheckedRef.current;
+        if (!shouldSkipLoader) {
+          setLoadingProfile(true);
+        }
+        checkProfile(session.user.id, shouldSkipLoader);
       } else {
         setNeedsProfileSetup(false);
         setLoadingProfile(false);
+        profileCheckedRef.current = false;
       }
     });
 
