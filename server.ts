@@ -203,6 +203,72 @@ async function startServer() {
     }
   });
 
+  // Fetch all challenges for a user (both created and joined invitations), bypassing RLS
+  app.get("/api/challenges/user/:userId", async (req, res) => {
+    if (!supabase) return res.status(500).json({ error: "Configuration Supabase manquante." });
+    try {
+      const { userId } = req.params;
+      if (!userId) {
+        return res.status(400).json({ error: "userId est requis." });
+      }
+
+      // 1. Fetch created challenges
+      const { data: createdChallenges, error: createdError } = await supabase
+        .from("challenges")
+        .select("*")
+        .eq("creator_id", userId);
+
+      if (createdError) {
+        console.error("Error loading created challenges in backend:", createdError);
+      }
+
+      // 2. Fetch invitations for this user
+      const { data: invitations, error: invsError } = await supabase
+        .from("challenge_invitations")
+        .select("challenge_id, accepted")
+        .eq("user_id", userId);
+
+      if (invsError) {
+        console.error("Error loading invitations in backend:", invsError);
+      }
+
+      // Extract challenge IDs from accepted invitations
+      const invitedChallengeIds = (invitations || [])
+        .filter((inv: any) => inv.accepted)
+        .map((inv: any) => inv.challenge_id);
+
+      // If there are invited challenge IDs, fetch those challenges too
+      let joinedChallenges: any[] = [];
+      if (invitedChallengeIds.length > 0) {
+        const { data: joinedData, error: joinedError } = await supabase
+          .from("challenges")
+          .select("*")
+          .in("id", invitedChallengeIds);
+
+        if (joinedError) {
+          console.error("Error loading joined challenges in backend:", joinedError);
+        } else if (joinedData) {
+          joinedChallenges = joinedData;
+        }
+      }
+
+      // Combine and remove duplicates
+      const allUniqueChallengesMap: Record<string, any> = {};
+      (createdChallenges || []).forEach((c: any) => {
+        allUniqueChallengesMap[c.id] = c;
+      });
+      joinedChallenges.forEach((c: any) => {
+        allUniqueChallengesMap[c.id] = c;
+      });
+
+      const challengesList = Object.values(allUniqueChallengesMap);
+      return res.json({ challenges: challengesList });
+    } catch (err: any) {
+      console.error("Error in challenges user endpoint:", err);
+      res.status(500).json({ error: "Erreur interne du serveur: " + err.message });
+    }
+  });
+
   // Join a challenge by inserting into challenge_invitations (bypasses RLS utilizing the service role key)
   app.post("/api/challenges/join", async (req, res) => {
     if (!supabase) return res.status(500).json({ error: "Configuration Supabase manquante." });

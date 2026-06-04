@@ -58,6 +58,8 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
   const [searchResult, setSearchResult] = useState<Challenge | null>(null);
   const [searchError, setSearchError] = useState<string | null>(null);
   const [joiningChallengeId, setJoiningChallengeId] = useState<string | null>(null);
+  const [joinedSuccessChallenge, setJoinedSuccessChallenge] = useState<Challenge | null>(null);
+  const [customAlert, setCustomAlert] = useState<{ type: 'info' | 'error' | 'success'; title: string; message: string } | null>(null);
   const [currentUsername, setCurrentUsername] = useState<string>("Moi");
   const [visibleMatchesCount, setVisibleMatchesCount] = useState<number>(4);
   const [activeTooltipId, setActiveTooltipId] = useState<number | null>(null);
@@ -490,56 +492,25 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
 
     setUserId(user.id);
 
-    // Fetch any challenges created by this user
-    const { data: createdChallenges, error: createdError } = await supabase
-      .from("challenges")
-      .select("*")
-      .eq("creator_id", user.id);
-
-    if (createdError) {
-      console.error("Error loading created challenges:", createdError);
-    }
-
-    // Fetch invitations for this user
-    const { data: invitations, error: invsError } = await supabase
-      .from("challenge_invitations")
-      .select("challenge_id, accepted")
-      .eq("user_id", user.id);
-
-    if (invsError) {
-      console.error("Error loading invitations:", invsError);
-    }
-
-    // Extract challenge IDs from accepted invitations
-    const invitedChallengeIds = (invitations || [])
-      .filter((inv: any) => inv.accepted)
-      .map((inv: any) => inv.challenge_id);
-
-    // If there are invited challenge IDs, fetch those challenges too
-    let joinedChallenges: any[] = [];
-    if (invitedChallengeIds.length > 0) {
-      const { data: joinedData, error: joinedError } = await supabase
+    let challengesRes: any[] = [];
+    try {
+      const res = await fetch(`/api/challenges/user/${user.id}`);
+      if (!res.ok) {
+        throw new Error(`HTTP error: ${res.status}`);
+      }
+      const data = await res.json();
+      challengesRes = data.challenges || [];
+    } catch (err) {
+      console.error("Error loading user challenges from backend:", err);
+      // Fallback
+      const { data: createdChallenges } = await supabase
         .from("challenges")
         .select("*")
-        .in("id", invitedChallengeIds);
-
-      if (joinedError) {
-        console.error("Error loading joined challenges:", joinedError);
-      } else if (joinedData) {
-        joinedChallenges = joinedData;
-      }
+        .eq("creator_id", user.id);
+      challengesRes = createdChallenges || [];
     }
 
-    // Combine and remove duplicates based on challenge id
-    const allUniqueChallengesMap: Record<string, any> = {};
-    (createdChallenges || []).forEach((c: any) => {
-      allUniqueChallengesMap[c.id] = c;
-    });
-    joinedChallenges.forEach((c: any) => {
-      allUniqueChallengesMap[c.id] = c;
-    });
-
-    const challengesRes = Object.values(allUniqueChallengesMap).sort(
+    const sortedChallenges = [...challengesRes].sort(
       (a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
     );
     
@@ -560,8 +531,8 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
       });
     }
 
-    if (challengesRes) {
-      const mapped = (Array.isArray(challengesRes) ? challengesRes : []).map((c: any) => ({
+    if (sortedChallenges) {
+      const mapped = (Array.isArray(sortedChallenges) ? sortedChallenges : []).map((c: any) => ({
         id: c.id,
         competitionId: c.competition_id,
         matchId: c.match_id,
@@ -644,7 +615,11 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
 
   const handleJoinChallenge = async (challengeToJoin: Challenge) => {
     if (!supabase || !userId) {
-      alert("Vous devez être connecté pour rejoindre un défi.");
+      setCustomAlert({
+        type: "error",
+        title: "Connexion requise",
+        message: "Vous devez être connecté pour participer à un défi."
+      });
       return;
     }
 
@@ -669,7 +644,11 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
 
       const result = await response.json();
       if (result.wasAlreadyParticipant) {
-        alert("Vous avez déjà rejoint ce défi !");
+        setCustomAlert({
+          type: "info",
+          title: "Déjà rejoint !",
+          message: `Vous avez déjà rejoint le défi "${challengeToJoin.title}".`
+        });
         return;
       }
 
@@ -685,10 +664,15 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
       setSelectedChallenge(challengeToJoin);
       await loadChallengeData(challengeToJoin.id);
       
-      alert(`Félicitations! Vous avez rejoint le défi "${challengeToJoin.title}" avec succès.`);
+      // Open custom congratulations popup
+      setJoinedSuccessChallenge(challengeToJoin);
     } catch (err: any) {
       console.error("Error joining challenge:", err);
-      alert("Impossible de rejoindre ce défi: " + (err.message || err));
+      setCustomAlert({
+        type: "error",
+        title: "Impossible de rejoindre",
+        message: "Impossible de rejoindre ce défi: " + (err.message || err)
+      });
     } finally {
       setJoiningChallengeId(null);
     }
@@ -2715,6 +2699,130 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
                 </div>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Custom Congratulations Modal */}
+      {joinedSuccessChallenge && (
+        <div className="fixed inset-0 bg-black/75 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl max-w-sm w-full p-6 text-center shadow-2xl border border-emerald-100 flex flex-col gap-5 animate-in zoom-in-95 duration-200 relative overflow-hidden">
+            {/* Decorative top bar */}
+            <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-emerald-400 via-teal-500 to-emerald-500"></div>
+            
+            {/* Celebratory Icon */}
+            <div className="mx-auto mt-2 w-16 h-16 bg-emerald-50 rounded-full flex items-center justify-center text-emerald-600 border border-emerald-100 shadow-inner relative animate-bounce">
+              <Trophy className="w-8 h-8" />
+              <span className="absolute -top-1 -right-1 text-xl">🎉</span>
+              <span className="absolute -bottom-1 -left-1 text-xl">✨</span>
+            </div>
+
+            <div className="space-y-1.5">
+              <h3 className="font-black text-xl text-emerald-800 tracking-tight">
+                Félicitations !
+              </h3>
+              <p className="text-gray-600 font-semibold text-xs leading-relaxed px-1">
+                Vous avez rejoint le défi avec succès. Placez vos pronostics maintenant pour rivaliser avec la communauté !
+              </p>
+            </div>
+
+            {/* Small challenge card recap */}
+            <div className="bg-emerald-50/60 border border-emerald-100/50 rounded-2xl p-3.5 text-left">
+              <div className="text-[9px] uppercase font-black text-emerald-800 tracking-wider mb-1 bg-emerald-100/80 rounded-full w-max px-2 py-0.5">
+                {joinedSuccessChallenge.matchId !== 0 ? "🎯 Match Unique" : "🏆 Compétition"}
+              </div>
+              <h4 className="font-black text-slate-800 text-sm leading-tight capitalize">
+                {joinedSuccessChallenge.title}
+              </h4>
+              <p className="text-[10px] text-slate-500 font-bold mt-0.5">
+                Créé par : <span className="font-extrabold text-slate-700">{joinedSuccessChallenge.creatorUsername || "Inconnu"}</span>
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedChallenge(joinedSuccessChallenge);
+                  setJoinedSuccessChallenge(null);
+                }}
+                className="w-full bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white font-black py-3 rounded-xl text-xs transition-all shadow-md cursor-pointer flex items-center justify-center gap-1.5"
+              >
+                Accéder au défi & pronostiquer <ChevronRight className="w-4 h-4" />
+              </button>
+              
+              <button
+                type="button"
+                onClick={() => setJoinedSuccessChallenge(null)}
+                className="w-full bg-gray-105 hover:bg-gray-200 text-gray-700 font-extrabold py-2 rounded-xl text-xs transition cursor-pointer"
+              >
+                Fermer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Custom Alert Modal */}
+      {customAlert && (
+        <div className="fixed inset-0 bg-black/75 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl max-w-sm w-full p-6 text-center shadow-2xl border border-gray-100 flex flex-col gap-5 animate-in zoom-in-95 duration-200 relative overflow-hidden">
+            {/* Decorative top bar */}
+            <div className={`absolute top-0 left-0 right-0 h-1.5 ${
+              customAlert.type === 'error'
+                ? 'bg-rose-500'
+                : customAlert.type === 'success'
+                ? 'bg-emerald-500'
+                : 'bg-amber-500'
+            }`}></div>
+            
+            {/* Icon */}
+            <div className={`mx-auto mt-2 w-16 h-16 rounded-full flex items-center justify-center border shadow-inner relative ${
+              customAlert.type === 'error'
+                ? 'bg-rose-50 text-rose-500 border-rose-100'
+                : customAlert.type === 'success'
+                ? 'bg-emerald-50 text-emerald-500 border-emerald-100'
+                : 'bg-amber-50 text-amber-500 border-amber-100'
+            }`}>
+              {customAlert.type === 'error' ? (
+                <Lock className="w-8 h-8" />
+              ) : customAlert.type === 'success' ? (
+                <CheckCircle2 className="w-8 h-8" />
+              ) : (
+                <Info className="w-8 h-8" />
+              )}
+            </div>
+
+            <div className="space-y-1.5">
+              <h3 className={`font-black text-xl tracking-tight ${
+                customAlert.type === 'error'
+                  ? 'text-rose-800'
+                  : customAlert.type === 'success'
+                  ? 'text-emerald-800'
+                  : 'text-amber-800'
+              }`}>
+                {customAlert.title}
+              </h3>
+              <p className="text-gray-600 font-semibold text-xs leading-relaxed px-1">
+                {customAlert.message}
+              </p>
+            </div>
+
+            <div className="pt-1">
+              <button
+                type="button"
+                onClick={() => setCustomAlert(null)}
+                className={`w-full text-white font-black py-3 rounded-xl text-xs transition-all shadow-md cursor-pointer hover:brightness-95 active:scale-[0.98] ${
+                  customAlert.type === 'error'
+                    ? 'bg-rose-600 shadow-rose-200 z-10'
+                    : customAlert.type === 'success'
+                    ? 'bg-emerald-600 shadow-emerald-200 z-10'
+                    : 'bg-amber-600 shadow-amber-200 z-10'
+                }`}
+              >
+                Compris !
+              </button>
+            </div>
           </div>
         </div>
       )}
