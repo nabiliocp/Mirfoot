@@ -24,11 +24,15 @@ interface ProfileEditModalProps {
     username: string;
     avatar_type: "emoji" | "jersey";
     avatar_value: string;
+    favorite_club?: string;
+    favorite_national?: string;
   };
   onSave: (updated: {
     username: string;
     avatar_type: "emoji" | "jersey";
     avatar_value: string;
+    favorite_club?: string;
+    favorite_national?: string;
   }) => void;
 }
 
@@ -40,6 +44,8 @@ export default function ProfileEditModal({
   onSave,
 }: ProfileEditModalProps) {
   const [username, setUsername] = useState(initialProfile.username);
+  const [favoriteClub, setFavoriteClub] = useState(initialProfile.favorite_club || "");
+  const [favoriteNational, setFavoriteNational] = useState(initialProfile.favorite_national || "");
   const [avatarType, setAvatarType] = useState<"emoji" | "jersey">(initialProfile.avatar_type);
   const [avatarValue, setAvatarValue] = useState(initialProfile.avatar_value);
   const [loading, setLoading] = useState(false);
@@ -50,6 +56,8 @@ export default function ProfileEditModal({
       setUsername(initialProfile.username);
       setAvatarType(initialProfile.avatar_type);
       setAvatarValue(initialProfile.avatar_value);
+      setFavoriteClub(initialProfile.favorite_club || "");
+      setFavoriteNational(initialProfile.favorite_national || "");
       setErrorMsg("");
     }
   }, [isOpen, initialProfile]);
@@ -74,6 +82,8 @@ export default function ProfileEditModal({
           username: username.trim(),
           avatar_type: avatarType,
           avatar_value: avatarValue,
+          favorite_club: favoriteClub.trim(),
+          favorite_national: favoriteNational.trim(),
         },
       });
 
@@ -89,6 +99,8 @@ export default function ProfileEditModal({
           username: username.trim(),
           avatar_type: avatarType,
           avatar_value: avatarValue,
+          first_name: favoriteClub.trim(),     // favorite_club
+          last_name: favoriteNational.trim(),   // favorite_national
         }, { onConflict: 'id' });
 
       if (profileError) {
@@ -103,6 +115,8 @@ export default function ProfileEditModal({
         username: username.trim(),
         avatar_type: avatarType,
         avatar_value: avatarValue,
+        favorite_club: favoriteClub.trim(),
+        favorite_national: favoriteNational.trim(),
       });
       onClose();
     } catch (err: any) {
@@ -162,6 +176,36 @@ export default function ProfileEditModal({
               onChange={(e) => setUsername(e.target.value)}
               className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 hover:border-gray-300 outline-none transition text-sm font-semibold text-gray-800"
               placeholder="Ex: Zizou98"
+            />
+          </div>
+
+          {/* Favorite Club Input */}
+          <div className="text-left">
+            <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">
+              ⚽️ Club de cœur
+            </label>
+            <input
+              type="text"
+              required
+              value={favoriteClub}
+              onChange={(e) => setFavoriteClub(e.target.value)}
+              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 hover:border-gray-300 outline-none transition text-sm font-semibold text-gray-800"
+              placeholder="Ex: PSG, OM, Real Madrid"
+            />
+          </div>
+
+          {/* Favorite National Team Input */}
+          <div className="text-left">
+            <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">
+              🏆 Équipe nationale de cœur
+            </label>
+            <input
+              type="text"
+              required
+              value={favoriteNational}
+              onChange={(e) => setFavoriteNational(e.target.value)}
+              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 hover:border-gray-300 outline-none transition text-sm font-semibold text-gray-800"
+              placeholder="Ex: France, Maroc, Algérie"
             />
           </div>
 

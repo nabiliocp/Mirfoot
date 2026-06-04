@@ -20,6 +20,7 @@ export default function ProfileSetupView({
 }) {
   const [username, setUsername] = useState("");
   const [favoriteClub, setFavoriteClub] = useState("");
+  const [favoriteNational, setFavoriteNational] = useState("");
   const [avatarType, setAvatarType] = useState<"emoji" | "jersey">("emoji");
   const [avatarValue, setAvatarValue] = useState("👽");
   const [loading, setLoading] = useState(false);
@@ -32,6 +33,14 @@ export default function ProfileSetupView({
       setErrorMsg("Le pseudo est obligatoire.");
       return;
     }
+    if (!favoriteClub.trim()) {
+      setErrorMsg("Le club de cœur est obligatoire.");
+      return;
+    }
+    if (!favoriteNational.trim()) {
+      setErrorMsg("L'équipe nationale de cœur est obligatoire.");
+      return;
+    }
 
     setLoading(true);
     setErrorMsg("");
@@ -42,6 +51,9 @@ export default function ProfileSetupView({
         username,
         avatar_type: avatarType,
         avatar_value: avatarValue,
+        favorite_club: favoriteClub.trim(),
+        favorite_national: favoriteNational.trim(),
+        profile_completed: true,
       },
     });
 
@@ -59,6 +71,8 @@ export default function ProfileSetupView({
         username,
         avatar_type: avatarType,
         avatar_value: avatarValue,
+        first_name: favoriteClub.trim(),     // favorite_club
+        last_name: favoriteNational.trim(),   // favorite_national
       }, { onConflict: 'id' });
 
     setLoading(false);
@@ -106,9 +120,8 @@ export default function ProfileSetupView({
             />
           </div>
 
-          {/*
           <div>
-             <label className="block text-sm font-semibold text-gray-700 mb-1">
+            <label className="block text-sm font-semibold text-gray-700 mb-1">
               Club de cœur
             </label>
             <input
@@ -117,10 +130,23 @@ export default function ProfileSetupView({
               value={favoriteClub}
               onChange={(e) => setFavoriteClub(e.target.value)}
               className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none"
-              placeholder="Ton club (ex: PSG, OM, Real)"
+              placeholder="Ton club (ex: PSG, OM, Real Madrid)"
             />
           </div>
-          */}
+
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-1">
+              Équipe nationale de cœur
+            </label>
+            <input
+              type="text"
+              required
+              value={favoriteNational}
+              onChange={(e) => setFavoriteNational(e.target.value)}
+              className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none"
+              placeholder="Ton équipe nationale (ex: France, Maroc, Algérie)"
+            />
+          </div>
 
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">

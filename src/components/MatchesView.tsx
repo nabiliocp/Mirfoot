@@ -4,9 +4,16 @@ import { AlertCircle, Clock, Search, ChevronRight } from 'lucide-react';
 
 interface MatchesViewProps {
   onPronoClick?: (match: Match, competitionId: number) => void;
+  userProfile?: {
+    username: string;
+    avatar_type: "emoji" | "jersey";
+    avatar_value: string;
+    favorite_club?: string;
+    favorite_national?: string;
+  } | null;
 }
 
-export default function MatchesView({ onPronoClick }: MatchesViewProps) {
+export default function MatchesView({ onPronoClick, userProfile }: MatchesViewProps) {
   const [competitions, setCompetitions] = useState<Competition[]>([]);
   const [selectedCompId, setSelectedCompId] = useState<number | null>(null);
   const [matches, setMatches] = useState<Match[]>([]);
@@ -59,6 +66,37 @@ export default function MatchesView({ onPronoClick }: MatchesViewProps) {
       });
   }, [selectedCompId]);
 
+  // Compute Favorite Matches
+  const userHeartMatches = userProfile && matches.filter(match => {
+    const club = userProfile.favorite_club?.toLowerCase().trim();
+    const national = userProfile.favorite_national?.toLowerCase().trim();
+    if (!club && !national) return false;
+
+    const homeName = (match.homeTeam.name || "").toLowerCase();
+    const homeShort = (match.homeTeam.shortName || "").toLowerCase();
+    const awayName = (match.awayTeam.name || "").toLowerCase();
+    const awayShort = (match.awayTeam.shortName || "").toLowerCase();
+
+    const matchesClub = club && (
+      homeName.includes(club) || 
+      homeShort.includes(club) || 
+      awayName.includes(club) || 
+      awayShort.includes(club)
+    );
+
+    const matchesNational = national && (
+      homeName.includes(national) || 
+      homeShort.includes(national) || 
+      awayName.includes(national) || 
+      awayShort.includes(national)
+    );
+
+    return matchesClub || matchesNational;
+  }) || [];
+
+  // General other matches avoiding duplication
+  const otherMatches = matches.filter(match => !userHeartMatches.some(hm => hm.id === match.id));
+
   if (loading && !competitions.length && !error) {
     return <div className="flex justify-center p-12 text-emerald-600"><Clock className="animate-spin w-8 h-8" /></div>;
   }
@@ -85,6 +123,67 @@ export default function MatchesView({ onPronoClick }: MatchesViewProps) {
     );
   }
 
+  const renderMatchCard = (match: Match, isHeart = false) => {
+    // Detect which team is the favorite one
+    const club = userProfile?.favorite_club?.toLowerCase().trim();
+    const national = userProfile?.favorite_national?.toLowerCase().trim();
+    const isHomeHeart = club && ((match.homeTeam.name || "").toLowerCase().includes(club) || (match.homeTeam.shortName || "").toLowerCase().includes(club)) ||
+                        national && ((match.homeTeam.name || "").toLowerCase().includes(national) || (match.homeTeam.shortName || "").toLowerCase().includes(national));
+    const isAwayHeart = club && ((match.awayTeam.name || "").toLowerCase().includes(club) || (match.awayTeam.shortName || "").toLowerCase().includes(club)) ||
+                        national && ((match.awayTeam.name || "").toLowerCase().includes(national) || (match.awayTeam.shortName || "").toLowerCase().includes(national));
+
+    return (
+      <div 
+        key={match.id} 
+        className={`rounded-2xl p-5 shadow-sm border transition hover:shadow-md relative overflow-hidden ${
+          isHeart 
+            ? "bg-rose-50/40 border-rose-200 ring-2 ring-rose-500/10" 
+            : "bg-white border-gray-100"
+        }`}
+      >
+        {isHeart && (
+          <div className="absolute top-0 right-0 bg-rose-500 text-white text-[10px] font-bold px-2.5 py-1 rounded-bl-xl uppercase tracking-wider flex items-center gap-1">
+            ❤️ Cœur ♥️
+          </div>
+        )}
+
+        <div className="flex justify-between items-center mb-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+          <span>{new Date(match.utcDate).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' })} • {new Date(match.utcDate).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</span>
+          <span className="bg-emerald-50 text-emerald-600 px-2 py-1 rounded">À venir</span>
+        </div>
+        
+        <div className="flex items-center justify-between">
+          <div className="flex flex-col items-center flex-1 relative">
+            <img src={match.homeTeam.crest} alt={match.homeTeam.name} className="w-12 h-12 object-contain mb-2" onError={(e) => { e.currentTarget.style.display='none' }} />
+            <span className={`font-bold text-center text-sm md:text-base text-gray-800 ${isHomeHeart ? "text-rose-650 underline decoration-rose-450 decoration-2" : ""}`}>
+              {match.homeTeam.shortName} {isHomeHeart && "❤️"}
+            </span>
+          </div>
+          
+          <div className="flex-1 flex justify-center items-center font-black text-gray-300 text-xl px-4">
+            VS
+          </div>
+          
+          <div className="flex flex-col items-center flex-1 relative">
+            <img src={match.awayTeam.crest} alt={match.awayTeam.name} className="w-12 h-12 object-contain mb-2" onError={(e) => { e.currentTarget.style.display='none' }} />
+            <span className={`font-bold text-center text-sm md:text-base text-gray-800 ${isAwayHeart ? "text-rose-650 underline decoration-rose-450 decoration-2" : ""}`}>
+              {match.awayTeam.shortName} {isAwayHeart && "❤️"}
+            </span>
+          </div>
+        </div>
+
+        <div className="mt-4 pt-4 border-t border-gray-50 flex justify-center">
+          <button 
+            onClick={() => onPronoClick?.(match, selectedCompId!)}
+            className="text-sm font-semibold text-emerald-600 hover:text-emerald-700 flex items-center gap-1 transition-all cursor-pointer hover:scale-105 active:scale-95"
+          >
+            Faire mon prono <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-6 animate-in fade-in zoom-in-95 duration-300">
       <div className="flex items-center space-x-2 bg-white rounded-xl shadow-sm px-4 py-2 border border-gray-100">
@@ -100,7 +199,7 @@ export default function MatchesView({ onPronoClick }: MatchesViewProps) {
         </select>
       </div>
 
-      <div className="space-y-4">
+      <div className="space-y-6">
         {loading && <div className="flex justify-center p-6"><Clock className="animate-spin text-emerald-500 w-6 h-6" /></div>}
         
         {!loading && matches.length === 0 && (
@@ -109,39 +208,31 @@ export default function MatchesView({ onPronoClick }: MatchesViewProps) {
           </div>
         )}
 
-        {!loading && matches.map(match => (
-          <div key={match.id} className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 transition hover:shadow-md">
-            <div className="flex justify-between items-center mb-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">
-              <span>{new Date(match.utcDate).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' })} • {new Date(match.utcDate).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</span>
-              <span className="bg-emerald-50 text-emerald-600 px-2 py-1 rounded">À venir</span>
-            </div>
-            
-            <div className="flex items-center justify-between">
-              <div className="flex flex-col items-center flex-1">
-                <img src={match.homeTeam.crest} alt={match.homeTeam.name} className="w-12 h-12 object-contain mb-2" fallback-src="https://via.placeholder.com/48" onError={(e) => { e.currentTarget.style.display='none' }} />
-                <span className="font-bold text-center text-sm md:text-base text-gray-800">{match.homeTeam.shortName}</span>
-              </div>
-              
-              <div className="flex-1 flex justify-center items-center font-black text-gray-300 text-xl px-4">
-                VS
-              </div>
-              
-              <div className="flex flex-col items-center flex-1">
-                <img src={match.awayTeam.crest} alt={match.awayTeam.name} className="w-12 h-12 object-contain mb-2" onError={(e) => { e.currentTarget.style.display='none' }} />
-                <span className="font-bold text-center text-sm md:text-base text-gray-800">{match.awayTeam.shortName}</span>
-              </div>
-            </div>
-
-            <div className="mt-4 pt-4 border-t border-gray-50 flex justify-center">
-              <button 
-                onClick={() => onPronoClick?.(match, selectedCompId!)}
-                className="text-sm font-semibold text-emerald-600 hover:text-emerald-700 flex items-center gap-1 transition-all cursor-pointer hover:scale-105 active:scale-95"
-              >
-                Faire mon prono <ChevronRight className="w-4 h-4" />
-              </button>
+        {/* Heart Matches Section */}
+        {!loading && userHeartMatches.length > 0 && (
+          <div className="space-y-3">
+            <h3 className="text-sm font-bold text-rose-600 uppercase tracking-widest pl-1.5 flex items-center gap-1.5">
+              <span>❤️ Mes Équipes de Cœur ❤️</span>
+            </h3>
+            <div className="grid grid-cols-1 gap-4">
+              {userHeartMatches.map(match => renderMatchCard(match, true))}
             </div>
           </div>
-        ))}
+        )}
+
+        {/* Regular Matches Section */}
+        {!loading && otherMatches.length > 0 && (
+          <div className="space-y-3">
+            {!loading && userHeartMatches.length > 0 && (
+              <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest pl-1.5 pt-2">
+                Autres Matchs de la Compétition
+              </h3>
+            )}
+            <div className="grid grid-cols-1 gap-4">
+              {otherMatches.map(match => renderMatchCard(match, false))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

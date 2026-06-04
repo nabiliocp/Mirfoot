@@ -83,14 +83,16 @@ export default function LeaderboardView() {
                 )}
               </div>
               
-              <div className="ml-3 flex-1 flex flex-col">
-                <span className={`font-semibold text-gray-800`}>
+              <div className="ml-3 flex-1 flex flex-col font-sans">
+                <span className="font-semibold text-gray-800">
                   {profile.username}
                 </span>
                 {(profile.first_name || profile.last_name) && (
-                  <span className="text-xs text-gray-400">
-                    {[profile.first_name, profile.last_name].filter(Boolean).join(' ')}
-                  </span>
+                  <div className="text-[11px] text-gray-400 flex items-center gap-1.5 mt-0.5">
+                    {profile.first_name && <span className="inline-flex items-center gap-0.5">⚽️ {profile.first_name}</span>}
+                    {profile.first_name && profile.last_name && <span className="text-gray-300">|</span>}
+                    {profile.last_name && <span className="inline-flex items-center gap-0.5">🏆 {profile.last_name}</span>}
+                  </div>
                 )}
               </div>
               
