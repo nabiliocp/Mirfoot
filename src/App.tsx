@@ -96,6 +96,7 @@ export default function App() {
   const [showInviteScreen, setShowInviteScreen] = useState(false);
   const [loadingInvite, setLoadingInvite] = useState(true);
 
+  /*
   useEffect(() => {
     const storedInvite = inviteId || localStorage.getItem("pending_invite_id");
     if (session && storedInvite && supabase) {
@@ -126,6 +127,7 @@ export default function App() {
         });
     }
   }, [session, inviteId]);
+  */
 
   useEffect(() => {
     if (!supabase) {
@@ -142,9 +144,11 @@ export default function App() {
           .eq("id", userId)
           .single();
         
+        console.log("CheckProfile result for", userId, ":", { data, error });
+
         // If error (e.g. record not found) OR no username, force setup
         if (error || !data?.username) {
-          console.log("No profile found or username empty, forcing setup");
+          console.log("No profile found or username empty, forcing setup", { error, data });
           setNeedsProfileSetup(true);
           setUserProfile(null);
         } else {
