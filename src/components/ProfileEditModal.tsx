@@ -2,7 +2,7 @@ import { useState, useEffect, type FormEvent } from "react";
 import { supabase } from "../lib/supabase";
 import { X, User, Mail, Check, AlertCircle } from "lucide-react";
 
-const EMOJIS = ["👽", "🤓", "😎", "😜", "⚽", "🏆", "🔥", "👑", "🦄", "🦁", "🦖", "🍕"];
+const EMOJIS = ["👽", "🤓", "😎", "😜", "⚽", "🏆", "🔥", "👑", "🦁", "🦖", "🦄", "🍕"];
 const JERSEY_COLORS = [
   "#ef4444",
   "#3b82f6",
@@ -15,6 +15,60 @@ const JERSEY_COLORS = [
   "#14b8a6",
   "#06b6d4"
 ];
+
+const POPULAR_CLUBS = [
+  "Paris Saint-Germain (PSG)",
+  "Olympique de Marseille (OM)",
+  "Real Madrid",
+  "FC Barcelone",
+  "Manchester City",
+  "FC Bayern Munich",
+  "Juventus",
+  "Liverpool FC",
+  "Chelsea",
+  "Arsenal",
+  "Inter Milan",
+  "AC Milan",
+  "Atletico Madrid",
+  "Borussia Dortmund",
+  "Manchester United",
+  "Olympique Lyonnais (OL)",
+  "AS Monaco",
+  "RC Lens",
+  "Lille OSC",
+  "OGC Nice",
+  "Saint-Étienne",
+  "SL Benfica",
+  "Sporting CP",
+  "Ajax Amsterdam",
+  "Al-Nassr",
+  "Al-Hilal"
+].sort();
+
+const POPULAR_NATIONALS = [
+  "France",
+  "Maroc",
+  "Algérie",
+  "Tunisie",
+  "Sénégal",
+  "Côte d'Ivoire",
+  "Cameroun",
+  "Égypte",
+  "Mali",
+  "Espagne",
+  "Italie",
+  "Allemagne",
+  "Angleterre",
+  "Portugal",
+  "Belgique",
+  "Pays-Bas",
+  "Brésil",
+  "Argentine",
+  "Croatie",
+  "Uruguay",
+  "Japon",
+  "Suisse"
+].sort();
 
 interface ProfileEditModalProps {
   isOpen: boolean;
@@ -51,6 +105,23 @@ export default function ProfileEditModal({
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
+  // Dropdown visibility states
+  const [isClubFocused, setIsClubFocused] = useState(false);
+  const [isNationalFocused, setIsNationalFocused] = useState(false);
+
+  // Filter lists based on input queries
+  const filteredClubs = favoriteClub.trim() === ""
+    ? POPULAR_CLUBS
+    : POPULAR_CLUBS.filter(club => 
+        club.toLowerCase().includes(favoriteClub.toLowerCase())
+      );
+
+  const filteredNationals = favoriteNational.trim() === ""
+    ? POPULAR_NATIONALS
+    : POPULAR_NATIONALS.filter(nat => 
+        nat.toLowerCase().includes(favoriteNational.toLowerCase())
+      );
+
   useEffect(() => {
     if (isOpen) {
       setUsername(initialProfile.username);
@@ -59,6 +130,8 @@ export default function ProfileEditModal({
       setFavoriteClub(initialProfile.favorite_club || "");
       setFavoriteNational(initialProfile.favorite_national || "");
       setErrorMsg("");
+      setIsClubFocused(false);
+      setIsNationalFocused(false);
     }
   }, [isOpen, initialProfile]);
 
@@ -69,6 +142,14 @@ export default function ProfileEditModal({
     if (!supabase) return;
     if (!username.trim()) {
       setErrorMsg("Le pseudo ne peut pas être vide.");
+      return;
+    }
+    if (!favoriteClub.trim()) {
+      setErrorMsg("Le club de cœur est obligatoire.");
+      return;
+    }
+    if (!favoriteNational.trim()) {
+      setErrorMsg("L'équipe nationale de cœur est obligatoire.");
       return;
     }
 
@@ -176,11 +257,12 @@ export default function ProfileEditModal({
               onChange={(e) => setUsername(e.target.value)}
               className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 hover:border-gray-300 outline-none transition text-sm font-semibold text-gray-800"
               placeholder="Ex: Zizou98"
+              maxLength={20}
             />
           </div>
 
-          {/* Favorite Club Input */}
-          <div className="text-left">
+          {/* Favorite Club Dropdown Autocomplete */}
+          <div className="text-left relative">
             <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">
               ⚽️ Club de cœur
             </label>
@@ -188,14 +270,49 @@ export default function ProfileEditModal({
               type="text"
               required
               value={favoriteClub}
-              onChange={(e) => setFavoriteClub(e.target.value)}
+              onChange={(e) => {
+                setFavoriteClub(e.target.value);
+                setIsClubFocused(true);
+              }}
+              onFocus={() => {
+                setIsClubFocused(true);
+                setIsNationalFocused(false);
+              }}
+              onBlur={() => {
+                setTimeout(() => setIsClubFocused(false), 200);
+              }}
               className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 hover:border-gray-300 outline-none transition text-sm font-semibold text-gray-800"
               placeholder="Ex: PSG, OM, Real Madrid"
+              autoComplete="off"
             />
+
+            {isClubFocused && (
+              <div className="absolute z-30 left-0 right-0 mt-1 max-h-40 overflow-y-auto bg-white border border-gray-100 rounded-2xl shadow-xl shadow-gray-200/50">
+                {filteredClubs.length > 0 ? (
+                  filteredClubs.map((club) => (
+                    <button
+                      key={club}
+                      type="button"
+                      onMouseDown={() => {
+                        setFavoriteClub(club);
+                        setIsClubFocused(false);
+                      }}
+                      className="w-full text-left px-4 py-2 hover:bg-emerald-50 text-xs font-semibold text-gray-700 transition border-b border-gray-50 last:border-0"
+                    >
+                      ⚽️ {club}
+                    </button>
+                  ))
+                ) : (
+                  <div className="px-4 py-3 text-xs text-gray-400 italic">
+                    Aucun club suggéré (saisie libre)
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
-          {/* Favorite National Team Input */}
-          <div className="text-left">
+          {/* Favorite National Team Dropdown Autocomplete */}
+          <div className="text-left relative">
             <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">
               🏆 Équipe nationale de cœur
             </label>
@@ -203,10 +320,45 @@ export default function ProfileEditModal({
               type="text"
               required
               value={favoriteNational}
-              onChange={(e) => setFavoriteNational(e.target.value)}
+              onChange={(e) => {
+                setFavoriteNational(e.target.value);
+                setIsNationalFocused(true);
+              }}
+              onFocus={() => {
+                setIsNationalFocused(true);
+                setIsClubFocused(false);
+              }}
+              onBlur={() => {
+                setTimeout(() => setIsNationalFocused(false), 200);
+              }}
               className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 hover:border-gray-300 outline-none transition text-sm font-semibold text-gray-800"
               placeholder="Ex: France, Maroc, Algérie"
+              autoComplete="off"
             />
+
+            {isNationalFocused && (
+              <div className="absolute z-20 left-0 right-0 mt-1 max-h-40 overflow-y-auto bg-white border border-gray-100 rounded-2xl shadow-xl shadow-gray-200/50">
+                {filteredNationals.length > 0 ? (
+                  filteredNationals.map((nat) => (
+                    <button
+                      key={nat}
+                      type="button"
+                      onMouseDown={() => {
+                        setFavoriteNational(nat);
+                        setIsNationalFocused(false);
+                      }}
+                      className="w-full text-left px-4 py-2 hover:bg-emerald-50 text-xs font-semibold text-gray-700 transition border-b border-gray-50 last:border-0"
+                    >
+                      💪 {nat}
+                    </button>
+                  ))
+                ) : (
+                  <div className="px-4 py-3 text-xs text-gray-400 italic">
+                    Aucun pays suggéré (saisie libre)
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Avatar Selection */}
@@ -220,7 +372,7 @@ export default function ProfileEditModal({
               <button
                 type="button"
                 onClick={() => setAvatarType("emoji")}
-                className={`flex-1 py-2 px-3 rounded-xl font-bold text-xs transition-all cursor-pointer ${
+                className={`flex-1 py-1.5 px-3 rounded-xl font-bold text-xs transition-with-duration cursor-pointer ${
                   avatarType === "emoji" 
                     ? "bg-emerald-50 text-emerald-700 border border-emerald-500/30 shadow-xs" 
                     : "bg-gray-50 text-gray-500 hover:bg-gray-100 border border-gray-200/55"
@@ -231,7 +383,7 @@ export default function ProfileEditModal({
               <button
                 type="button"
                 onClick={() => setAvatarType("jersey")}
-                className={`flex-1 py-2 px-3 rounded-xl font-bold text-xs transition-all cursor-pointer ${
+                className={`flex-1 py-1.5 px-3 rounded-xl font-bold text-xs transition-with-duration cursor-pointer ${
                   avatarType === "jersey" 
                     ? "bg-emerald-50 text-emerald-700 border border-emerald-500/30 shadow-xs" 
                     : "bg-gray-50 text-gray-500 hover:bg-gray-100 border border-gray-200/55"
