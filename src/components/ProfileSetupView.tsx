@@ -160,25 +160,25 @@ export default function ProfileSetupView({
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-gray-50 flex-1">
-      <div className="bg-white p-6 sm:p-8 rounded-3xl shadow-sm border border-gray-100 max-w-md w-full text-center">
-        <h2 className="text-2xl font-bold mb-2 text-emerald-800">
+    <div className="flex flex-col items-center justify-center min-h-screen p-3 sm:p-4 bg-gray-50 flex-1">
+      <div className="bg-white p-5 sm:p-7 rounded-3xl shadow-sm border border-gray-100 max-w-sm w-full text-center">
+        <h2 className="text-xl sm:text-2xl font-bold mb-1 text-emerald-800">
           Complète ton profil !
         </h2>
-        <p className="text-gray-500 mb-6 text-sm">
-          Choisis ton pseudo, ton avatar et tes clubs préférés pour être dans la compétition !
+        <p className="text-gray-500 mb-4 text-xs">
+          Choisis ton pseudo, ton avatar et tes clubs pour être dans la compétition !
         </p>
 
         {errorMsg && (
-          <div className="bg-red-50 text-red-600 p-3.5 rounded-xl text-sm mb-4 border border-red-100 text-left">
+          <div className="bg-red-50 text-red-600 p-2.5 rounded-xl text-xs mb-3.5 border border-red-100 text-left">
             <span>{errorMsg}</span>
           </div>
         )}
 
-        <form onSubmit={handleSave} className="space-y-5 text-left">
+        <form onSubmit={handleSave} className="space-y-3.5 text-left">
           {/* Pseudo Input */}
           <div>
-            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">
+            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">
               ⚽️ Pseudo de joueur
             </label>
             <input
@@ -186,7 +186,7 @@ export default function ProfileSetupView({
               required
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              className="w-full p-3.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none font-semibold text-gray-800 text-sm"
+              className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none font-semibold text-gray-800 text-xs"
               placeholder="Ton pseudo (ex: Zizou98)"
               maxLength={20}
             />
@@ -194,7 +194,7 @@ export default function ProfileSetupView({
 
           {/* Club de cœur with Dynamic Autocomplete */}
           <div className="relative">
-            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">
+            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">
               ❤️ Club de cœur
             </label>
             <input
@@ -210,17 +210,16 @@ export default function ProfileSetupView({
                 setIsNationalFocused(false);
               }}
               onBlur={() => {
-                // Short timeout to let onMouseDown register click on suggestion before closing dropdown
                 setTimeout(() => setIsClubFocused(false), 200);
               }}
-              className="w-full p-3.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none font-semibold text-gray-800 text-sm"
+              className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none font-semibold text-gray-800 text-xs"
               placeholder="Sélectionne ou écris ton club (ex: PSG)"
               autoComplete="off"
             />
             
             {isClubFocused && (
-              <div className="absolute z-30 left-0 right-0 mt-1 max-h-48 overflow-y-auto bg-white border border-gray-100 rounded-2xl shadow-xl shadow-gray-200/50">
-                <div className="bg-gray-50 px-3 py-1.5 text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+              <div className="absolute z-30 left-0 right-0 mt-1 max-h-36 overflow-y-auto bg-white border border-gray-100 rounded-xl shadow-xl shadow-gray-200/50">
+                <div className="bg-gray-50 px-3 py-1 text-[9px] font-bold text-gray-400 uppercase tracking-wider">
                   Suggestions de clubs
                 </div>
                 {filteredClubs.length > 0 ? (
@@ -232,14 +231,14 @@ export default function ProfileSetupView({
                         setFavoriteClub(club);
                         setIsClubFocused(false);
                       }}
-                      className="w-full text-left px-4 py-2.5 hover:bg-emerald-50 text-sm font-semibold text-gray-700 transition border-b border-gray-50 last:border-0"
+                      className="w-full text-left px-3 py-1.5 hover:bg-emerald-50 text-xs font-semibold text-gray-700 transition border-b border-gray-50 last:border-0"
                     >
                       ⚽️ {club}
                     </button>
                   ))
                 ) : (
-                  <div className="px-4 py-3 text-xs text-gray-400 italic">
-                    Aucun club suggéré (saisie libre permise)
+                  <div className="px-3 py-2 text-[11px] text-gray-400 italic">
+                    Aucun club suggéré (saisie libre)
                   </div>
                 )}
               </div>
@@ -248,7 +247,7 @@ export default function ProfileSetupView({
 
           {/* Équipe Nationale with Dynamic Autocomplete */}
           <div className="relative">
-            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">
+            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">
               🏆 Équipe nationale de cœur
             </label>
             <input
@@ -266,14 +265,14 @@ export default function ProfileSetupView({
               onBlur={() => {
                 setTimeout(() => setIsNationalFocused(false), 200);
               }}
-              className="w-full p-3.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none font-semibold text-gray-800 text-sm"
+              className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none font-semibold text-gray-800 text-xs"
               placeholder="Sélectionne ou écris ton pays (ex: France)"
               autoComplete="off"
             />
 
             {isNationalFocused && (
-              <div className="absolute z-20 left-0 right-0 mt-1 max-h-48 overflow-y-auto bg-white border border-gray-100 rounded-2xl shadow-xl shadow-gray-200/50">
-                <div className="bg-gray-50 px-3 py-1.5 text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+              <div className="absolute z-20 left-0 right-0 mt-1 max-h-36 overflow-y-auto bg-white border border-gray-100 rounded-xl shadow-xl shadow-gray-200/50">
+                <div className="bg-gray-50 px-3 py-1 text-[9px] font-bold text-gray-400 uppercase tracking-wider">
                   Suggestions de sélections
                 </div>
                 {filteredNationals.length > 0 ? (
@@ -285,14 +284,14 @@ export default function ProfileSetupView({
                         setFavoriteNational(nat);
                         setIsNationalFocused(false);
                       }}
-                      className="w-full text-left px-4 py-2.5 hover:bg-emerald-50 text-sm font-semibold text-gray-700 transition border-b border-gray-50 last:border-0"
+                      className="w-full text-left px-3 py-1.5 hover:bg-emerald-50 text-xs font-semibold text-gray-700 transition border-b border-gray-50 last:border-0"
                     >
                       💪 {nat}
                     </button>
                   ))
                 ) : (
-                  <div className="px-4 py-3 text-xs text-gray-400 italic">
-                    Aucun pays suggéré (saisie libre permise)
+                  <div className="px-3 py-2 text-[11px] text-gray-400 italic">
+                    Aucun pays suggéré (saisie libre)
                   </div>
                 )}
               </div>
@@ -301,34 +300,34 @@ export default function ProfileSetupView({
 
           {/* Avatar Settings */}
           <div>
-            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">
               Style de ton avatar
             </label>
-            <div className="flex justify-center gap-4 mb-3.5">
+            <div className="flex justify-center gap-2 mb-2">
               <button
                 type="button"
                 onClick={() => setAvatarType("emoji")}
-                className={`py-2 px-4 rounded-xl font-bold text-xs transition-all cursor-pointer hover:scale-[1.03] ${avatarType === "emoji" ? "bg-emerald-100 text-emerald-700 border border-emerald-500/30" : "bg-gray-100 text-gray-500 border border-transparent"}`}
+                className={`flex-1 py-1 px-3 rounded-lg font-bold text-[11px] transition-all cursor-pointer ${avatarType === "emoji" ? "bg-emerald-100 text-emerald-700 border border-emerald-500/20" : "bg-gray-100 text-gray-500 border border-transparent"}`}
               >
                 😄 Emojis
               </button>
               <button
                 type="button"
                 onClick={() => setAvatarType("jersey")}
-                className={`py-2 px-4 rounded-xl font-bold text-xs transition-all cursor-pointer hover:scale-[1.03] ${avatarType === "jersey" ? "bg-emerald-100 text-emerald-700 border border-emerald-500/30" : "bg-gray-100 text-gray-500 border border-transparent"}`}
+                className={`flex-1 py-1 px-3 rounded-lg font-bold text-[11px] transition-all cursor-pointer ${avatarType === "jersey" ? "bg-emerald-100 text-emerald-700 border border-emerald-500/20" : "bg-gray-100 text-gray-500 border border-transparent"}`}
               >
                 👕 Maillots
               </button>
             </div>
 
-            <div className="grid grid-cols-4 gap-2 px-3 py-4 bg-gray-50 rounded-2xl max-h-[140px] overflow-y-auto">
+            <div className="grid grid-cols-6 gap-1 px-2 py-2 bg-gray-50 rounded-2xl max-h-[85px] overflow-y-auto border border-gray-100/80">
               {avatarType === "emoji"
                 ? EMOJIS.map((emoji) => (
                     <button
                       key={emoji}
                       type="button"
                       onClick={() => setAvatarValue(emoji)}
-                      className={`aspect-square text-3xl flex items-center justify-center rounded-xl transition ${avatarValue === emoji ? "bg-white shadow-md ring-2 ring-emerald-500 scale-105" : "hover:bg-gray-200"}`}
+                      className={`aspect-square text-xl flex items-center justify-center rounded-lg transition ${avatarValue === emoji ? "bg-white shadow-md ring-2 ring-emerald-500 scale-105" : "hover:bg-gray-200"}`}
                     >
                       {emoji}
                     </button>
@@ -339,7 +338,7 @@ export default function ProfileSetupView({
                       type="button"
                       onClick={() => setAvatarValue(color)}
                       style={{ backgroundColor: color }}
-                      className={`aspect-square rounded-full transition border-4 border-white shadow-sm mx-auto w-10 h-10 ${avatarValue === color ? "ring-2 ring-emerald-500 scale-105" : "hover:scale-[1.03]"}`}
+                      className={`aspect-square rounded-full transition border-2 border-white shadow-xs mx-auto w-6 h-6 ${avatarValue === color ? "ring-2 ring-emerald-500 scale-105" : "hover:scale-[1.03]"}`}
                     />
                   ))}
             </div>
@@ -348,7 +347,7 @@ export default function ProfileSetupView({
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 rounded-xl transition-all shadow-sm disabled:opacity-50 cursor-pointer hover:scale-[1.02] active:scale-[0.98] mt-3"
+            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-xl transition-all shadow-sm disabled:opacity-50 cursor-pointer text-xs sm:text-sm hover:scale-[1.01] active:scale-[0.99] mt-3"
           >
             {loading ? "Enregistrement..." : "Créer mon profil et Jouer !"}
           </button>
