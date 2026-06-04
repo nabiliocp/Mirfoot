@@ -26,6 +26,38 @@ import { Match } from "./types";
 import logoImage from "./assets/images/pig_football_logo_1780308392869.png";
 
 export default function App() {
+  // Fix double hash immediately on component render to ensure Supabase SDK can parse the parameters
+  if (typeof window !== "undefined" && window.location.href.includes("##")) {
+    const cleanUrl = window.location.href.replace("##", "#");
+    window.history.replaceState({}, document.title, cleanUrl);
+  }
+
+  // Purely cosmetic URL cleaner to wipe magic link tokens after Supabase consumes them (delayed by 1.5s)
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const url = new URL(window.location.href);
+      if (
+        url.hash.includes("access_token") || 
+        url.hash.includes("id_token") || 
+        url.searchParams.has("code") ||
+        url.searchParams.has("type")
+      ) {
+        const cleanTimer = setTimeout(() => {
+          const freshUrl = new URL(window.location.href);
+          freshUrl.hash = "";
+          freshUrl.searchParams.delete("code");
+          freshUrl.searchParams.delete("type");
+          freshUrl.searchParams.delete("error");
+          freshUrl.searchParams.delete("error_description");
+          // Maintain other params like invite code if necessary, or just clear
+          window.history.replaceState({}, document.title, freshUrl.pathname + freshUrl.search);
+          console.log("[App] Cleared auth tokens from address bar to avoid reload loops");
+        }, 1500);
+        return () => clearTimeout(cleanTimer);
+      }
+    }
+  }, []);
+
   const [session, setSession] = useState<Session | null>(null);
   const [loadingSession, setLoadingSession] = useState(true);
   const [needsProfileSetup, setNeedsProfileSetup] = useState(false);
@@ -79,41 +111,71 @@ export default function App() {
   }, [session, inviteId]);
 
   useEffect(() => {
-    if (!supabase) return;
+    if (!supabase) {
+      setLoadingSession(false);
+      return;
+    }
 
     const checkProfile = async (userId: string) => {
-      if (!supabase) return;
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("username, avatar_type, avatar_value")
-        .eq("id", userId)
-        .single();
-      
-      // If error (e.g. record not found) OR no username, force setup
-      if (error || !data?.username) {
+      try {
+        if (!supabase) return;
+        const { data, error } = await supabase
+          .from("profiles")
+          .select("username, avatar_type, avatar_value")
+          .eq("id", userId)
+          .single();
+        
+        // If error (e.g. record not found) OR no username, force setup
+        if (error || !data?.username) {
+          console.log("No profile found or username empty, forcing setup");
+          setNeedsProfileSetup(true);
+          setUserProfile(null);
+        } else {
+          console.log("Profile resolved perfectly:", data.username);
+          setNeedsProfileSetup(false);
+          setUserProfile({
+            username: data.username,
+            avatar_type: (data.avatar_type as "emoji" | "jersey") || "emoji",
+            avatar_value: data.avatar_value || "👽",
+          });
+        }
+      } catch (err) {
+        console.error("Exception checking profile:", err);
         setNeedsProfileSetup(true);
-        setUserProfile(null);
-      } else {
-        setNeedsProfileSetup(false);
-        setUserProfile({
-          username: data.username,
-          avatar_type: (data.avatar_type as "emoji" | "jersey") || "emoji",
-          avatar_value: data.avatar_value || "👽",
-        });
       }
     };
 
+    // Safe timeout fallback so the user is never locked in "Connexion en cours..." indefinitely
+    let resolved = false;
+    const timeout = setTimeout(() => {
+      if (!resolved) {
+        console.warn("Auth check taking longer than 2.5s! Forcing loadingSession to false for stability.");
+        setLoadingSession(false);
+      }
+    }, 2500);
+
     supabase.auth.getSession().then(({ data: { session } }) => {
+      resolved = true;
+      clearTimeout(timeout);
+      console.log("getSession resolved. Session exists:", !!session);
       setSession(session);
       setLoadingSession(false);
       if (session) {
         checkProfile(session.user.id);
       }
+    }).catch(err => {
+      console.error("Error in getSession:", err);
+      resolved = true;
+      clearTimeout(timeout);
+      setLoadingSession(false);
     });
 
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
+      resolved = true;
+      clearTimeout(timeout);
+      console.log("AuthStateChange event emitted:", _event, "Session exists:", !!session);
       setSession(session);
       setLoadingSession(false);
       if (session) {
@@ -123,7 +185,10 @@ export default function App() {
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      clearTimeout(timeout);
+      subscription.unsubscribe();
+    };
   }, []);
 
   useEffect(() => {
