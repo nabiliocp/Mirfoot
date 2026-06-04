@@ -4,24 +4,11 @@ export interface User {
   points: number;
 }
 
-export interface RulesSet {
-  exact_score: number;
-  correct_winner: number;
-  closest_guess: number;
-}
-
-export interface KnockoutRulesSet extends RulesSet {
-  exact_score_penalties: number;
-  correct_winner_penalties: number;
-  // New rules
-  prolongation_winner: number;
-  prolongation_score: number;
-  penalties_winner: number;
-}
-
 export interface PointRules {
-  group_stage: RulesSet;
-  knockout_stage: KnockoutRulesSet;
+  exact_score: number;
+  close_score: number;
+  correct_winner: number;
+  qualification: number;
 }
 
 export interface Challenge {
@@ -47,15 +34,7 @@ export interface Challenge {
 export interface Prediction {
   homeScore?: number;
   awayScore?: number;
-  firstToScore?: string; // 'home', 'away', 'none'
-  // New fields
-  endStage?: 'regulation' | 'prolongation' | 'penalties';
-  winner?: 'home' | 'away'; // applicable for prolongation or penalties
-  prolongationHomeScore?: number; // Should I add these? The user said "Quel score Prolongation score"
-  prolongationAwayScore?: number;
-  
-  penaltiesHomeScore?: number;
-  penaltiesAwayScore?: number;
+  qualifies?: 'home' | 'away';
   customAnswer?: string;
   bonus?: boolean;
 }

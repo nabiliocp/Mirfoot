@@ -3,8 +3,6 @@ import type { FormEvent } from "react";
 import {
   Challenge,
   PointRules,
-  RulesSet,
-  KnockoutRulesSet,
   Prediction,
   Competition,
   Match,
@@ -151,51 +149,35 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
 
   const ruleLabels: Record<string, string> = {
     exact_score: "Score Exact",
-    correct_winner: "Bon Vainqueur (1N2)",
-    closest_guess: "Plus proche du score",
-    exact_score_penalties: "Score Exact Tab (Knockout)",
-    correct_winner_penalties: "Vainqueur Tab (Knockout)",
-    prolongation_winner: "Vainqueur Prolongation",
-    prolongation_score: "Score Prolongation",
-    penalties_winner: "Vainqueur Penalty",
+    close_score: "Score Proche",
+    correct_winner: "Bon Vainqueur",
+    qualification: "Qualification (Tirs au but, etc)",
   };
 
   const renderReadableRules = (rules: PointRules) => {
     return (
       <div className="space-y-4">
-        <div>
-          <h4 className="font-bold text-emerald-700 text-sm mb-2 flex items-center gap-2">
-            <div className="w-2 h-2 bg-emerald-500 rounded-full" />
-            Phase de Groupes
-          </h4>
-          <div className="grid grid-cols-1 gap-2 pl-4 border-l-2 border-emerald-100">
-            {Object.entries(rules.group_stage).map(([key, value]) => (
-              value > 0 && (
-                <div key={key} className="flex justify-between text-xs items-center">
-                  <span className="text-gray-600 font-medium">{ruleLabels[key] || key}</span>
-                  <span className="bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full font-bold">+{value} pts</span>
-                </div>
-              )
-            ))}
+        <div className="grid grid-cols-1 gap-2 pl-4 border-l-2 border-emerald-100">
+          <div className="flex justify-between text-xs items-center">
+            <span className="text-gray-600 font-medium">Score Exact</span>
+            <span className="bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full font-bold">+{rules.exact_score ?? 0} pts</span>
+          </div>
+          <div className="flex justify-between text-xs items-center">
+            <span className="text-gray-600 font-medium">Score Proche</span>
+            <span className="bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full font-bold">+{rules.close_score ?? 0} pts</span>
+          </div>
+          <div className="flex justify-between text-xs items-center">
+            <span className="text-gray-600 font-medium">Bon Vainqueur</span>
+            <span className="bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full font-bold">+{rules.correct_winner ?? 0} pts</span>
+          </div>
+          <div className="flex justify-between text-xs items-center">
+            <span className="text-gray-600 font-medium">Qualification</span>
+            <span className="bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full font-bold">+{rules.qualification || 0} pts</span>
           </div>
         </div>
-        
-        <div>
-          <h4 className="font-bold text-indigo-700 text-sm mb-2 flex items-center gap-2">
-            <div className="w-2 h-2 bg-indigo-500 rounded-full" />
-            Phase Éliminatoire
-          </h4>
-          <div className="grid grid-cols-1 gap-2 pl-4 border-l-2 border-indigo-100">
-            {Object.entries(rules.knockout_stage).map(([key, value]) => (
-              value > 0 && (
-                <div key={key} className="flex justify-between text-xs items-center">
-                  <span className="text-gray-600 font-medium">{ruleLabels[key] || key}</span>
-                  <span className="bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-full font-bold">+{value} pts</span>
-                </div>
-              )
-            ))}
-          </div>
-        </div>
+        <p className="text-[10px] text-gray-500 italic mt-2 px-2 bg-gray-50 p-2 rounded">
+          Score exact, Score proche et Bon vainqueur ne sont pas cumulables (seul le meilleur est retenu). La qualification est un bonus séparé.
+        </p>
 
         <div>
           <h4 className="font-bold text-amber-700 text-sm mb-2 flex items-center gap-2">
@@ -226,13 +208,9 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
     [key: string]: { enabled: boolean; points: number; label: string };
   }>({
     exact_score: { enabled: true, points: 5, label: "Score Exact" },
-    correct_winner: { enabled: true, points: 2, label: "Bon Vainqueur (1N2)" },
-    closest_guess: { enabled: true, points: 1, label: "Plus proche du score" },
-    exact_score_penalties: { enabled: false, points: 5, label: "Score Exact Tab (Knockout)" },
-    correct_winner_penalties: { enabled: false, points: 2, label: "Vainqueur Tab (Knockout)" },
-    prolongation_winner: { enabled: false, points: 3, label: "Vainqueur Prolongation" },
-    prolongation_score: { enabled: false, points: 5, label: "Score Prolongation" },
-    penalties_winner: { enabled: false, points: 3, label: "Vainqueur Penalty" },
+    close_score: { enabled: true, points: 3, label: "Score Proche" },
+    correct_winner: { enabled: true, points: 2, label: "Bon Vainqueur" },
+    qualification: { enabled: true, points: 2, label: "Qualification (Tirs au but, etc)" },
   });
 
   const toggleRule = (rule: string) => {
@@ -878,21 +856,10 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
         away_crest?: string;
       };
     } = {
-      group_stage: {
-        exact_score: customRulesConfig.exact_score.enabled ? customRulesConfig.exact_score.points : 0,
-        correct_winner: customRulesConfig.correct_winner.enabled ? customRulesConfig.correct_winner.points : 0,
-        closest_guess: customRulesConfig.closest_guess.enabled ? customRulesConfig.closest_guess.points : 0,
-      },
-      knockout_stage: {
-        exact_score: customRulesConfig.exact_score.enabled ? customRulesConfig.exact_score.points : 0,
-        correct_winner: customRulesConfig.correct_winner.enabled ? customRulesConfig.correct_winner.points : 0,
-        closest_guess: customRulesConfig.closest_guess.enabled ? customRulesConfig.closest_guess.points : 0,
-        exact_score_penalties: customRulesConfig.exact_score_penalties.enabled ? customRulesConfig.exact_score_penalties.points : 0,
-        correct_winner_penalties: customRulesConfig.correct_winner_penalties.enabled ? customRulesConfig.correct_winner_penalties.points : 0,
-        prolongation_winner: customRulesConfig.prolongation_winner.enabled ? customRulesConfig.prolongation_winner.points : 0,
-        prolongation_score: customRulesConfig.prolongation_score.enabled ? customRulesConfig.prolongation_score.points : 0,
-        penalties_winner: customRulesConfig.penalties_winner.enabled ? customRulesConfig.penalties_winner.points : 0,
-      },
+      exact_score: customRulesConfig.exact_score.enabled ? customRulesConfig.exact_score.points : 0,
+      close_score: customRulesConfig.close_score.enabled ? customRulesConfig.close_score.points : 0,
+      correct_winner: customRulesConfig.correct_winner.enabled ? customRulesConfig.correct_winner.points : 0,
+      qualification: customRulesConfig.qualification.enabled ? customRulesConfig.qualification.points : 0,
       match_metadata: {
         home_crest: selectedMatch.homeTeam?.crest || "",
         away_crest: selectedMatch.awayTeam?.crest || "",
@@ -1061,10 +1028,24 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
     challengeId: string,
     updates: Partial<Prediction>,
   ) => {
-    setPredictionForms((prev) => ({
-      ...prev,
-      [challengeId]: { ...(prev[challengeId] || {}), ...updates },
-    }));
+    setPredictionForms((prev) => {
+      const current = prev[challengeId] || {};
+      const next = { ...current, ...updates };
+
+      // Si le score change et n'est plus un match nul, on supprime la qualification
+      if (
+        updates.homeScore !== undefined || updates.awayScore !== undefined
+      ) {
+        if (next.homeScore !== next.awayScore) {
+          next.qualifies = undefined;
+        }
+      }
+
+      return {
+        ...prev,
+        [challengeId]: next,
+      };
+    });
   };
 
   const updateCompetitionPredictionForm = (
@@ -1490,6 +1471,7 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
     const activeForm = {
       homeScore: draftForm.homeScore !== undefined ? draftForm.homeScore : userPred?.homeScore,
       awayScore: draftForm.awayScore !== undefined ? draftForm.awayScore : userPred?.awayScore,
+      qualifies: draftForm.qualifies !== undefined ? draftForm.qualifies : userPred?.qualifies,
       endStage: draftForm.endStage !== undefined ? draftForm.endStage : userPred?.endStage,
       prolongationHomeScore: draftForm.prolongationHomeScore !== undefined ? draftForm.prolongationHomeScore : userPred?.prolongationHomeScore,
       prolongationAwayScore: draftForm.prolongationAwayScore !== undefined ? draftForm.prolongationAwayScore : userPred?.prolongationAwayScore,
@@ -1567,79 +1549,35 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
           </div>
         </div>
 
-        {/* Knockout Match Prediction Fields */}
-        {(challenge.pointRules as any)?.knockout_stage && 
+        {/* Qualification / Elimination Match Prediction Field */}
+        {(challenge.pointRules?.qualification! > 0) && 
          activeForm.homeScore !== undefined && 
+         activeForm.awayScore !== undefined &&
          activeForm.homeScore === activeForm.awayScore && (
           <div className="mt-4 pt-4 border-t border-gray-200 animate-in fade-in duration-300">
-            <p className="text-xs font-bold text-gray-500 mb-3 text-center">Le match se termine en :</p>
-            <div className="grid grid-cols-2 gap-2 mb-3">
+            <label className="block text-xs font-bold text-gray-700 mb-2 text-center">
+              Qui se qualifie ? (Obligatoire en cas de Nul)
+            </label>
+            <div className="grid grid-cols-2 gap-2">
               <button
                 type="button"
-                className={`p-2 rounded-lg text-xs font-bold ${activeForm.endStage === 'prolongation' ? 'bg-emerald-600 text-white' : 'bg-gray-200'}`}
+                className={`p-3 rounded-lg text-xs font-bold transition-all ${activeForm.qualifies === 'home' ? 'bg-emerald-600 text-white shadow-md' : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50'}`}
                 disabled={!isOpen}
-                onClick={() => updatePredictionForm(challenge.id, {endStage: 'prolongation'})}
-              >Prolongation</button>
+                onClick={() => updatePredictionForm(challenge.id, {qualifies: 'home'})}
+              >
+                {challenge.matchHomeTeam}
+              </button>
               <button
                 type="button"
-                className={`p-2 rounded-lg text-xs font-bold ${activeForm.endStage === 'penalties' ? 'bg-emerald-600 text-white' : 'bg-gray-200'}`}
+                className={`p-3 rounded-lg text-xs font-bold transition-all ${activeForm.qualifies === 'away' ? 'bg-emerald-600 text-white shadow-md' : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50'}`}
                 disabled={!isOpen}
-                onClick={() => updatePredictionForm(challenge.id, {endStage: 'penalties'})}
-              >Penalty</button>
+                onClick={() => updatePredictionForm(challenge.id, {qualifies: 'away'})}
+              >
+                {challenge.matchAwayTeam}
+              </button>
             </div>
-            
-            {activeForm.endStage === 'prolongation' && (
-                <div className="grid grid-cols-3 gap-2">
-                    <input type="number" placeholder="Pr. Home Sc." className="text-center p-2 rounded-lg text-xs" value={activeForm.prolongationHomeScore ?? ""} disabled={!isOpen} onChange={(e) => updatePredictionForm(challenge.id, {prolongationHomeScore: parseInt(e.target.value)})} />
-                    <input type="number" placeholder="Pr. Away Sc." className="text-center p-2 rounded-lg text-xs" value={activeForm.prolongationAwayScore ?? ""} disabled={!isOpen} onChange={(e) => updatePredictionForm(challenge.id, {prolongationAwayScore: parseInt(e.target.value)})} />
-                    <select className="text-center p-2 rounded-lg text-xs text-gray-800 bg-white border font-bold" value={activeForm.winner ?? ""} disabled={!isOpen} onChange={(e) => updatePredictionForm(challenge.id, {winner: e.target.value as any})}>
-                        <option value="">Vainqueur</option>
-                        <option value="home">{challenge.matchHomeTeam}</option>
-                        <option value="away">{challenge.matchAwayTeam}</option>
-                    </select>
-                </div>
-            )}
-            
-            {activeForm.endStage === 'penalties' && (
-                <div className="grid grid-cols-1 gap-2">
-                    <select className="text-center p-2 rounded-lg text-xs text-gray-800 bg-white border font-bold" value={activeForm.winner ?? ""} disabled={!isOpen} onChange={(e) => updatePredictionForm(challenge.id, {winner: e.target.value as any})}>
-                        <option value="">Vainqueur Penalty</option>
-                        <option value="home">{challenge.matchHomeTeam}</option>
-                        <option value="away">{challenge.matchAwayTeam}</option>
-                    </select>
-                </div>
-            )}
           </div>
         )}
-
-        <div className="space-y-3 pt-2">
-          {challenge.pointRules?.knockout_stage.exact_score_penalties! > 0 && (
-            <div className="flex border-t border-gray-100 pt-3 flex-col gap-2">
-                <label className="block text-xs font-bold text-gray-700">
-                   Score des Tirs au but (si égalité)
-                </label>
-                <div className="flex gap-2 justify-center font-bold">
-                    <input
-                      type="number"
-                      placeholder="Dom."
-                      value={activeForm.penaltiesHomeScore ?? ""}
-                      onChange={(e) => updatePredictionForm(challenge.id, { penaltiesHomeScore: parseInt(e.target.value) })}
-                      disabled={!isOpen}
-                      className="w-12 h-10 text-center border rounded-lg"
-                    />
-                    <span className="self-center">-</span>
-                    <input
-                        type="number"
-                        placeholder="Ext."
-                        value={activeForm.penaltiesAwayScore ?? ""}
-                        onChange={(e) => updatePredictionForm(challenge.id, { penaltiesAwayScore: parseInt(e.target.value) })}
-                        disabled={!isOpen}
-                        className="w-12 h-10 text-center border rounded-lg"
-                    />
-                </div>
-            </div>
-          )}
-        </div>
 
         {isNotDefinedYet ? (
           <div className="text-xs text-amber-850 bg-amber-50 border border-amber-200 text-center font-bold p-3.5 rounded-xl mt-4 flex flex-col items-center justify-center gap-1.5 shadow-xs">
@@ -1702,8 +1640,7 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
         if (singleMatch && singleMatch.status === "FINISHED") {
           const rHome = singleMatch.score.fullTime.home;
           const rAway = singleMatch.score.fullTime.away;
-          const isKnockout = ["OCTOFINAL", "QUARTERFINAL", "SEMIFINAL", "FINAL"].includes(singleMatch.stage || "");
-          const rules = isKnockout && challenge.pointRules?.knockout_stage ? challenge.pointRules.knockout_stage : challenge.pointRules?.group_stage;
+          const rules = challenge.pointRules;
           
           const predVal = typeof bet.predictions === 'string' ? JSON.parse(bet.predictions) : bet.predictions;
           const pHome = predVal?.homeScore;
@@ -1717,13 +1654,14 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
             if (isExact) {
               pts = rules.exact_score;
             } else if (actualWinner === predWinner) {
-              pts = rules.correct_winner;
-              isWinner = true;
-            } else {
+              // Note: client side "isWinner / close score" simulation won't account for minimum distance accurately
               const diff = Math.abs(pHome - rHome) + Math.abs(pAway - rAway);
-              if (diff <= 2 && rules?.closest_guess) {
-                pts = rules.closest_guess;
+              if (rules?.close_score && diff <= 2) { // rough simulation
+                pts = rules.close_score;
+              } else {
+                pts = rules.correct_winner;
               }
+              isWinner = true;
             }
           }
         }
@@ -1759,8 +1697,7 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
             if (m.status === "FINISHED") {
               const rHome = m.score.fullTime.home;
               const rAway = m.score.fullTime.away;
-              const isKnockout = ["OCTOFINAL", "QUARTERFINAL", "SEMIFINAL", "FINAL"].includes(m.stage || "");
-              const rules = isKnockout && challenge.pointRules?.knockout_stage ? challenge.pointRules.knockout_stage : challenge.pointRules?.group_stage;
+              const rules = challenge.pointRules;
               
               if (rHome !== null && rAway !== null) {
                 const isExact = pMatch.homeScore === rHome && pMatch.awayScore === rAway;
@@ -1771,13 +1708,13 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
                   pts += rules.exact_score;
                   exactCount++;
                 } else if (actualWinner === predWinner) {
-                  pts += rules.correct_winner;
-                  winnerCount++;
-                } else {
                   const diff = Math.abs(pMatch.homeScore - rHome) + Math.abs(pMatch.awayScore - rAway);
-                  if (diff <= 2 && rules?.closest_guess) {
-                    pts += rules.closest_guess;
+                  if (rules?.close_score && diff <= 2) {
+                    pts += rules.close_score;
+                  } else {
+                    pts += rules.correct_winner;
                   }
+                  winnerCount++;
                 }
               }
             }
@@ -2874,14 +2811,23 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
                               Barème de points {hasCompetitionStarted && "(Verrouillé)"}
                             </label>
                             <div className="grid grid-cols-2 gap-2">
-                              {/* Simplify: only allow editing group stage exact_score and winner for now to save space */}
                               <div className="space-y-1">
                                 <label className="text-[10px] text-gray-500">Score Exact</label>
                                 <input
                                   type="number"
                                   disabled={hasCompetitionStarted}
-                                  value={editPointRules.group_stage.exact_score}
-                                  onChange={(e) => setEditPointRules({...editPointRules, group_stage: {...editPointRules.group_stage, exact_score: parseInt(e.target.value)}})}
+                                  value={editPointRules.exact_score}
+                                  onChange={(e) => setEditPointRules({...editPointRules, exact_score: parseInt(e.target.value) || 0})}
+                                  className="w-full p-2 rounded-lg border border-gray-300 disabled:bg-gray-100"
+                                />
+                              </div>
+                              <div className="space-y-1">
+                                <label className="text-[10px] text-gray-500">Score Proche</label>
+                                <input
+                                  type="number"
+                                  disabled={hasCompetitionStarted}
+                                  value={editPointRules.close_score}
+                                  onChange={(e) => setEditPointRules({...editPointRules, close_score: parseInt(e.target.value) || 0})}
                                   className="w-full p-2 rounded-lg border border-gray-300 disabled:bg-gray-100"
                                 />
                               </div>
@@ -2890,8 +2836,18 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
                                 <input
                                   type="number"
                                   disabled={hasCompetitionStarted}
-                                  value={editPointRules.group_stage.correct_winner}
-                                  onChange={(e) => setEditPointRules({...editPointRules, group_stage: {...editPointRules.group_stage, correct_winner: parseInt(e.target.value)}})}
+                                  value={editPointRules.correct_winner}
+                                  onChange={(e) => setEditPointRules({...editPointRules, correct_winner: parseInt(e.target.value) || 0})}
+                                  className="w-full p-2 rounded-lg border border-gray-300 disabled:bg-gray-100"
+                                />
+                              </div>
+                              <div className="space-y-1">
+                                <label className="text-[10px] text-gray-500">Qualification</label>
+                                <input
+                                  type="number"
+                                  disabled={hasCompetitionStarted}
+                                  value={editPointRules.qualification || 0}
+                                  onChange={(e) => setEditPointRules({...editPointRules, qualification: parseInt(e.target.value) || 0})}
                                   className="w-full p-2 rounded-lg border border-gray-300 disabled:bg-gray-100"
                                 />
                               </div>

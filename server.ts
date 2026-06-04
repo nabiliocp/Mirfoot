@@ -86,61 +86,77 @@ async function startServer() {
          const matchData = await matchRes.json();
 
          if (matchData.status === "FINISHED") {
-           const finalScore = matchData.score.fullTime;
-           const homeScore = finalScore.home;
-           const awayScore = finalScore.away;
-           
-           // Logic to calculate points for each user
-           const { data: bets } = await supabase
-             .from("bets")
-             .select("*")
-             .eq("challenge_id", challenge.id);
+            const homeScore = matchData.score.regularTime?.home ?? matchData.score.fullTime?.home ?? 0;
+            const awayScore = matchData.score.regularTime?.away ?? matchData.score.fullTime?.away ?? 0;
+            
+            let actualWinner = 'draw';
+            if (homeScore > awayScore) actualWinner = 'home';
+            else if (homeScore < awayScore) actualWinner = 'away';
 
-           if (bets) {
-             for (const bet of bets) {
-               const pred = typeof bet.predictions === 'string' ? JSON.parse(bet.predictions) : bet.predictions;
-               const rules = typeof challenge.point_rules === 'string' ? JSON.parse(challenge.point_rules) : challenge.point_rules;
-               
-               let points = 0;
-               const isExact = pred.homeScore === homeScore && pred.awayScore === awayScore;
-               const actualWinner = homeScore > awayScore ? 'home' : homeScore < awayScore ? 'away' : 'draw';
-               const predWinner = pred.homeScore > pred.awayScore ? 'home' : pred.homeScore < pred.awayScore ? 'away' : 'draw';
-               
-               if (isExact) {
-                 points = rules.group_stage.exact_score;
-               } else if (actualWinner === predWinner) {
-                 // Check if it's the closest guess by absolute difference for matches
-                 // (Simplified version: award correct_winner points, closest guess is usually used as a tiebreaker or separate points)
-                 points = rules.group_stage.correct_winner;
-               } else {
-                 // Check for closest guess logic? 
-                 // We'll award the 'closest_guess' points if they got the winner wrong but scores were close
-                 const diff = Math.abs(pred.homeScore - homeScore) + Math.abs(pred.awayScore - awayScore);
-                 if (diff <= 2) {
-                    points = rules.group_stage.closest_guess;
-                 }
-               }
-               
-               // Knockout penalties logic
-               if (matchData.score.winner === 'PENALTY_SHOOTOUT' && pred.penaltiesHomeScore !== undefined) {
-                  const actualPenWinner = matchData.score.penalties.home > matchData.score.penalties.away ? 'home' : 'away';
-                  const predPenWinner = pred.penaltiesHomeScore > pred.penaltiesAwayScore ? 'home' : 'away';
-                  const isExactPen = pred.penaltiesHomeScore === matchData.score.penalties.home && pred.penaltiesAwayScore === matchData.score.penalties.away;
-                  
-                  if (isExactPen) {
-                    points += rules.knockout_stage.exact_score_penalties;
-                  } else if (actualPenWinner === predPenWinner) {
-                    points += rules.knockout_stage.correct_winner_penalties;
+            let actualQualifier = null;
+            if (matchData.score.winner === 'HOME_TEAM') actualQualifier = 'home';
+            else if (matchData.score.winner === 'AWAY_TEAM') actualQualifier = 'away';
+
+            // Logic to calculate points for each user
+            const { data: bets } = await supabase
+              .from("bets")
+              .select("*")
+              .eq("challenge_id", challenge.id);
+
+            if (bets && bets.length > 0) {
+              // First pass: find the minimum distance among correct winners (excluding exact scores)
+              let minDistance = Infinity;
+              for (const bet of bets) {
+                const pred = typeof bet.predictions === 'string' ? JSON.parse(bet.predictions) : bet.predictions;
+                const isExact = pred.homeScore === homeScore && pred.awayScore === awayScore;
+                
+                let predWinner = 'draw';
+                if (pred.homeScore > pred.awayScore) predWinner = 'home';
+                else if (pred.homeScore < pred.awayScore) predWinner = 'away';
+                
+                if (!isExact && predWinner === actualWinner) {
+                  const distance = Math.abs(pred.homeScore - homeScore) + Math.abs(pred.awayScore - awayScore);
+                  if (distance < minDistance) {
+                    minDistance = distance;
                   }
-               }
-               
-               await supabase.from("bets").update({ points_awarded: points }).eq("id", bet.id);
-               await supabase.rpc('increment_user_points', { user_uuid: bet.user_id, points_to_add: points });
-             }
-           }
+                }
+              }
 
-           await supabase.from("challenges").update({ resolved: true }).eq("id", challenge.id);
-           resolvedCount++;
+              for (const bet of bets) {
+                const pred = typeof bet.predictions === 'string' ? JSON.parse(bet.predictions) : bet.predictions;
+                const rules = typeof challenge.point_rules === 'string' ? JSON.parse(challenge.point_rules) : challenge.point_rules;
+                
+                let points = 0;
+                const isExact = pred.homeScore === homeScore && pred.awayScore === awayScore;
+                
+                let predWinner = 'draw';
+                if (pred.homeScore > pred.awayScore) predWinner = 'home';
+                else if (pred.homeScore < pred.awayScore) predWinner = 'away';
+                
+                const distance = Math.abs(pred.homeScore - homeScore) + Math.abs(pred.awayScore - awayScore);
+                
+                if (isExact) {
+                  points += rules.exact_score || 0;
+                } else if (predWinner === actualWinner) {
+                  if (distance === minDistance && minDistance !== Infinity) {
+                    points += rules.close_score || 0;
+                  } else {
+                    points += rules.correct_winner || 0;
+                  }
+                }
+                
+                // Bonus qualification
+                if (pred.qualifies && actualQualifier && pred.qualifies === actualQualifier) {
+                  points += rules.qualification || 0;
+                }
+                
+                await supabase.from("bets").update({ points_awarded: points }).eq("id", bet.id);
+                await supabase.rpc('increment_user_points', { user_uuid: bet.user_id, points_to_add: points });
+              }
+            }
+
+            await supabase.from("challenges").update({ resolved: true }).eq("id", challenge.id);
+            resolvedCount++;
          }
        }
 
