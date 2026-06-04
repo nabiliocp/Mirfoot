@@ -32,10 +32,6 @@ export default function ProfileSetupView({
       setErrorMsg("Le pseudo est obligatoire.");
       return;
     }
-    if (!favoriteClub.trim()) {
-      setErrorMsg("Le club de cœur est obligatoire.");
-      return;
-    }
 
     setLoading(true);
     setErrorMsg("");
@@ -46,7 +42,6 @@ export default function ProfileSetupView({
         username,
         avatar_type: avatarType,
         avatar_value: avatarValue,
-        favorite_club: favoriteClub,
       },
     });
 
@@ -64,7 +59,6 @@ export default function ProfileSetupView({
         username,
         avatar_type: avatarType,
         avatar_value: avatarValue,
-        favorite_club: favoriteClub,
       }, { onConflict: 'id' });
 
     setLoading(false);
@@ -112,8 +106,9 @@ export default function ProfileSetupView({
             />
           </div>
 
+          {/*
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1">
+             <label className="block text-sm font-semibold text-gray-700 mb-1">
               Club de cœur
             </label>
             <input
@@ -125,6 +120,7 @@ export default function ProfileSetupView({
               placeholder="Ton club (ex: PSG, OM, Real)"
             />
           </div>
+          */}
 
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">

@@ -139,14 +139,14 @@ export default function App() {
         console.log("Forcing profile check for", userId);
         const { data, error } = await supabase
           .from("profiles")
-          .select("username, avatar_type, avatar_value, favorite_club")
+          .select("username, avatar_type, avatar_value")
           .eq("id", userId)
           .single();
         
         console.log("Resultat verif profil:", { data, error });
 
         // Si erreur ou si données manquantes, FORCER le setup
-        if (error || !data?.username || !data?.favorite_club) {
+        if (error || !data?.username) {
           console.log("Profil incomplet ou inexistant, affichage FORCÉ du setup.");
           setNeedsProfileSetup(true);
           setUserProfile(null);
