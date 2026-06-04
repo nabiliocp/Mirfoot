@@ -71,6 +71,11 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
   const [allProfiles, setAllProfiles] = useState<any[]>([]);
   const [loadingChallengeDetails, setLoadingChallengeDetails] = useState(false);
 
+  // States for challenge editing
+  const [editTitle, setEditTitle] = useState("");
+  const [editCompId, setEditCompId] = useState<number | string>("");
+  const [updatingChallenge, setUpdatingChallenge] = useState(false);
+
   const ruleLabels: Record<string, string> = {
     exact_score: "Score Exact",
     correct_winner: "Bon Vainqueur (1N2)",
@@ -917,8 +922,79 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
 
     if (!error) {
       await loadData(); // Reload data to sync with DB
+      setSelectedChallenge(null); // Return to list view
     } else {
-      alert("Erreur lors de la suppression du défi: " + error.message);
+      alert("Erreur lors de la suppression du défi : " + error.message);
+    }
+  };
+
+  useEffect(() => {
+    if (activeModal && activeModal.type === "edit") {
+      setEditTitle(activeModal.challenge.title || "");
+      setEditCompId(activeModal.challenge.competitionId || "");
+    }
+  }, [activeModal]);
+
+  const handleUpdateChallenge = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!supabase || !activeModal || activeModal.type !== "edit") return;
+
+    setUpdatingChallenge(true);
+    const challengeId = activeModal.challenge.id;
+
+    try {
+      const updates: any = {
+        title: editTitle.trim(),
+      };
+
+      // Only update competition if there are no other participants (double check)
+      const otherBets = challengeBets ? challengeBets.filter(b => b.user_id !== activeModal.challenge.creatorId).length : 0;
+      const otherInvites = participants ? participants.filter(id => id !== activeModal.challenge.creatorId).length : 0;
+      const hasOtherUsers = otherBets > 0 || otherInvites > 0;
+
+      if (!hasOtherUsers && activeModal.challenge.matchId === 0) {
+        updates.competition_id = Number(editCompId);
+      }
+
+      const { data, error } = await supabase
+        .from("challenges")
+        .update(updates)
+        .eq("id", challengeId)
+        .select();
+
+      if (error) {
+        alert("Erreur lors de la mise à jour : " + error.message);
+      } else if (data && data[0]) {
+        // Update local state in challenges
+        setChallenges((prev) =>
+          prev.map((c) =>
+            c.id === challengeId
+              ? {
+                  ...c,
+                  title: data[0].title,
+                  competitionId: data[0].competition_id,
+                }
+              : c
+          )
+        );
+
+        // Update selectedChallenge if it's currently opened
+        if (selectedChallenge && selectedChallenge.id === challengeId) {
+          const updatedChallenge = {
+            ...selectedChallenge,
+            title: data[0].title,
+            competitionId: data[0].competition_id,
+          };
+          setSelectedChallenge(updatedChallenge);
+        }
+
+        setActiveModal(null);
+      }
+    } catch (err: any) {
+      console.error(err);
+      alert("Erreur : " + err.message);
+    } finally {
+      setUpdatingChallenge(false);
     }
   };
 
@@ -1563,7 +1639,19 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
               <div className="text-[10px] uppercase font-black text-emerald-200 tracking-wider flex items-center gap-1.5 mb-1 bg-white/10 px-2 py-0.5 rounded-full w-max">
                 {challenge.matchId !== 0 ? "🎯 Match Unique" : "🏆 Compétition"}
               </div>
-              <h2 className="text-2xl font-black tracking-tight capitalize">{challenge.title}</h2>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h2 className="text-2xl font-black tracking-tight capitalize">{challenge.title}</h2>
+                {challenge.creatorId === userId && (
+                  <button
+                    type="button"
+                    onClick={() => setActiveModal({ type: 'edit', challenge })}
+                    className="p-1.5 text-emerald-100 hover:text-white hover:bg-white/10 rounded-xl transition-all cursor-pointer active:scale-90 flex items-center justify-center border border-white/5 shadow-sm"
+                    title="Modifier mon défi"
+                  >
+                    <Edit2 className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
               <p className="text-emerald-100/90 text-sm font-semibold mt-1 flex flex-wrap items-center gap-2">
                 Créé par : <span className="font-extrabold bg-white/10 px-2 py-0.5 rounded-md">{challenge.creatorUsername}</span>
                 {challenge.code && (
@@ -2223,7 +2311,13 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
             activeModal.type === "details" && activeModal.challenge.matchId === 0 ? "max-w-xl" : "max-w-sm"
           }`}>
             <h3 className="font-black text-xl text-gray-900 capitalize text-center">
-              {activeModal.type === "rules" ? "Barème de Points" : activeModal.type}
+              {activeModal.type === "rules" 
+                ? "Barème de Points" 
+                : activeModal.type === "edit" 
+                ? "Modifier le Défi" 
+                : activeModal.type === "confirm-delete" 
+                ? "Supprimer le Défi" 
+                : activeModal.type}
             </h3>
             <div className="text-sm text-gray-600 bg-gray-50 p-4 rounded-xl border border-gray-100">
              {activeModal.type === "rules" ? (
@@ -2392,7 +2486,110 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
                    </div>
                  </>
                ) : activeModal.type === "edit" ? (
-                 <p className="text-center">Édition en cours d'implémentation</p>
+                 (() => {
+                    const otherBets = challengeBets ? challengeBets.filter(b => b.user_id !== activeModal.challenge.creatorId).length : 0;
+                    const otherInvites = participants ? participants.filter(id => id !== activeModal.challenge.creatorId).length : 0;
+                    const hasOtherParticipants = otherBets > 0 || otherInvites > 0;
+
+                    // For deletion and starting checks
+                    const isMatchStarted = activeModal.challenge.matchDate ? new Date(activeModal.challenge.matchDate).getTime() <= Date.now() : false;
+                    const isCompStarted = modalMatches && modalMatches.length > 0 && modalMatches.some((m: Match) => {
+                      const matchTime = new Date(m.utcDate).getTime();
+                      const isPast = matchTime <= Date.now();
+                      const isLiveOrFinished = !["TIMED", "SCHEDULED"].includes(m.status);
+                      return isPast || isLiveOrFinished;
+                    });
+                    const hasCompetitionStarted = activeModal.challenge.matchId !== 0 ? isMatchStarted : isCompStarted;
+                    const canDelete = !hasCompetitionStarted;
+
+                    return (
+                      <form onSubmit={handleUpdateChallenge} className="space-y-4 text-left">
+                        <div>
+                          <label className="block text-xs font-black text-gray-700 uppercase tracking-wider mb-1.5">
+                            Nom du défi
+                          </label>
+                          <input
+                            type="text"
+                            required
+                            value={editTitle}
+                            onChange={(e) => setEditTitle(e.target.value)}
+                            className="w-full p-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-emerald-500 font-medium text-gray-900 bg-white"
+                            placeholder="Nom du défi"
+                          />
+                        </div>
+
+                        {activeModal.challenge.matchId === 0 && (
+                          <div>
+                            <label className="block text-xs font-black text-gray-700 uppercase tracking-wider mb-1.5">
+                              Compétition
+                            </label>
+                            {hasOtherParticipants ? (
+                              <div className="bg-amber-50 border border-amber-200/50 rounded-xl p-3 text-amber-800 text-xs font-medium space-y-1">
+                                <p className="font-bold flex items-center gap-1">
+                                  <span>🔒</span> Compétition verrouillée
+                                </p>
+                                <p className="text-amber-700">
+                                  La compétition ne peut pas être modifiée car d'autres participants ont déjà intégré ce défi ou fait des pronostics.
+                                </p>
+                                <div className="mt-1 font-bold text-gray-800 bg-white/50 px-2 py-1 rounded w-max">
+                                  🏆 {competitions.find(c => String(c.id) === String(activeModal.challenge.competitionId))?.name || "Compétition"}
+                                </div>
+                              </div>
+                            ) : (
+                              <select
+                                value={editCompId}
+                                onChange={(e) => setEditCompId(e.target.value)}
+                                className="w-full p-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-emerald-500 font-medium text-gray-900 bg-white"
+                              >
+                                {competitions.map((comp) => (
+                                  <option key={comp.id} value={comp.id}>
+                                    {comp.name}
+                                  </option>
+                                ))}
+                              </select>
+                            )}
+                          </div>
+                        )}
+
+                        <div className="pt-2 border-t border-gray-100 flex flex-col gap-2">
+                          <button
+                            type="submit"
+                            disabled={updatingChallenge}
+                            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl transition-all cursor-pointer shadow-sm select-none text-center"
+                          >
+                            {updatingChallenge ? "Enregistrement..." : "Enregistrer les modifications"}
+                          </button>
+
+                          {canDelete ? (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (confirm("Êtes-vous sûr de vouloir supprimer ce défi ? Tous les pronostics associés seront également supprimés.")) {
+                                  performDelete(activeModal.challenge.id);
+                                  setActiveModal(null);
+                                }
+                              }}
+                              className="w-full border-2 border-red-500 text-red-600 hover:bg-red-50 font-bold py-2.5 rounded-xl transition-all cursor-pointer text-center text-xs bg-transparent"
+                            >
+                              Supprimer le défi
+                            </button>
+                          ) : (
+                            <div className="bg-red-50 border border-red-100 rounded-xl p-2.5 text-red-700 text-[11px] font-semibold text-center">
+                              ⚠️ Ce défi ne peut plus être supprimé car la compétition ou le match a déjà commencé.
+                            </div>
+                          )}
+
+                          <button
+                            type="button"
+                            onClick={() => setActiveModal(null)}
+                            className="w-full bg-gray-105 hover:bg-gray-200 text-gray-700 font-bold py-2.5 rounded-xl transition-all cursor-pointer text-center text-xs"
+                          >
+                            Annuler / Fermer
+                          </button>
+                        </div>
+                      </form>
+                    );
+                  })()
                ) : (
                  "Participants bientôt disponibles"
                )}
