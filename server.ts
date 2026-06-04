@@ -153,6 +153,52 @@ async function startServer() {
 
 
   // Search challenge by code (bypasses RLS utilizing the service role key)
+  app.delete("/api/challenges/:challengeId", async (req, res) => {
+    if (!supabase) return res.status(500).json({ error: "Configuration Supabase manquante." });
+    try {
+      const { challengeId } = req.params;
+      const { userId } = req.query; // pass user id to verify ownership
+
+      if (!challengeId || !userId) {
+        return res.status(400).json({ error: "challengeId et userId sont requis." });
+      }
+
+      // 1. Verify ownership
+      const { data: challenge, error: challengeError } = await supabase
+        .from("challenges")
+        .select("creator_id")
+        .eq("id", challengeId)
+        .single();
+      
+      if (challengeError) {
+        return res.status(500).json({ error: "Erreur lors de la vérification du défi." });
+      }
+      
+      if (!challenge || challenge.creator_id !== userId) {
+        return res.status(403).json({ error: "Non autorisé: vous n'êtes pas le créateur de ce défi." });
+      }
+
+      // 2. Delete bets
+      await supabase.from("bets").delete().eq("challenge_id", challengeId);
+      
+      // 3. Delete invitations
+      await supabase.from("challenge_invitations").delete().eq("challenge_id", challengeId);
+      
+      // 4. Delete challenge
+      const { error: delError } = await supabase.from("challenges").delete().eq("id", challengeId);
+      
+      if (delError) {
+        return res.status(500).json({ error: "Erreur lors de la suppression du défi : " + delError.message });
+      }
+      
+      return res.json({ success: true, message: "Défi supprimé avec succès." });
+      
+    } catch (err: any) {
+      console.error("Error in delete endpoint:", err);
+      res.status(500).json({ error: "Erreur interne du serveur: " + err.message });
+    }
+  });
+
   app.get("/api/challenges/search/:code", async (req, res) => {
     if (!supabase) return res.status(500).json({ error: "Configuration Supabase manquante." });
     try {

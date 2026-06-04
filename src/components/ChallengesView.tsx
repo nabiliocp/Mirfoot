@@ -146,6 +146,7 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
   const [editTitle, setEditTitle] = useState("");
   const [editCompId, setEditCompId] = useState<number | string>("");
   const [updatingChallenge, setUpdatingChallenge] = useState(false);
+  const [deletingChallenge, setDeletingChallenge] = useState(false);
 
   const ruleLabels: Record<string, string> = {
     exact_score: "Score Exact",
@@ -957,30 +958,27 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
   };
 
   const performDelete = async (challengeId: string | number) => {
-    if (!supabase) return;
+    if (!supabase || !userId) return;
     
-    // First, delete associated bets
-    const { error: betsError } = await supabase
-      .from("bets")
-      .delete()
-      .eq("challenge_id", challengeId);
-
-    if (betsError) {
-      alert("Erreur lors de la suppression des paris: " + betsError.message);
-      return;
-    }
-
-    // Then delete the challenge
-    const { error } = await supabase
-      .from("challenges")
-      .delete()
-      .eq("id", challengeId);
-
-    if (!error) {
-      await loadData(); // Reload data to sync with DB
-      setSelectedChallenge(null); // Return to list view
-    } else {
-      alert("Erreur lors de la suppression du défi : " + error.message);
+    setDeletingChallenge(true); // Need to add this state variable
+    try {
+      const response = await fetch(`/api/challenges/${challengeId}?userId=${userId}`, {
+        method: 'DELETE',
+      });
+      
+      const data = await response.json();
+      
+      if (response.ok && data.success) {
+        await loadData(); // Reload data to sync with DB
+        setActiveModal(null);
+        setSelectedChallenge(null); // Return to list view
+      } else {
+        alert("Erreur: " + (data.error || "Impossible de supprimer le défi"));
+      }
+    } catch (err: any) {
+      alert("Erreur réseau: " + err.message);
+    } finally {
+      setDeletingChallenge(false);
     }
   };
 
@@ -2769,13 +2767,36 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
                       )}
                  </>
                ) : activeModal.type === "confirm-delete" ? (
-                 <>
-                   <p className="text-center font-semibold text-gray-800 mb-4">Êtes-vous sûr de vouloir supprimer ce défi ?</p>
-                   <div className="flex gap-2">
-                     <button onClick={() => setActiveModal(null)} className="flex-1 bg-gray-200 text-gray-700 py-3 rounded-xl font-bold cursor-pointer hover:bg-gray-300 transition-all">Annuler</button>
-                     <button onClick={() => { performDelete(activeModal.challenge.id); setActiveModal(null); }} className="flex-1 bg-red-600 text-white py-3 rounded-xl font-bold cursor-pointer hover:bg-red-700 transition-all">Supprimer</button>
+                 <div className="flex flex-col items-center">
+                   <div className="w-16 h-16 bg-red-50 border-2 border-red-100 rounded-full flex flex-col items-center justify-center mb-4 text-red-500 animate-pulse">
+                     <X className="w-8 h-8" />
                    </div>
-                 </>
+                   <p className="text-center font-extrabold text-gray-800 text-base mb-1">Êtes-vous sûr de vouloir supprimer ce défi ?</p>
+                   <p className="text-center text-red-500 font-semibold text-xs px-4 mb-6">Tous les pronostics et invitations associés seront définitivement effacés. Cette action est irréversible.</p>
+                   
+                   <div className="flex gap-3 w-full">
+                     <button 
+                       onClick={() => setActiveModal(null)} 
+                       disabled={deletingChallenge}
+                       className="flex-1 bg-white border-2 border-gray-200 text-gray-700 py-3 rounded-xl font-bold cursor-pointer hover:bg-gray-50 hover:border-gray-300 transition-all disabled:opacity-50"
+                     >
+                       Annuler
+                     </button>
+                     <button 
+                       onClick={() => { performDelete(activeModal.challenge.id); }} 
+                       disabled={deletingChallenge}
+                       className="flex-1 bg-red-500 text-white py-3 rounded-xl font-bold cursor-pointer hover:bg-red-600 shadow-md shadow-red-200 hover:shadow-lg hover:shadow-red-300 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                     >
+                       {deletingChallenge ? (
+                         <>
+                           <Clock className="w-4 h-4 animate-spin" /> Suppression...
+                         </>
+                       ) : (
+                         "Oui, supprimer"
+                       )}
+                     </button>
+                   </div>
+                 </div>
                ) : activeModal.type === "edit" ? (
                  (() => {
                     const otherBets = challengeBets ? challengeBets.filter(b => b.user_id !== activeModal.challenge.creatorId).length : 0;
@@ -2855,10 +2876,7 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
                             <button
                               type="button"
                               onClick={() => {
-                                if (confirm("Êtes-vous sûr de vouloir supprimer ce défi ? Tous les pronostics associés seront également supprimés.")) {
-                                  performDelete(activeModal.challenge.id);
-                                  setActiveModal(null);
-                                }
+                                setActiveModal({ type: 'confirm-delete', challenge: activeModal.challenge });
                               }}
                               className="w-full border-2 border-red-500 text-red-600 hover:bg-red-50 font-bold py-2.5 rounded-xl transition-all cursor-pointer text-center text-xs bg-transparent"
                             >
