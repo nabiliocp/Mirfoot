@@ -145,6 +145,7 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
   // States for challenge editing
   const [editTitle, setEditTitle] = useState("");
   const [editCompId, setEditCompId] = useState<number | string>("");
+  const [editPointRules, setEditPointRules] = useState<PointRules | null>(null);
   const [updatingChallenge, setUpdatingChallenge] = useState(false);
   const [deletingChallenge, setDeletingChallenge] = useState(false);
 
@@ -986,6 +987,7 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
     if (activeModal && activeModal.type === "edit") {
       setEditTitle(activeModal.challenge.title || "");
       setEditCompId(activeModal.challenge.competitionId || "");
+      setEditPointRules(activeModal.challenge.pointRules || null);
     }
   }, [activeModal]);
 
@@ -999,6 +1001,7 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
     try {
       const updates: any = {
         title: editTitle.trim(),
+        point_rules: editPointRules,
       };
 
       // Only update competition if there are no other participants (double check)
@@ -1027,6 +1030,7 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
                   ...c,
                   title: data[0].title,
                   competitionId: data[0].competition_id,
+                  pointRules: data[0].point_rules,
                 }
               : c
           )
@@ -1038,6 +1042,7 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
             ...selectedChallenge,
             title: data[0].title,
             competitionId: data[0].competition_id,
+            pointRules: data[0].point_rules,
           };
           setSelectedChallenge(updatedChallenge);
         }
@@ -2860,6 +2865,37 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
                                 ))}
                               </select>
                             )}
+                          </div>
+                        )}
+
+                        {editPointRules && (
+                          <div>
+                            <label className="block text-xs font-black text-gray-700 uppercase tracking-wider mb-1.5">
+                              Barème de points {hasCompetitionStarted && "(Verrouillé)"}
+                            </label>
+                            <div className="grid grid-cols-2 gap-2">
+                              {/* Simplify: only allow editing group stage exact_score and winner for now to save space */}
+                              <div className="space-y-1">
+                                <label className="text-[10px] text-gray-500">Score Exact</label>
+                                <input
+                                  type="number"
+                                  disabled={hasCompetitionStarted}
+                                  value={editPointRules.group_stage.exact_score}
+                                  onChange={(e) => setEditPointRules({...editPointRules, group_stage: {...editPointRules.group_stage, exact_score: parseInt(e.target.value)}})}
+                                  className="w-full p-2 rounded-lg border border-gray-300 disabled:bg-gray-100"
+                                />
+                              </div>
+                              <div className="space-y-1">
+                                <label className="text-[10px] text-gray-500">Bon Vainqueur</label>
+                                <input
+                                  type="number"
+                                  disabled={hasCompetitionStarted}
+                                  value={editPointRules.group_stage.correct_winner}
+                                  onChange={(e) => setEditPointRules({...editPointRules, group_stage: {...editPointRules.group_stage, correct_winner: parseInt(e.target.value)}})}
+                                  className="w-full p-2 rounded-lg border border-gray-300 disabled:bg-gray-100"
+                                />
+                              </div>
+                            </div>
                           </div>
                         )}
 
