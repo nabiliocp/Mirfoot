@@ -96,7 +96,6 @@ export default function App() {
   const [showInviteScreen, setShowInviteScreen] = useState(false);
   const [loadingInvite, setLoadingInvite] = useState(true);
 
-  /*
   useEffect(() => {
     const storedInvite = inviteId || localStorage.getItem("pending_invite_id");
     if (session && storedInvite && supabase) {
@@ -127,7 +126,6 @@ export default function App() {
         });
     }
   }, [session, inviteId]);
-  */
 
   useEffect(() => {
     if (!supabase) {
@@ -225,11 +223,12 @@ export default function App() {
       // Fetch challenge details
       supabase
         .from("challenges")
-        .select("title, match_home_team, match_away_team")
-        .eq("id", invite)
+        .select("id, title, match_home_team, match_away_team")
+        .eq("rules", invite)
         .single()
         .then(({ data }) => {
           if (data) {
+            localStorage.setItem("pending_invite_id", data.id);
             if (data.match_home_team === "Comp" && data.match_away_team === "Comp") {
               setInviteChallengeName(`${data.title} (Compétition)`);
             } else {

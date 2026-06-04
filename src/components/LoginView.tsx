@@ -1,102 +1,16 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { supabase } from '../lib/supabase';
-import { AlertCircle, User, Mail, Lock, Shirt } from 'lucide-react';
+import { AlertCircle, Mail } from 'lucide-react';
 // @ts-ignore
 import logoImage from '../assets/images/pig_football_logo_1780308392869.png';
 
-const EMOJIS = ['👽', '🤓', '😎', '😜', '⚽', '🏆', '🔥', '👑'];
-const JERSEY_COLORS = ['#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#ffffff', '#000000'];
-
 export default function LoginView() {
-  const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
-  const [username, setUsername] = useState('');
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
-  const [avatarType, setAvatarType] = useState<'emoji' | 'jersey'>('emoji');
-  const [avatarValue, setAvatarValue] = useState('👽');
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
-  const [searchCode, setSearchCode] = useState('');
-  const [searchedChallenge, setSearchedChallenge] = useState<{ id: string; title: string, home: string, away: string, compName: string } | null>(null);
-  const [inviteEmail, setInviteEmail] = useState('');
-  const [showSearch, setShowSearch] = useState(false);
-
-  const handleSearchCode = async () => {
-    setErrorMsg('');
-    if (!searchCode.trim()) return;
-    
-    const { data, error } = await supabase
-        .from("challenges")
-        .select("id, title, match_home_team, match_away_team, competition_id")
-        .eq("rules", searchCode.trim())
-        .single();
-    
-    if (error || !data) {
-        setErrorMsg("Défi non trouvé");
-        return;
-    }
-
-    console.log("Challenge data fetched:", data);
-    
-    // ... challenge found
-    let compName = 'Compétition';
-    if (data.competition_id) {
-        try {
-            const resp = await fetch("/api/competitions");
-            const compData = await resp.json();
-            // Football-data API returns { competitions: [...] }
-            const competitions = compData.competitions || [];
-            console.log("Competitions found:", competitions);
-            const competition = competitions.find((c: any) => c.id === Number(data.competition_id));
-            console.log("Competition match:", competition);
-            if (competition) compName = competition.name;
-        } catch (e) {
-            console.error("Failed to fetch competitions", e);
-        }
-    }
-    console.log("Final compName:", compName);
-    
-    setSearchedChallenge({
-        id: data.id,
-        title: data.title,
-        home: data.match_home_team === "Comp" && compName !== 'Compétition' ? compName : data.match_home_team,
-        away: data.match_away_team === "Comp" ? '' : data.match_away_team,
-        compName: compName
-    });
-  };
-
-  const handleInviteJoin = async (emailToUse: string) => {
-    if (!supabase) return;
-    if (!emailToUse.trim()) {
-      setErrorMsg("Veuillez saisir votre email.");
-      return;
-    }
-    setLoading(true);
-    setErrorMsg('');
-    setSuccessMsg('');
-    try {
-      if (searchedChallenge) {
-        localStorage.setItem("pending_invite_id", searchedChallenge.id);
-      }
-      const { error } = await supabase.auth.signInWithOtp({
-        email: emailToUse.trim(),
-        options: {
-          emailRedirectTo: window.location.origin
-        }
-      });
-      if (error) throw error;
-      setSuccessMsg(`Lien magique envoyé à ${emailToUse} ! Connecte-toi via cet email pour rejoindre le défi automatiquement.`);
-      setSearchedChallenge(null);
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Une erreur est survenue');
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  
   const handleAuth = async (e: FormEvent) => {
     e.preventDefault();
     if (!supabase) return;
@@ -105,35 +19,14 @@ export default function LoginView() {
     setSuccessMsg('');
 
     try {
-      if (isLogin) {
-        const { error } = await supabase.auth.signInWithOtp({
-          email,
-          options: {
-            emailRedirectTo: window.location.origin
-          }
-        });
-        if (error) throw error;
-        setSuccessMsg('Lien magique envoyé ! Déconnecte-toi de cet onglet ou vérifie tes emails.');
-      } else {
-        if (!username.trim()) {
-          throw new Error("Le pseudo (username) est obligatoire.");
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+        options: {
+          emailRedirectTo: window.location.origin
         }
-        const { error } = await supabase.auth.signInWithOtp({
-          email,
-          options: {
-            emailRedirectTo: window.location.origin,
-            data: {
-              username,
-              first_name: firstName,
-              last_name: lastName,
-              avatar_type: avatarType,
-              avatar_value: avatarValue
-            }
-          }
-        });
-        if (error) throw error;
-        setSuccessMsg('Compte créé ! Un lien magique a été envoyé par email.');
-      }
+      });
+      if (error) throw error;
+      setSuccessMsg('Lien magique envoyé ! Vérifie ta boîte mail.');
     } catch (err: any) {
       setErrorMsg(err.message || 'Une erreur est survenue');
     } finally {
@@ -172,48 +65,6 @@ export default function LoginView() {
           </div>
         )}
 
-        {searchedChallenge && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white p-6 rounded-3xl shadow-xl max-w-sm w-full">
-              <h2 className="text-xl font-bold mb-2">Défi trouvé !</h2>
-              <div className="bg-emerald-50 p-4 rounded-xl mb-4 text-emerald-900 border border-emerald-100">
-                <p className="font-bold">{searchedChallenge.title}</p>
-                <p className="text-sm font-semibold text-emerald-700">{searchedChallenge.compName}</p>
-                {searchedChallenge.home && searchedChallenge.home !== 'Comp' && searchedChallenge.away && searchedChallenge.away !== 'Comp' && (
-                    <p className="text-sm">{searchedChallenge.home} vs {searchedChallenge.away}</p>
-                )}
-              </div>
-              <div className="text-left mb-4">
-                <label className="block text-xs font-semibold text-gray-600 mb-1">
-                  Saisis ton email pour recevoir un lien magique :
-                </label>
-                <input
-                  type="email"
-                  required
-                  value={inviteEmail}
-                  onChange={(e) => setInviteEmail(e.target.value)}
-                  className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-                  placeholder="ton@email.com"
-                />
-              </div>
-              <div className="space-y-2">
-                <button
-                  onClick={() => handleInviteJoin(inviteEmail)}
-                  className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-4 rounded-xl transition cursor-pointer text-sm"
-                >
-                  Recevoir le lien & rejoindre
-                </button>
-                <button
-                  onClick={() => setSearchedChallenge(null)}
-                  className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-3 px-4 rounded-xl transition cursor-pointer text-sm"
-                >
-                  Annuler
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
         {successMsg && (
           <div className="bg-emerald-50 text-emerald-700 p-3 rounded-xl text-sm mb-4 border border-emerald-100 flex items-center gap-2 text-left">
             <Mail className="w-4 h-4 flex-shrink-0" />
@@ -221,109 +72,7 @@ export default function LoginView() {
           </div>
         )}
 
-        {!showSearch ? (
-          <button
-            type="button"
-            onClick={() => setShowSearch(true)}
-            className="w-full bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-800 font-bold py-3 px-4 rounded-xl transition-all duration-200 mb-6 flex justify-center items-center gap-2 cursor-pointer shadow-sm hover:scale-[1.01] active:scale-[0.99] text-sm"
-          >
-            🤝 Rejoindre un défi par code
-          </button>
-        ) : (
-          <div className="bg-emerald-50 rounded-2xl p-4 border border-emerald-100 mb-6 w-full text-left relative animate-in fade-in slide-in-from-top-2 duration-200">
-            <button
-              type="button"
-              onClick={() => setShowSearch(false)}
-              className="absolute right-3 top-3 text-emerald-800 hover:text-emerald-950 text-xs font-semibold"
-            >
-              Fermer
-            </button>
-            <label className="block text-xs font-semibold text-emerald-800 mb-2">Rejoindre un défi par code</label>
-            <div className="flex flex-col sm:flex-row gap-2">
-              <input
-                type="text"
-                value={searchCode}
-                onChange={(e) => setSearchCode(e.target.value)}
-                className="w-full sm:flex-1 min-w-0 px-3 py-2.5 bg-white border border-emerald-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none cursor-text"
-                placeholder="Code du défi..."
-              />
-              <button
-                type="button"
-                onClick={handleSearchCode}
-                className="w-full sm:w-auto bg-emerald-600 text-white font-bold py-2.5 px-5 rounded-xl text-sm cursor-pointer hover:bg-emerald-700 transition shrink-0"
-              >
-                Rechercher
-              </button>
-            </div>
-          </div>
-        )}
-
         <form onSubmit={handleAuth} className="space-y-4 text-left">
-          {!isLogin && (
-            <div className="space-y-4 animate-in slide-in-from-top-4 duration-300">
-              <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-1">Pseudo (Obligatoire, unique)*</label>
-                <div className="relative">
-                  <User className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                  <input
-                    type="text"
-                    required
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    className="w-full pl-9 pr-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-                    placeholder="Ton pseudo dans le groupe"
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1">Prénom</label>
-                  <input
-                    type="text"
-                    value={firstName}
-                    onChange={(e) => setFirstName(e.target.value)}
-                    className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-                    placeholder="Optionnel"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1">Nom</label>
-                  <input
-                    type="text"
-                    value={lastName}
-                    onChange={(e) => setLastName(e.target.value)}
-                    className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-                    placeholder="Optionnel"
-                  />
-                </div>
-              </div>
-              
-              <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-2">Choisis ton Avatar</label>
-                <div className="flex gap-2 mb-3 bg-gray-100 p-1 rounded-lg">
-                  <button type="button" onClick={() => { setAvatarType('emoji'); setAvatarValue(EMOJIS[0]); }} className={`flex-1 text-xs py-1.5 rounded-md font-medium transition ${avatarType === 'emoji' ? 'bg-white shadow-sm text-emerald-700' : 'text-gray-500'}`}>Emoji</button>
-                  <button type="button" onClick={() => { setAvatarType('jersey'); setAvatarValue(JERSEY_COLORS[0]); }} className={`flex-1 text-xs py-1.5 rounded-md font-medium transition ${avatarType === 'jersey' ? 'bg-white shadow-sm text-emerald-700' : 'text-gray-500'}`}>Maillot</button>
-                </div>
-                
-                <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 flex flex-wrap gap-2 justify-center">
-                  {avatarType === 'emoji' ? (
-                    EMOJIS.map(emoji => (
-                      <button key={emoji} type="button" onClick={() => setAvatarValue(emoji)} className={`w-10 h-10 text-xl flex items-center justify-center rounded-lg transition ${avatarValue === emoji ? 'bg-emerald-100 ring-2 ring-emerald-500 scale-110' : 'hover:bg-gray-200 bg-white shadow-sm'}`}>
-                        {emoji}
-                      </button>
-                    ))
-                  ) : (
-                    JERSEY_COLORS.map(color => (
-                      <button key={color} type="button" onClick={() => setAvatarValue(color)} className={`w-10 h-10 flex items-center justify-center rounded-lg transition shadow-sm ${avatarValue === color ? 'ring-2 ring-offset-2 ring-emerald-500 scale-110' : 'hover:scale-105'}`} style={{ backgroundColor: color }}>
-                        <Shirt className={`w-5 h-5 ${color === '#ffffff' ? 'text-gray-800' : 'text-white'}`} />
-                      </button>
-                    ))
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
-
           <div>
             <label className="block text-xs font-semibold text-gray-600 mb-1">Email</label>
             <div className="relative">
@@ -350,21 +99,9 @@ export default function LoginView() {
                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                </svg>
             ) : null}
-            {isLogin ? 'Se Connecter' : 'Créer mon Compte'}
+            Se Connecter
           </button>
         </form>
-        
-        <div className="mt-6 text-sm">
-          <p className="text-gray-500">
-            {isLogin ? "Tu n'as pas de compte ?" : "Tu as déjà un compte ?"}
-            <button 
-              onClick={() => setIsLogin(!isLogin)} 
-              className="ml-1 text-emerald-600 font-bold hover:underline cursor-pointer"
-            >
-              {isLogin ? "S'inscrire" : "Se connecter"}
-            </button>
-          </p>
-        </div>
       </div>
       
       <div className="mt-8 text-center shrink-0 pb-4">

@@ -510,13 +510,6 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
       .filter((inv: any) => inv.accepted)
       .map((inv: any) => inv.challenge_id);
 
-    // Fallback: If there is an invite parameter in URL or localStorage, make sure it is fetched!
-    const urlParams = new URLSearchParams(window.location.search);
-    const inviteIdFromUrl = urlParams.get("invite") || localStorage.getItem("pending_invite_id");
-    if (inviteIdFromUrl && !invitedChallengeIds.includes(inviteIdFromUrl)) {
-      invitedChallengeIds.push(inviteIdFromUrl);
-    }
-
     // If there are invited challenge IDs, fetch those challenges too
     let joinedChallenges: any[] = [];
     if (invitedChallengeIds.length > 0) {
@@ -762,7 +755,7 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
   const shareOnWhatsApp = (challenge: Challenge) => {
     const appUrl =
       (import.meta as any).env?.VITE_APP_URL || window.location.origin;
-    const inviteUrl = `${appUrl}?invite=${challenge.id}`;
+    const inviteUrl = `${appUrl}?invite=${challenge.code}`;
     
     let desc = "";
     if (challenge.matchId === 0) {
