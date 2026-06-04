@@ -1860,7 +1860,7 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
           {detailTab === "matches" && (
             <div className="space-y-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-gray-100 pb-3 mb-3">
-                <h3 className="font-bold text-gray-800 text-sm">Entrez vos pronostics pour les matchs de ce défi :</h3>
+                <h3 className="font-bold text-gray-800 text-sm">Veuillez entrer vos pronostics</h3>
                 {challenge.matchId === 0 && (
                   <span className="text-[10px] bg-indigo-50 text-indigo-700 px-2.5 py-1 rounded font-extrabold uppercase">
                     Compétition : {competition?.name || "Football"}
