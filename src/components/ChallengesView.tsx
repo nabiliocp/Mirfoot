@@ -25,6 +25,7 @@ import {
   Users,
   CheckSquare,
   Search,
+  X,
 } from "lucide-react";
 import { supabase } from "../lib/supabase";
 
@@ -182,6 +183,17 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
   const [predictionForms, setPredictionForms] = useState<
     Record<string, Prediction>
   >({});
+
+  const [confirmCancelBonus, setConfirmCancelBonus] = useState<{
+    challengeId: string;
+    matchId: number;
+    isBonusActive: boolean;
+    homeTeamName: string;
+    awayTeamName: string;
+    scoreHome?: number;
+    scoreAway?: number;
+    challenge: Challenge;
+  } | null>(null);
 
   const getFlagUrl = (teamName: string, officialCrest?: string) => {
     if (officialCrest) return officialCrest;
@@ -1032,6 +1044,83 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
         },
       };
     });
+  };
+
+  const handleSaveBonusChange = async (
+    challenge: Challenge,
+    matchId: number,
+    newStatus: boolean,
+    hScore?: number,
+    aScore?: number,
+  ) => {
+    // 1. Update form draft first
+    setPredictionForms((prev) => {
+      const currentChallengeForm = prev[challenge.id] || {};
+      const currentMatches = currentChallengeForm.matches || {};
+      const currentMatchPred = currentMatches[matchId] || {};
+      return {
+        ...prev,
+        [challenge.id]: {
+          ...currentChallengeForm,
+          matches: {
+            ...currentMatches,
+            [matchId]: {
+              ...currentMatchPred,
+              bonus: newStatus,
+            },
+          },
+        },
+      };
+    });
+
+    // 2. Commit immediately to Supabase
+    if (!supabase) { alert("Erreur de connexion"); return; }
+    if (!userId) { alert("Vous devez être connecté"); return; }
+    if (challenge.locked || challenge.resolved) { alert("Le défi est verrouillé ou terminé"); return; }
+
+    const finalH = hScore !== undefined ? Number(hScore) : NaN;
+    const finalA = aScore !== undefined ? Number(aScore) : NaN;
+
+    if (isNaN(finalH) || isNaN(finalA)) {
+      alert("Veuillez d'abord remplir vos scores de match !");
+      return;
+    }
+
+    const currentPreds = userPredictions[challenge.id] || {};
+    const matchesPreds = currentPreds.matches || {};
+
+    const updatedMatches = {
+      ...matchesPreds,
+      [matchId]: {
+        homeScore: finalH,
+        awayScore: finalA,
+        bonus: newStatus,
+      },
+    };
+
+    const updatedChallengePreds = {
+      ...currentPreds,
+      matches: updatedMatches,
+    };
+
+    const { error } = await supabase.from("bets").upsert(
+      {
+        user_id: userId,
+        challenge_id: challenge.id,
+        predictions: updatedChallengePreds,
+      },
+      { onConflict: "user_id,challenge_id" },
+    );
+
+    if (error) {
+      console.error("Erreur d'enregistrement direct du bonus :", error);
+      alert("Erreur lors de l'enregistrement de la modification du bonus: " + error.message);
+    } else {
+      setUserPredictions((prev) => ({
+        ...prev,
+        [challenge.id]: updatedChallengePreds,
+      }));
+    }
   };
 
   const submitPrediction = async (challenge: Challenge) => {
@@ -1892,24 +1981,34 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
                         {hasSubmitted && isOpen && (
                           <div className="mt-2 text-center">
                             {isBonusActive ? (
-                              <div className="space-y-2">
-                                <div className="w-full text-xs font-black bg-amber-100/80 text-amber-800 py-2 rounded-lg flex items-center justify-center gap-2 border border-amber-200">
+                              <div className="w-full text-xs font-black bg-amber-100/80 text-amber-800 py-2 px-3 rounded-lg flex items-center justify-between border border-amber-200 relative">
+                                <div className="flex items-center gap-2 mx-auto justify-center">
                                   <Trophy className="w-3.5 h-3.5 text-amber-600 animate-bounce" />
                                   Bonus X2 activé !
                                 </div>
                                 <button 
                                   type="button"
-                                  className="w-full text-xs font-bold bg-white text-rose-600 border border-rose-200/60 py-1.5 rounded-lg hover:bg-rose-50 hover:text-rose-700 transition cursor-pointer flex items-center justify-center gap-1.5"
-                                  onClick={() => toggleBonus(challengeId, m.id, isBonusActive)}
+                                  className="absolute right-2 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-amber-200 hover:bg-amber-300 text-amber-800 flex items-center justify-center transition cursor-pointer font-bold shadow-xs border border-amber-300/40"
+                                  onClick={() => setConfirmCancelBonus({ 
+                                    challengeId, 
+                                    matchId: m.id, 
+                                    isBonusActive,
+                                    homeTeamName: m.homeTeam.shortName || m.homeTeam.name,
+                                    awayTeamName: m.awayTeam.shortName || m.awayTeam.name,
+                                    scoreHome,
+                                    scoreAway,
+                                    challenge
+                                  })}
+                                  title="Désactiver le bonus"
                                 >
-                                   Annuler le Bonus X2
+                                  <X className="w-3 h-3" />
                                 </button>
                               </div>
                             ) : (
                               <button 
                                 type="button"
                                 className="w-full text-xs font-black bg-gradient-to-br from-amber-400 to-orange-500 text-white py-2 rounded-lg hover:shadow-lg transition-all cursor-pointer flex items-center justify-center gap-2 hover:scale-[1.01] active:scale-[0.99]"
-                                onClick={() => toggleBonus(challengeId, m.id, isBonusActive)}
+                                onClick={() => handleSaveBonusChange(challenge, m.id, !isBonusActive, scoreHome, scoreAway)}
                               >
                                  <Trophy className="w-3.5 h-3.5" />
                                  Jouer Bonus X2
@@ -2488,24 +2587,34 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
                                   {hasSubmitted && isOpen && (
                                     <div className="text-center">
                                       {isBonusActive ? (
-                                        <div className="space-y-1.5">
-                                          <div className="w-full text-[10px] font-black bg-amber-100/80 text-amber-800 py-1.5 rounded-lg flex items-center justify-center gap-1 border border-amber-200">
+                                        <div className="w-full text-[10px] font-black bg-amber-100/80 text-amber-800 py-1.5 px-2.5 rounded-lg flex items-center justify-between border border-amber-200 relative">
+                                          <div className="flex items-center gap-1 mx-auto justify-center">
                                             <Trophy className="w-3 h-3 text-amber-600 animate-bounce" />
                                             Bonus X2 activé !
                                           </div>
-                                          <button 
+                                          <button
                                             type="button"
-                                            className="w-full text-[10px] font-bold bg-white text-rose-600 border border-rose-200/60 py-1 rounded-lg hover:bg-rose-50 hover:text-rose-700 transition cursor-pointer flex items-center justify-center gap-1"
-                                            onClick={() => toggleBonus(challengeId, m.id, isBonusActive)}
+                                            className="absolute right-1.5 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-amber-200 hover:bg-amber-300 text-amber-800 flex items-center justify-center transition cursor-pointer font-bold border border-amber-300/40"
+                                            onClick={() => setConfirmCancelBonus({ 
+                                              challengeId, 
+                                              matchId: m.id, 
+                                              isBonusActive,
+                                              homeTeamName: m.homeTeam.shortName || m.homeTeam.name,
+                                              awayTeamName: m.awayTeam.shortName || m.awayTeam.name,
+                                              scoreHome,
+                                              scoreAway,
+                                              challenge: activeModal.challenge
+                                            })}
+                                            title="Désactiver le bonus"
                                           >
-                                             Annuler le Bonus X2
+                                            <X className="w-2.5 h-2.5" />
                                           </button>
                                         </div>
                                       ) : (
                                         <button 
                                           type="button"
                                           className="w-full text-[10px] font-black bg-gradient-to-br from-amber-400 to-orange-500 text-white py-1.5 rounded-lg hover:shadow-lg transition-all cursor-pointer flex items-center justify-center gap-1 hover:scale-[1.01] active:scale-[0.99]"
-                                          onClick={() => toggleBonus(challengeId, m.id, isBonusActive)}
+                                          onClick={() => handleSaveBonusChange(activeModal.challenge, m.id, !isBonusActive, scoreHome, scoreAway)}
                                         >
                                            <Trophy className="w-3 h-3" />
                                            Jouer Bonus X2
@@ -2941,6 +3050,77 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
                 }`}
               >
                 Compris !
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Cancel Bonus Confirmation Popup */}
+      {confirmCancelBonus && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-xs z-[60] flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-white rounded-3xl w-full max-w-sm p-6 shadow-2xl space-y-5 relative border border-gray-100 overflow-hidden text-center">
+            {/* Top decorative amber line */}
+            <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-amber-400 via-orange-400 to-amber-500"></div>
+            
+            <div className="space-y-3.5">
+              {/* Golden circular container with trophy icon */}
+              <div className="mx-auto w-14 h-14 rounded-full bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-500 shadow-inner relative animate-pulse">
+                <Trophy className="w-7 h-7 text-amber-600" />
+                <div className="absolute -top-1 -right-1 w-5 h-5 bg-amber-500 text-white rounded-full flex items-center justify-center text-[9px] font-black border-2 border-white shadow-xs">
+                  X2
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <h3 className="font-extrabold text-lg text-indigo-950 tracking-tight">
+                  Désactiver le Bonus X2 ?
+                </h3>
+                <div className="text-gray-600 text-xs font-semibold px-2 leading-relaxed space-y-2">
+                  <p>
+                    Es-tu sûr de vouloir retirer le Bonus X2 pour ton pronostic sur le match :
+                  </p>
+                  <div className="bg-indigo-50/50 rounded-xl p-2.5 font-bold text-indigo-900 border border-indigo-100/30 flex items-center justify-center gap-1.5 text-[11px] uppercase tracking-wide">
+                    <span>{confirmCancelBonus.homeTeamName}</span>
+                    <span className="text-gray-300 font-extrabold text-[9px]">VS</span>
+                    <span>{confirmCancelBonus.awayTeamName}</span>
+                    {confirmCancelBonus.scoreHome !== undefined && confirmCancelBonus.scoreAway !== undefined && (
+                      <span className="text-amber-600 pl-1 font-black">
+                        ({confirmCancelBonus.scoreHome} - {confirmCancelBonus.scoreAway})
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-[10px] text-gray-400 font-medium pb-2 border-b border-gray-100/50">
+                    Tu pourras à tout moment réactiver le Bonus X2 tant que le match n'a pas commencé.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  handleSaveBonusChange(
+                    confirmCancelBonus.challenge,
+                    confirmCancelBonus.matchId,
+                    false,
+                    confirmCancelBonus.scoreHome,
+                    confirmCancelBonus.scoreAway
+                  );
+                  setConfirmCancelBonus(null);
+                }}
+                className="w-full bg-amber-500 hover:bg-amber-600 active:scale-[0.98] text-white font-black py-3 rounded-xl text-xs transition-all shadow-md shadow-amber-200/50 cursor-pointer text-center"
+              >
+                Oui, désactiver le bonus
+              </button>
+              
+              <button
+                type="button"
+                onClick={() => setConfirmCancelBonus(null)}
+                className="w-full bg-gray-50 hover:bg-gray-100 active:scale-[0.98] text-gray-700 font-extrabold py-2.5 rounded-xl text-xs transition duration-200 border border-gray-200/80 cursor-pointer text-center"
+              >
+                Garder le bonus actif
               </button>
             </div>
           </div>
