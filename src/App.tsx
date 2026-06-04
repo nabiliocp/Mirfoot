@@ -28,6 +28,7 @@ import logoImage from "./assets/images/pig_football_logo_1780308392869.png";
 export default function App() {
   const [session, setSession] = useState<Session | null>(null);
   const [loadingSession, setLoadingSession] = useState(true);
+  const [loadingProfile, setLoadingProfile] = useState(false);
   const [needsProfileSetup, setNeedsProfileSetup] = useState(false);
   const [userProfile, setUserProfile] = useState<{
     username: string;
@@ -136,6 +137,9 @@ export default function App() {
       const checkProfile = async (userId: string) => {
       try {
         if (!supabase) return;
+        setLoadingProfile(true);
+        // Wait 1s for potential async trigger to populate profile
+        await new Promise((resolve) => setTimeout(resolve, 1000));
         console.log("Forcing profile check for", userId);
         const { data, error } = await supabase
           .from("profiles")
@@ -146,8 +150,8 @@ export default function App() {
         console.log("Resultat verif profil:", { data, error });
 
         // Si erreur ou si données manquantes, FORCER le setup
-        if (error || !data?.username) {
-          console.log("Profil incomplet ou inexistant, affichage FORCÉ du setup.");
+        if (error || !data || !data.username || data.username.trim() === "") {
+          console.log("Profil incomplet ou inexistant (error found, no data or empty username), affichage FORCÉ du setup.", { error, data });
           setNeedsProfileSetup(true);
           setUserProfile(null);
         } else {
@@ -162,6 +166,8 @@ export default function App() {
       } catch (err) {
         console.error("Erreur critique verif profil:", err);
         setNeedsProfileSetup(true);
+      } finally {
+        setLoadingProfile(false);
       }
     };
 
@@ -181,6 +187,7 @@ export default function App() {
       setSession(session);
       setLoadingSession(false);
       if (session) {
+        setLoadingProfile(true);
         checkProfile(session.user.id);
       }
     }).catch(err => {
@@ -199,9 +206,11 @@ export default function App() {
       setSession(session);
       setLoadingSession(false);
       if (session) {
+        setLoadingProfile(true);
         checkProfile(session.user.id);
       } else {
         setNeedsProfileSetup(false);
+        setLoadingProfile(false);
       }
     });
 
@@ -266,7 +275,7 @@ export default function App() {
     window.history.replaceState({}, document.title, window.location.pathname);
   };
 
-  if (loadingSession) {
+  if (loadingSession || loadingProfile) {
     return (
       <div className="min-h-screen bg-gray-50 flex flex-col justify-center items-center p-6">
         <div className="animate-pulse text-emerald-700 font-bold">Connexion en cours...</div>
