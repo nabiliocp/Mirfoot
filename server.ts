@@ -149,6 +149,16 @@ async function startServer() {
                 if (pred.qualifies && actualQualifier && pred.qualifies === actualQualifier) {
                   points += rules.qualification || 0;
                 }
+
+                // Bonus X2 logic
+                const isBonusActive = !!pred.bonus;
+                if (isBonusActive) {
+                  if (points > 0) {
+                    points = points * 2;
+                  } else {
+                    points = -4;
+                  }
+                }
                 
                 await supabase.from("bets").update({ points_awarded: points }).eq("id", bet.id);
                 await supabase.rpc('increment_user_points', { user_uuid: bet.user_id, points_to_add: points });
