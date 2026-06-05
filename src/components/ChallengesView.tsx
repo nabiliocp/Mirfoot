@@ -470,7 +470,7 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
     setLoadingChallengeDetails(true);
     try {
         const [betsRes, invsRes] = await Promise.all([
-          supabase.from("bets").select("user_id").eq("challenge_id", challengeId),
+          supabase.from("bets").select("*").eq("challenge_id", challengeId),
           supabase.from("challenge_invitations").select("user_id").eq("challenge_id", challengeId)
         ]);
         if (betsRes.data) setChallengeBets(betsRes.data);
