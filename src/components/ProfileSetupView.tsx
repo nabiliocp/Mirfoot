@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { supabase } from "../lib/supabase";
+import { X } from "lucide-react";
 // @ts-ignore
 import logoImage from "../assets/images/pig_football_logo_1780308392869.png";
 
@@ -163,7 +164,21 @@ export default function ProfileSetupView({
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen p-3 sm:p-4 bg-gray-50 flex-1">
-      <div className="bg-white p-5 sm:p-7 rounded-3xl shadow-sm border border-gray-100 max-w-sm w-full text-center">
+      <div className="relative bg-white p-5 sm:p-7 rounded-3xl shadow-sm border border-gray-100 max-w-sm w-full text-center">
+        <button
+          type="button"
+          onClick={async () => {
+            if (supabase) {
+              await supabase.auth.signOut();
+              window.location.reload();
+            }
+          }}
+          className="absolute top-4 right-4 p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition cursor-pointer"
+          title="Fermer et se déconnecter"
+        >
+          <X className="w-5 h-5" />
+        </button>
+
         <div className="flex flex-col items-center mb-3">
           <img src={logoImage} alt="Mirfoot Logo" className="w-16 h-16 object-cover rounded-xl shadow-xs bg-white border border-gray-100" />
         </div>
