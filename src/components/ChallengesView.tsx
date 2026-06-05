@@ -2683,11 +2683,6 @@ export default function ChallengesView({
                             <span className={`text-xs font-bold flex items-center gap-1.5 flex-wrap ${isCurrentUser ? "text-emerald-950 font-black" : "text-gray-800"}`}>
                               <span>{player.username}</span>
                               {isCurrentUser && <span className="font-black text-[9px] bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded">Moi</span>}
-                              {isLast && (
-                                <span className="font-black text-[9px] bg-pink-100 text-pink-700 px-1.5 py-0.5 rounded border border-pink-200">
-                                  Tête de cochon 🐷
-                                </span>
-                              )}
                             </span>
                             <span className="text-[10px] text-gray-400 font-semibold">{player.predictionsCount} pronostic(s)</span>
                           </div>

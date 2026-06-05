@@ -89,11 +89,6 @@ export default function LeaderboardView() {
               <div className="ml-3 flex-1 flex flex-col font-sans">
                 <span className="font-semibold text-gray-800 flex items-center gap-1.5 flex-wrap">
                   {profile.username}
-                  {isLast && (
-                    <span className="font-black text-[9px] bg-pink-100 text-pink-700 px-1.5 py-0.5 rounded-md inline-flex items-center gap-0.5 border border-pink-200">
-                      Tête de cochon 🐷
-                    </span>
-                  )}
                 </span>
                 {(profile.first_name || profile.last_name) && (
                   <div className="text-[11px] text-gray-400 flex items-center gap-1.5 mt-0.5">
