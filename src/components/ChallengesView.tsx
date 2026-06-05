@@ -1645,7 +1645,7 @@ export default function ChallengesView({
     })() : null;
 
     return (
-      <div className="space-y-4 bg-gray-50 p-4 rounded-xl border border-gray-100 mt-4">
+      <div className="space-y-4 bg-white p-5 rounded-2xl border-2 border-slate-200/95 shadow-md mt-4">
         <div className="grid grid-cols-2 gap-4">
           <div className="text-center flex flex-col items-center">
             <div className="w-10 h-10 flex items-center justify-center bg-white border border-gray-200 rounded-full overflow-hidden shrink-0 shadow-xs mb-1.5 p-1">
@@ -2409,7 +2409,7 @@ export default function ChallengesView({
                       (formMatch?.bonus !== undefined && formMatch.bonus !== !!userPredMatch?.bonus);
 
                     return (
-                      <div key={m.id} className="bg-gray-50/50 rounded-2xl p-4 border border-gray-100 space-y-3.5">
+                      <div key={m.id} className="bg-white rounded-2xl p-4 border-2 border-slate-200/95 shadow-sm hover:border-emerald-300 transition duration-200 space-y-3.5">
                         <div className="flex justify-between items-center text-[10px] font-bold text-gray-400 uppercase tracking-wider border-b border-gray-100/50 pb-2">
                           <span>
                             {new Date(m.utcDate).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' })} • {new Date(m.utcDate).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
@@ -2760,7 +2760,7 @@ export default function ChallengesView({
                     const isFinished = m.status === "FINISHED";
                     const isLive = ["IN_PLAY", "LIVE", "PAUSED"].includes(m.status);
                     return (
-                      <div key={m.id} className="bg-gray-50/50 border border-gray-100/70 p-4 rounded-2xl flex flex-col gap-2">
+                      <div key={m.id} className="bg-white border-2 border-slate-200/95 shadow-sm p-4 rounded-2xl flex flex-col gap-2">
                         <div className="flex justify-between items-center text-[10px] font-bold text-gray-400 uppercase tracking-widest">
                           <span>{new Date(m.utcDate).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' })}</span>
                           <span className={`px-2 py-0.5 rounded-full font-extrabold ${isLive ? 'bg-rose-50 text-rose-600 border border-rose-100 animate-pulse' : isFinished ? 'bg-gray-100 text-gray-500' : 'bg-indigo-50 text-indigo-700'}`}>

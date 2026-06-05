@@ -135,10 +135,10 @@ export default function MatchesView({ onPronoClick, userProfile }: MatchesViewPr
     return (
       <div 
         key={match.id} 
-        className={`rounded-2xl p-5 shadow-sm border transition hover:shadow-md relative overflow-hidden ${
+        className={`rounded-2xl p-5 border-2 transition duration-200 relative overflow-hidden ${
           isHeart 
-            ? "bg-rose-50/40 border-rose-200 ring-2 ring-rose-500/10" 
-            : "bg-white border-gray-100"
+            ? "bg-rose-50/50 border-rose-300 shadow-md ring-2 ring-rose-500/10 hover:shadow-lg" 
+            : "bg-white border-slate-200/95 shadow-md hover:shadow-lg hover:border-emerald-300"
         }`}
       >
         {isHeart && (
