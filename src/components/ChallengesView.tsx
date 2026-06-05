@@ -2655,6 +2655,7 @@ export default function ChallengesView({
                 <div className="space-y-3">
                   {leaderboard.map((player, index) => {
                     const isCurrentUser = player.userId === userId;
+                    const isLast = index === leaderboard.length - 1 && leaderboard.length > 1;
 
                     return (
                       <div 
@@ -2664,7 +2665,9 @@ export default function ChallengesView({
                             ? "bg-emerald-50/50 border-emerald-300 shadow-sm" 
                             : index === 0 
                               ? "bg-yellow-50/20 border-yellow-100" 
-                              : "bg-white border-gray-100"
+                              : isLast 
+                                ? "bg-pink-50/20 border-pink-100"
+                                : "bg-white border-gray-100"
                         }`}
                       >
                         <div className="flex items-center gap-3">
@@ -2673,12 +2676,18 @@ export default function ChallengesView({
                           </span>
                           
                           <div className="w-8 h-8 flex items-center justify-center bg-gray-100 rounded-lg text-lg">
-                            {player.avatar_type === "emoji" ? player.avatar_value : "⚽"}
+                            {isLast ? "🐷" : (player.avatar_type === "emoji" ? player.avatar_value : "⚽")}
                           </div>
                           
                           <div>
-                            <span className={`text-xs font-bold block ${isCurrentUser ? "text-emerald-950 font-black" : "text-gray-800"}`}>
-                              {player.username} {isCurrentUser && <span className="font-black text-[9px] bg-emerald-100 text-emerald-800 px-1.5 rounded ml-1">Moi</span>}
+                            <span className={`text-xs font-bold flex items-center gap-1.5 flex-wrap ${isCurrentUser ? "text-emerald-950 font-black" : "text-gray-800"}`}>
+                              <span>{player.username}</span>
+                              {isCurrentUser && <span className="font-black text-[9px] bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded">Moi</span>}
+                              {isLast && (
+                                <span className="font-black text-[9px] bg-pink-100 text-pink-700 px-1.5 py-0.5 rounded border border-pink-200">
+                                  Tête de cochon 🐷
+                                </span>
+                              )}
                             </span>
                             <span className="text-[10px] text-gray-400 font-semibold">{player.predictionsCount} pronostic(s)</span>
                           </div>

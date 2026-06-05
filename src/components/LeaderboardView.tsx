@@ -59,11 +59,12 @@ export default function LeaderboardView() {
         {profiles.map((profile, index) => {
           const isTop3 = index < 3;
           const medals = ['text-yellow-400', 'text-gray-400', 'text-amber-600'];
+          const isLast = index === profiles.length - 1 && profiles.length > 1;
           
           return (
             <div 
               key={profile.id} 
-              className={`flex items-center p-4 rounded-xl shadow-sm border ${index === 0 ? 'bg-yellow-50/50 border-yellow-200' : 'bg-white border-gray-100'}`}
+              className={`flex items-center p-4 rounded-xl shadow-sm border ${index === 0 ? 'bg-yellow-50/50 border-yellow-200' : isLast ? 'bg-pink-50/20 border-pink-100' : 'bg-white border-gray-100'}`}
             >
               <div className="w-10 flex justify-center items-center font-bold text-gray-500">
                 {isTop3 ? (
@@ -74,7 +75,9 @@ export default function LeaderboardView() {
               </div>
               
               <div className="ml-2 w-10 flex justify-center">
-                {profile.avatar_type === 'emoji' ? (
+                {isLast ? (
+                  <span className="text-2xl">🐷</span>
+                ) : profile.avatar_type === 'emoji' ? (
                   <span className="text-2xl">{profile.avatar_value === '🐷' ? '👽' : profile.avatar_value}</span>
                 ) : (
                   <div className="w-8 h-8 rounded-md flex items-center justify-center text-white" style={{ backgroundColor: profile.avatar_value }}>
@@ -84,8 +87,13 @@ export default function LeaderboardView() {
               </div>
               
               <div className="ml-3 flex-1 flex flex-col font-sans">
-                <span className="font-semibold text-gray-800">
+                <span className="font-semibold text-gray-800 flex items-center gap-1.5 flex-wrap">
                   {profile.username}
+                  {isLast && (
+                    <span className="font-black text-[9px] bg-pink-100 text-pink-700 px-1.5 py-0.5 rounded-md inline-flex items-center gap-0.5 border border-pink-200">
+                      Tête de cochon 🐷
+                    </span>
+                  )}
                 </span>
                 {(profile.first_name || profile.last_name) && (
                   <div className="text-[11px] text-gray-400 flex items-center gap-1.5 mt-0.5">
