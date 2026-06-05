@@ -95,6 +95,45 @@ const isTeamsNotDefinedYet = (homeTeam?: { name?: string; shortName?: string }, 
   return isMatchPlaceholder(homeName) || isMatchPlaceholder(awayName);
 };
 
+const calculateMatchPoints = (
+  m: any,
+  pHome?: number,
+  pAway?: number,
+  isBonusActive?: boolean,
+  pointRules?: PointRules
+) => {
+  if (pHome === undefined || pAway === undefined) return null;
+  const rHome = m.score?.fullTime?.home;
+  const rAway = m.score?.fullTime?.away;
+  if (rHome === null || rAway === null || rHome === undefined || rAway === undefined) return null;
+
+  const rules = pointRules || { exact_score: 3, close_score: 2, correct_winner: 1, qualification: 1 };
+  const isExact = pHome === rHome && pAway === rAway;
+  const actualWinner = rHome > rAway ? 'home' : rHome < rAway ? 'away' : 'draw';
+  const predWinner = pHome > pAway ? 'home' : pHome < pAway ? 'away' : 'draw';
+
+  let matchPts = 0;
+  if (isExact) {
+    matchPts = rules.exact_score;
+  } else if (actualWinner === predWinner) {
+    const diff = Math.abs(pHome - rHome) + Math.abs(pAway - rAway);
+    if (rules?.close_score && diff <= 2) {
+      matchPts = rules.close_score;
+    } else {
+      matchPts = rules.correct_winner;
+    }
+  }
+
+  if (isBonusActive) {
+    if (matchPts > 0) {
+      matchPts = matchPts * 2;
+    } else {
+      matchPts = -4;
+    }
+  }
+  return matchPts;
+};
+
 interface ChallengesViewProps {
   preselectedMatch?: { match: Match; competitionId: number } | null;
   onClearPreselectedMatch?: () => void;
@@ -1506,6 +1545,25 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
     const timeLeft = challenge.matchDate ? new Date(challenge.matchDate).getTime() - new Date().getTime() : Infinity;
     const isOpen = timeLeft > 0 && !isLocked && !isNotDefinedYet;
 
+    const singleMatchRaw = modalMatches.find(m => m.id === challenge.matchId);
+    const singleMatch = singleMatchRaw ? (() => {
+      if (isSimulationMode && simulatedScores[singleMatchRaw.id]) {
+        const sim = simulatedScores[singleMatchRaw.id];
+        return {
+          ...singleMatchRaw,
+          status: sim.status,
+          score: {
+            ...singleMatchRaw.score,
+            fullTime: {
+              home: (sim.home === undefined || sim.home === "") ? 0 : Number(sim.home),
+              away: (sim.away === undefined || sim.away === "") ? 0 : Number(sim.away)
+            }
+          }
+        };
+      }
+      return singleMatchRaw;
+    })() : null;
+
     return (
       <div className="space-y-4 bg-gray-50 p-4 rounded-xl border border-gray-100 mt-4">
         <div className="grid grid-cols-2 gap-4">
@@ -1601,6 +1659,40 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
             <div className="flex items-center justify-center gap-2 text-indigo-700 font-bold bg-indigo-50 p-3 rounded-xl border border-indigo-100">
               <CheckCircle2 className="w-5 h-5 text-indigo-500" /> Ton prono est enregistré ! ({userPred.homeScore} - {userPred.awayScore})
             </div>
+            {singleMatch && (() => {
+              const isFinished = singleMatch.status === "FINISHED" || singleMatch.status === "AWARDED";
+              const isInProgress = ["IN_PLAY", "LIVE", "PAUSED"].includes(singleMatch.status);
+              if (isFinished || isInProgress) {
+                const realHome = singleMatch.score?.fullTime?.home;
+                const realAway = singleMatch.score?.fullTime?.away;
+                if (realHome !== null && realAway !== null && realHome !== undefined && realAway !== undefined) {
+                  const matchPts = calculateMatchPoints(singleMatch, userPred.homeScore, userPred.awayScore, !!userPred.bonus, challenge.pointRules);
+                  return (
+                    <div className="text-xs font-semibold rounded-xl bg-indigo-50/40 p-2.5 border border-indigo-100/50 flex flex-col gap-1.5 text-left font-sans">
+                      <div className="flex justify-between items-center text-[10px] font-bold uppercase tracking-wider pl-1 pr-1">
+                        <span className={isInProgress ? "text-amber-600 animate-pulse" : "text-gray-500"}>
+                          {isInProgress ? "🔥 Match en cours" : "⚽ Match terminé"}
+                        </span>
+                        <span className="text-gray-600">Score réel : <span className="font-mono text-indigo-950 font-black text-xs">{realHome} - {realAway}</span></span>
+                      </div>
+                      <div className="flex justify-between items-center border-t border-indigo-100/40 pt-1.5 mt-0.5">
+                        <span className="text-[10px] text-gray-500 font-semibold">Points remportés :</span>
+                        <span className={`px-2 py-0.5 rounded font-black text-[11px] font-mono ${
+                          matchPts !== null && matchPts > 0 
+                            ? 'bg-emerald-100 text-emerald-800' 
+                            : matchPts !== null && matchPts < 0 
+                              ? 'bg-rose-100 text-rose-800' 
+                              : 'bg-slate-200 text-slate-700'
+                        }`}>
+                          {matchPts !== null && matchPts > 0 ? `+${matchPts}` : matchPts} {matchPts !== null && Math.abs(matchPts) > 1 ? 'pts' : 'pt'}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                }
+              }
+              return null;
+            })()}
             {isOpen && hasFormChange && (
               <button
                 type="button"
@@ -2248,6 +2340,40 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
                                 <CheckCircle2 className="w-4 h-4 text-indigo-600" />
                                 Pronostic enregistré ! ({userPredMatch.homeScore} - {userPredMatch.awayScore})
                               </div>
+                              {(() => {
+                                const isFinished = m.status === "FINISHED" || m.status === "AWARDED";
+                                const isInProgress = ["IN_PLAY", "LIVE", "PAUSED"].includes(m.status);
+                                if (isFinished || isInProgress) {
+                                  const realHome = m.score?.fullTime?.home;
+                                  const realAway = m.score?.fullTime?.away;
+                                  if (realHome !== null && realAway !== null && realHome !== undefined && realAway !== undefined) {
+                                    const matchPts = calculateMatchPoints(m, userPredMatch.homeScore, userPredMatch.awayScore, !!userPredMatch.bonus, challenge.pointRules);
+                                    return (
+                                      <div className="text-xs font-semibold rounded-xl bg-indigo-50/40 p-2.5 border border-indigo-100/50 flex flex-col gap-1.5 text-left font-sans shadow-xs animate-fade-in">
+                                        <div className="flex justify-between items-center text-[10px] font-bold uppercase tracking-wider pl-1 pr-1">
+                                          <span className={isInProgress ? "text-amber-600 animate-pulse" : "text-gray-500"}>
+                                            {isInProgress ? "🔥 Match en cours" : "⚽ Match terminé"}
+                                          </span>
+                                          <span className="text-gray-600">Score réel : <span className="font-mono text-indigo-950 font-black text-xs">{realHome} - {realAway}</span></span>
+                                        </div>
+                                        <div className="flex justify-between items-center border-t border-indigo-100/40 pt-1.5 mt-0.5">
+                                          <span className="text-[10px] text-gray-500 font-semibold">Points remportés :</span>
+                                          <span className={`px-2 py-0.5 rounded font-black text-[11px] font-mono ${
+                                            matchPts !== null && matchPts > 0 
+                                              ? 'bg-emerald-100 text-emerald-800' 
+                                              : matchPts !== null && matchPts < 0 
+                                                ? 'bg-rose-100 text-rose-800' 
+                                                : 'bg-slate-200 text-slate-700'
+                                          }`}>
+                                            {matchPts !== null && matchPts > 0 ? `+${matchPts}` : matchPts} {matchPts !== null && Math.abs(matchPts) > 1 ? 'pts' : 'pt'}
+                                          </span>
+                                        </div>
+                                      </div>
+                                    );
+                                  }
+                                }
+                                return null;
+                              })()}
                               {isOpen && hasFormChange && (
                                 <button
                                   type="button"
@@ -2711,7 +2837,24 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
                           ) : modalMatches.length === 0 ? (
                             <p className="text-center text-gray-500 py-8 text-sm font-semibold">Aucun match programmé trouvé pour cette compétition.</p>
                           ) : (
-                            modalMatches.slice(0, visibleMatchesCount).map((m) => {
+                            modalMatches.slice(0, visibleMatchesCount).map((item) => {
+                              const m = (() => {
+                                if (isSimulationMode && simulatedScores[item.id]) {
+                                  const sim = simulatedScores[item.id];
+                                  return {
+                                    ...item,
+                                    status: sim.status,
+                                    score: {
+                                      ...item.score,
+                                      fullTime: {
+                                        home: (sim.home === undefined || sim.home === "") ? 0 : Number(sim.home),
+                                        away: (sim.away === undefined || sim.away === "") ? 0 : Number(sim.away)
+                                      }
+                                    }
+                                  };
+                                }
+                                return item;
+                              })();
                               const challengeId = activeModal.challenge.id;
                               const userPredMap = userPredictions[challengeId]?.matches || {};
                               const userPredMatch = userPredMap[m.id];
@@ -2858,6 +3001,40 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
                                         <div className="text-[10px] font-bold text-indigo-700 bg-indigo-50 py-1 rounded-lg flex items-center justify-center gap-1 border border-indigo-100">
                                           <CheckCircle2 className="w-3.5 h-3.5 text-indigo-500" /> Pronostic enregistré ! ({userPredMatch?.homeScore} - {userPredMatch?.awayScore})
                                         </div>
+                                        {(() => {
+                                          const isFinished = m.status === "FINISHED" || m.status === "AWARDED";
+                                          const isInProgress = ["IN_PLAY", "LIVE", "PAUSED"].includes(m.status);
+                                          if (isFinished || isInProgress) {
+                                            const realHome = m.score?.fullTime?.home;
+                                            const realAway = m.score?.fullTime?.away;
+                                            if (realHome !== null && realAway !== null && realHome !== undefined && realAway !== undefined) {
+                                              const matchPts = calculateMatchPoints(m, userPredMatch.homeScore, userPredMatch.awayScore, !!userPredMatch.bonus, activeModal.challenge.pointRules);
+                                              return (
+                                                <div className="text-xs font-semibold rounded-xl bg-indigo-50/40 p-2 border border-indigo-150 flex flex-col gap-1 text-left font-sans shadow-xs animate-fade-in mt-1.5">
+                                                  <div className="flex justify-between items-center text-[9px] font-bold uppercase tracking-wider pl-1 pr-1">
+                                                    <span className={isInProgress ? "text-amber-600 animate-pulse" : "text-gray-500"}>
+                                                      {isInProgress ? "🔥 En cours" : "⚽ Terminé"}
+                                                    </span>
+                                                    <span className="text-gray-600">Score réel : <span className="font-mono text-indigo-950 font-black text-xs">{realHome} - {realAway}</span></span>
+                                                  </div>
+                                                  <div className="flex justify-between items-center border-t border-indigo-100/40 pt-1 mt-1">
+                                                    <span className="text-[9px] text-gray-400 font-semibold font-sans">Points :</span>
+                                                    <span className={`px-1.5 py-0.5 rounded font-black text-[10px] font-mono ${
+                                                      matchPts !== null && matchPts > 0 
+                                                        ? 'bg-emerald-100 text-emerald-800' 
+                                                        : matchPts !== null && matchPts < 0 
+                                                          ? 'bg-rose-100 text-rose-800' 
+                                                          : 'bg-slate-200 text-slate-700'
+                                                    }`}>
+                                                      {matchPts !== null && matchPts > 0 ? `+${matchPts}` : matchPts} {matchPts !== null && Math.abs(matchPts) > 1 ? 'pts' : 'pt'}
+                                                    </span>
+                                                  </div>
+                                                </div>
+                                              );
+                                            }
+                                          }
+                                          return null;
+                                        })()}
                                         {isOpen && hasFormChange && (
                                           <button
                                             type="button"
