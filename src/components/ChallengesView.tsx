@@ -1659,6 +1659,11 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
             <div className="flex items-center justify-center gap-2 text-indigo-700 font-bold bg-indigo-50 p-3 rounded-xl border border-indigo-100">
               <CheckCircle2 className="w-5 h-5 text-indigo-500" /> Ton prono est enregistré ! ({userPred.homeScore} - {userPred.awayScore})
             </div>
+            {hasFormChange && (
+              <div className="text-xs font-bold text-amber-700 bg-amber-50 py-2 px-3 rounded-xl border border-amber-200 animate-pulse text-center">
+                ⚠️ Modifications non enregistrées ! Tu as saisi ({activeForm.homeScore} - {activeForm.awayScore}). Clique sur le bouton violet "Modifier mon pronostic" ci-dessous pour valider !
+              </div>
+            )}
             {singleMatch && (() => {
               const isFinished = singleMatch.status === "FINISHED" || singleMatch.status === "AWARDED";
               const isInProgress = ["IN_PLAY", "LIVE", "PAUSED"].includes(singleMatch.status);
@@ -2340,6 +2345,11 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
                                 <CheckCircle2 className="w-4 h-4 text-indigo-600" />
                                 Pronostic enregistré ! ({userPredMatch.homeScore} - {userPredMatch.awayScore})
                               </div>
+                              {hasFormChange && (
+                                <div className="text-[10px] font-bold text-amber-700 bg-amber-50 py-2 px-3 rounded-xl border border-amber-200 animate-pulse text-center">
+                                  ⚠️ Modifications non enregistrées ! Tu as saisi ({scoreHome} - {scoreAway}). Clique sur le bouton violet "Modifier mon pronostic" ci-dessous pour valider !
+                                </div>
+                              )}
                               {(() => {
                                 const isFinished = m.status === "FINISHED" || m.status === "AWARDED";
                                 const isInProgress = ["IN_PLAY", "LIVE", "PAUSED"].includes(m.status);
@@ -3001,6 +3011,11 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
                                         <div className="text-[10px] font-bold text-indigo-700 bg-indigo-50 py-1 rounded-lg flex items-center justify-center gap-1 border border-indigo-100">
                                           <CheckCircle2 className="w-3.5 h-3.5 text-indigo-500" /> Pronostic enregistré ! ({userPredMatch?.homeScore} - {userPredMatch?.awayScore})
                                         </div>
+                                        {hasFormChange && (
+                                          <div className="text-[9.5px] font-bold text-amber-700 bg-amber-50 py-1.5 px-2 rounded-lg border border-amber-200 animate-pulse text-center">
+                                            ⚠️ Modifications non enregistrées ! Tu as saisi ({scoreHome} - {scoreAway}). Clique sur le bouton "Modifier mon pronostic" ci-dessous pour valider !
+                                          </div>
+                                        )}
                                         {(() => {
                                           const isFinished = m.status === "FINISHED" || m.status === "AWARDED";
                                           const isInProgress = ["IN_PLAY", "LIVE", "PAUSED"].includes(m.status);
