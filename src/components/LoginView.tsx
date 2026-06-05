@@ -19,7 +19,7 @@ export default function LoginView() {
         options: {
           redirectTo: window.location.origin,
           queryParams: {
-            prompt: 'select_account'
+            prompt: 'select_account consent'
           }
         }
       });
