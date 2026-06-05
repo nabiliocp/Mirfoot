@@ -1657,8 +1657,8 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
           score: {
             ...m.score,
             fullTime: {
-              home: sim.home !== undefined ? sim.home : null,
-              away: sim.away !== undefined ? sim.away : null
+              home: (sim.home === undefined || sim.home === "") ? 0 : Number(sim.home),
+              away: (sim.away === undefined || sim.away === "") ? 0 : Number(sim.away)
             }
           }
         };
@@ -1905,11 +1905,11 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
                     setSimulatedScores({});
                   } else {
                     // Initialize simulated scores with the current match scores if they exist (limit to 5 groups and 5 knockouts)
-                    const initialSim: Record<number, { home: number; away: number; status: string }> = {};
+                    const initialSim: Record<number, { home: number | string; away: number | string; status: string }> = {};
                     limitSimMatches.forEach(m => {
                       initialSim[m.id] = {
-                        home: m.score.fullTime.home !== null ? m.score.fullTime.home : 0,
-                        away: m.score.fullTime.away !== null ? m.score.fullTime.away : 0,
+                        home: m.score.fullTime.home !== null ? m.score.fullTime.home : "",
+                        away: m.score.fullTime.away !== null ? m.score.fullTime.away : "",
                         status: m.status === "FINISHED" ? "FINISHED" : "FINISHED" // Default simulated matches as finished so calculations trigger immediately!
                       };
                     });
@@ -1936,7 +1936,7 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   {limitSimMatches.map(m => {
-                    const sim = simulatedScores[m.id] || { home: 0, away: 0, status: "FINISHED" };
+                    const sim = simulatedScores[m.id] || { home: "", away: "", status: "FINISHED" };
                     return (
                       <div key={m.id} className="bg-white border border-slate-200/40 p-4 rounded-2xl shadow-xs space-y-3">
                         <div className="flex justify-between items-center text-[10px] uppercase font-black tracking-wider text-slate-400">
@@ -1974,9 +1974,10 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
                             <input 
                               type="number" 
                               min="0"
-                              value={sim.home}
+                              value={sim.home ?? ""}
                               onChange={(e) => {
-                                const val = Math.max(0, parseInt(e.target.value) || 0);
+                                const valStr = e.target.value;
+                                const val = valStr === "" ? "" : Math.max(0, parseInt(valStr) || 0);
                                 setSimulatedScores(prev => ({
                                   ...prev,
                                   [m.id]: {
@@ -1991,9 +1992,10 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
                             <input 
                               type="number" 
                               min="0"
-                              value={sim.away}
+                              value={sim.away ?? ""}
                               onChange={(e) => {
-                                const val = Math.max(0, parseInt(e.target.value) || 0);
+                                const valStr = e.target.value;
+                                const val = valStr === "" ? "" : Math.max(0, parseInt(valStr) || 0);
                                 setSimulatedScores(prev => ({
                                   ...prev,
                                   [m.id]: {
