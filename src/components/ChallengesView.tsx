@@ -1673,21 +1673,44 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
                 if (realHome !== null && realAway !== null && realHome !== undefined && realAway !== undefined) {
                   const matchPts = calculateMatchPoints(singleMatch, userPred.homeScore, userPred.awayScore, !!userPred.bonus, challenge.pointRules);
                   return (
-                    <div className="text-xs font-semibold rounded-xl bg-indigo-50/40 p-2.5 border border-indigo-100/50 flex flex-col gap-1.5 text-left font-sans">
-                      <div className="flex justify-between items-center text-[10px] font-bold uppercase tracking-wider pl-1 pr-1">
-                        <span className={isInProgress ? "text-amber-600 animate-pulse" : "text-gray-500"}>
-                          {isInProgress ? "🔥 Match en cours" : "⚽ Match terminé"}
+                    <div className={`text-xs rounded-xl p-3 border shadow-xs flex flex-col gap-2 text-left font-sans ${
+                      matchPts !== null && matchPts > 0 
+                        ? 'bg-emerald-50/50 border-emerald-200 border-l-4 border-l-emerald-500' 
+                        : matchPts !== null && matchPts < 0 
+                          ? 'bg-rose-50/50 border-rose-200 border-l-4 border-l-rose-500' 
+                          : 'bg-slate-50 border-slate-300 border-l-4 border-l-slate-400'
+                    }`}>
+                      <div className="flex justify-between items-center">
+                        <span className={`text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 ${
+                          isInProgress ? 'text-amber-600 animate-pulse' : 'text-slate-600'
+                        }`}>
+                          {isInProgress ? (
+                            <>
+                              <span className="inline-block w-2 h-2 rounded-full bg-amber-500 animate-ping" />
+                              <span>🔥 Match en cours</span>
+                            </>
+                          ) : (
+                            <>
+                              <span className="inline-block w-2.5 h-2.5 rounded-full bg-slate-500 flex items-center justify-center text-[7px] text-white">✓</span>
+                              <span>⚽ Match terminé</span>
+                            </>
+                          )}
                         </span>
-                        <span className="text-gray-600">Score réel : <span className="font-mono text-indigo-950 font-black text-xs">{realHome} - {realAway}</span></span>
+                        <span className="text-[10px] text-slate-600 font-bold flex items-center gap-1">
+                          Score réel : 
+                          <span className="ml-1 bg-white px-2 py-0.5 rounded border border-slate-300 font-mono text-slate-900 font-black text-xs shadow-xs">
+                            {realHome} - {realAway}
+                          </span>
+                        </span>
                       </div>
-                      <div className="flex justify-between items-center border-t border-indigo-100/40 pt-1.5 mt-0.5">
-                        <span className="text-[10px] text-gray-500 font-semibold">Points remportés :</span>
-                        <span className={`px-2 py-0.5 rounded font-black text-[11px] font-mono ${
+                      <div className="flex justify-between items-center border-t border-slate-200/60 pt-2 mt-0.5">
+                        <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Points remportés :</span>
+                        <span className={`px-2.5 py-1 rounded-lg font-black text-[11px] font-mono shadow-xs border ${
                           matchPts !== null && matchPts > 0 
-                            ? 'bg-emerald-100 text-emerald-800' 
+                            ? 'bg-emerald-600 text-white border-emerald-700' 
                             : matchPts !== null && matchPts < 0 
-                              ? 'bg-rose-100 text-rose-800' 
-                              : 'bg-slate-200 text-slate-700'
+                              ? 'bg-rose-650 text-white border-rose-700' 
+                              : 'bg-slate-705 bg-slate-700 text-white border-slate-800'
                         }`}>
                           {matchPts !== null && matchPts > 0 ? `+${matchPts}` : matchPts} {matchPts !== null && Math.abs(matchPts) > 1 ? 'pts' : 'pt'}
                         </span>
@@ -2359,21 +2382,44 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
                                   if (realHome !== null && realAway !== null && realHome !== undefined && realAway !== undefined) {
                                     const matchPts = calculateMatchPoints(m, userPredMatch.homeScore, userPredMatch.awayScore, !!userPredMatch.bonus, challenge.pointRules);
                                     return (
-                                      <div className="text-xs font-semibold rounded-xl bg-indigo-50/40 p-2.5 border border-indigo-100/50 flex flex-col gap-1.5 text-left font-sans shadow-xs animate-fade-in">
-                                        <div className="flex justify-between items-center text-[10px] font-bold uppercase tracking-wider pl-1 pr-1">
-                                          <span className={isInProgress ? "text-amber-600 animate-pulse" : "text-gray-500"}>
-                                            {isInProgress ? "🔥 Match en cours" : "⚽ Match terminé"}
+                                      <div className={`text-xs rounded-xl p-3 border shadow-xs flex flex-col gap-2 text-left font-sans animate-fade-in ${
+                                        matchPts !== null && matchPts > 0 
+                                          ? 'bg-emerald-50/50 border-emerald-200 border-l-4 border-l-emerald-500' 
+                                          : matchPts !== null && matchPts < 0 
+                                            ? 'bg-rose-50/50 border-rose-200 border-l-4 border-l-rose-500' 
+                                            : 'bg-slate-50 border-slate-300 border-l-4 border-l-slate-400'
+                                      }`}>
+                                        <div className="flex justify-between items-center">
+                                          <span className={`text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 ${
+                                            isInProgress ? 'text-amber-600 animate-pulse' : 'text-slate-600'
+                                          }`}>
+                                            {isInProgress ? (
+                                              <>
+                                                <span className="inline-block w-2 h-2 rounded-full bg-amber-500 animate-ping" />
+                                                <span>🔥 Match en cours</span>
+                                              </>
+                                            ) : (
+                                              <>
+                                                <span className="inline-block w-2.5 h-2.5 rounded-full bg-slate-500 flex items-center justify-center text-[7px] text-white">✓</span>
+                                                <span>⚽ Match terminé</span>
+                                              </>
+                                            )}
                                           </span>
-                                          <span className="text-gray-600">Score réel : <span className="font-mono text-indigo-950 font-black text-xs">{realHome} - {realAway}</span></span>
+                                          <span className="text-[10px] text-slate-600 font-bold flex items-center gap-1">
+                                            Score réel : 
+                                            <span className="ml-1 bg-white px-2 py-0.5 rounded border border-slate-300 font-mono text-slate-900 font-black text-xs shadow-xs">
+                                              {realHome} - {realAway}
+                                            </span>
+                                          </span>
                                         </div>
-                                        <div className="flex justify-between items-center border-t border-indigo-100/40 pt-1.5 mt-0.5">
-                                          <span className="text-[10px] text-gray-500 font-semibold">Points remportés :</span>
-                                          <span className={`px-2 py-0.5 rounded font-black text-[11px] font-mono ${
+                                        <div className="flex justify-between items-center border-t border-slate-200/60 pt-2 mt-0.5">
+                                          <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Points remportés :</span>
+                                          <span className={`px-2.5 py-1 rounded-lg font-black text-[11px] font-mono shadow-xs border ${
                                             matchPts !== null && matchPts > 0 
-                                              ? 'bg-emerald-100 text-emerald-800' 
+                                              ? 'bg-emerald-600 text-white border-emerald-700' 
                                               : matchPts !== null && matchPts < 0 
-                                                ? 'bg-rose-100 text-rose-800' 
-                                                : 'bg-slate-200 text-slate-700'
+                                                ? 'bg-rose-650 text-white border-rose-700' 
+                                                : 'bg-slate-700 text-white border-slate-800'
                                           }`}>
                                             {matchPts !== null && matchPts > 0 ? `+${matchPts}` : matchPts} {matchPts !== null && Math.abs(matchPts) > 1 ? 'pts' : 'pt'}
                                           </span>
@@ -3025,21 +3071,44 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
                                             if (realHome !== null && realAway !== null && realHome !== undefined && realAway !== undefined) {
                                               const matchPts = calculateMatchPoints(m, userPredMatch.homeScore, userPredMatch.awayScore, !!userPredMatch.bonus, activeModal.challenge.pointRules);
                                               return (
-                                                <div className="text-xs font-semibold rounded-xl bg-indigo-50/40 p-2 border border-indigo-150 flex flex-col gap-1 text-left font-sans shadow-xs animate-fade-in mt-1.5">
-                                                  <div className="flex justify-between items-center text-[9px] font-bold uppercase tracking-wider pl-1 pr-1">
-                                                    <span className={isInProgress ? "text-amber-600 animate-pulse" : "text-gray-500"}>
-                                                      {isInProgress ? "🔥 En cours" : "⚽ Terminé"}
+                                                <div className={`text-xs rounded-xl p-2.5 border shadow-xs flex flex-col gap-1.5 text-left font-sans mt-2 animate-fade-in ${
+                                                  matchPts !== null && matchPts > 0 
+                                                    ? 'bg-emerald-50/50 border-emerald-200 border-l-4 border-l-emerald-500' 
+                                                    : matchPts !== null && matchPts < 0 
+                                                      ? 'bg-rose-50/50 border-rose-200 border-l-4 border-l-rose-500' 
+                                                      : 'bg-slate-50 border-slate-300 border-l-4 border-l-slate-400'
+                                                }`}>
+                                                  <div className="flex justify-between items-center">
+                                                    <span className={`text-[9px] font-bold uppercase tracking-wider flex items-center gap-1 ${
+                                                      isInProgress ? 'text-amber-600 animate-pulse' : 'text-slate-600'
+                                                    }`}>
+                                                      {isInProgress ? (
+                                                        <>
+                                                          <span className="inline-block w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping" />
+                                                          <span>🔥 En cours</span>
+                                                        </>
+                                                      ) : (
+                                                        <>
+                                                          <span className="inline-block w-2 h-2 rounded-full bg-slate-500 flex items-center justify-center text-[6px] text-white">✓</span>
+                                                          <span>⚽ Terminé</span>
+                                                        </>
+                                                      )}
                                                     </span>
-                                                    <span className="text-gray-600">Score réel : <span className="font-mono text-indigo-950 font-black text-xs">{realHome} - {realAway}</span></span>
+                                                    <span className="text-[9px] text-slate-600 font-bold flex items-center gap-0.5">
+                                                      Score réel : 
+                                                      <span className="ml-1 bg-white px-1.5 py-0.5 rounded border border-slate-300 font-mono text-slate-900 font-black text-xs shadow-xs">
+                                                        {realHome} - {realAway}
+                                                      </span>
+                                                    </span>
                                                   </div>
-                                                  <div className="flex justify-between items-center border-t border-indigo-100/40 pt-1 mt-1">
-                                                    <span className="text-[9px] text-gray-400 font-semibold font-sans">Points :</span>
-                                                    <span className={`px-1.5 py-0.5 rounded font-black text-[10px] font-mono ${
+                                                  <div className="flex justify-between items-center border-t border-slate-200/60 pt-1.5 mt-0.5">
+                                                    <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider">Points remportés :</span>
+                                                    <span className={`px-2 py-0.5 rounded-lg font-black text-[10px] font-mono shadow-xs border ${
                                                       matchPts !== null && matchPts > 0 
-                                                        ? 'bg-emerald-100 text-emerald-800' 
+                                                        ? 'bg-emerald-600 text-white border-emerald-700' 
                                                         : matchPts !== null && matchPts < 0 
-                                                          ? 'bg-rose-100 text-rose-800' 
-                                                          : 'bg-slate-200 text-slate-700'
+                                                          ? 'bg-rose-650 text-white border-rose-700' 
+                                                          : 'bg-slate-700 text-white border-slate-800'
                                                     }`}>
                                                       {matchPts !== null && matchPts > 0 ? `+${matchPts}` : matchPts} {matchPts !== null && Math.abs(matchPts) > 1 ? 'pts' : 'pt'}
                                                     </span>
