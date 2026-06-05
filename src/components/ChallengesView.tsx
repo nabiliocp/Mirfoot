@@ -137,9 +137,20 @@ const calculateMatchPoints = (
 interface ChallengesViewProps {
   preselectedMatch?: { match: Match; competitionId: number } | null;
   onClearPreselectedMatch?: () => void;
+  selectedChallenge?: Challenge | null;
+  setSelectedChallenge?: (challenge: Challenge | null) => void;
+  detailTab?: "matches" | "leaderboard" | "participants" | "results";
+  setDetailTab?: (tab: "matches" | "leaderboard" | "participants" | "results") => void;
 }
 
-export default function ChallengesView({ preselectedMatch, onClearPreselectedMatch }: ChallengesViewProps = {}) {
+export default function ChallengesView({ 
+  preselectedMatch, 
+  onClearPreselectedMatch,
+  selectedChallenge: propSelectedChallenge,
+  setSelectedChallenge: propSetSelectedChallenge,
+  detailTab: propDetailTab,
+  setDetailTab: propSetDetailTab
+}: ChallengesViewProps = {}) {
   const [activeModal, setActiveModal] = useState<{
     type: "rules" | "participants" | "confirm-delete" | "edit" | "details";
     challenge: Challenge;
@@ -172,8 +183,14 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
   const [upcomingMatchesByComp, setUpcomingMatchesByComp] = useState<Record<string, Match>>({});
 
   // Challenge details page state
-  const [selectedChallenge, setSelectedChallenge] = useState<Challenge | null>(null);
-  const [detailTab, setDetailTab] = useState<"matches" | "leaderboard" | "participants" | "results">("matches");
+  const [localSelectedChallenge, setLocalSelectedChallenge] = useState<Challenge | null>(null);
+  const selectedChallenge = propSelectedChallenge !== undefined ? propSelectedChallenge : localSelectedChallenge;
+  const setSelectedChallenge = propSetSelectedChallenge !== undefined ? propSetSelectedChallenge : setLocalSelectedChallenge;
+
+  const [localDetailTab, setLocalDetailTab] = useState<"matches" | "leaderboard" | "participants" | "results">("matches");
+  const detailTab = propDetailTab !== undefined ? propDetailTab : localDetailTab;
+  const setDetailTab = propSetDetailTab !== undefined ? propSetDetailTab : setLocalDetailTab;
+
   const [challengeBets, setChallengeBets] = useState<any[]>([]);
   const [participants, setParticipants] = useState<string[]>([]);
   const [allProfiles, setAllProfiles] = useState<any[]>([]);
@@ -184,6 +201,68 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
   const [isSimPanelCollapsed, setIsSimPanelCollapsed] = useState(false);
   const [simulatedScores, setSimulatedScores] = useState<Record<number, { home: number; away: number; status: string }>>({});
   const [userEmail, setUserEmail] = useState<string | null>(null);
+
+  // Cloud sync states - prevent updating state while loading initial metadata values from cloud
+  const [loadingCloudSim, setLoadingCloudSim] = useState(true);
+
+  // 1. Fetch simulation state on load from Supabase Auth metadata
+  useEffect(() => {
+    if (!supabase || !userId) {
+      setLoadingCloudSim(false);
+      return;
+    }
+    
+    async function loadSimulationFromCloud() {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user && user.user_metadata) {
+          const meta = user.user_metadata;
+          if (meta.isSimulationMode !== undefined) {
+            setIsSimulationMode(!!meta.isSimulationMode);
+          }
+          if (meta.isSimPanelCollapsed !== undefined) {
+            setIsSimPanelCollapsed(!!meta.isSimPanelCollapsed);
+          }
+          if (meta.simulatedScores) {
+            // Restore keys and types
+            const scores: Record<number, any> = {};
+            Object.keys(meta.simulatedScores).forEach(key => {
+              scores[Number(key)] = meta.simulatedScores[key];
+            });
+            setSimulatedScores(scores);
+          }
+        }
+      } catch (err) {
+        console.error("Error loading simulation metadata from cloud:", err);
+      } finally {
+        setLoadingCloudSim(false);
+      }
+    }
+    loadSimulationFromCloud();
+  }, [userId]);
+
+  // 2. Perform background autosave to Supabase Auth user metadata
+  useEffect(() => {
+    if (!supabase || !userId || loadingCloudSim) return;
+
+    // Wait 1s after user stops editing to perform any cloud update to prevent spamming APIs
+    const timer = setTimeout(async () => {
+      try {
+        await supabase.auth.updateUser({
+          data: {
+            isSimulationMode,
+            isSimPanelCollapsed,
+            simulatedScores
+          }
+        });
+        console.log("Simulation autosaved successfully to cloud.");
+      } catch (err) {
+        console.error("Autosave of simulation state to cloud failed:", err);
+      }
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, [isSimulationMode, isSimPanelCollapsed, simulatedScores, userId, loadingCloudSim]);
 
   // States for challenge editing
   const [editTitle, setEditTitle] = useState("");
@@ -2225,56 +2304,58 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
         )}
 
         {/* Tab selection */}
-        <div className="bg-white border border-gray-100 rounded-2xl p-1.5 shadow-xs flex flex-wrap gap-1">
-          <button
-            type="button"
-            onClick={() => setDetailTab("matches")}
-            className={`flex-1 min-w-[70px] text-center py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
-              detailTab === "matches"
-                ? "bg-emerald-600 text-white shadow-xs"
-                : "text-gray-500 hover:text-gray-800 hover:bg-gray-50"
-            }`}
-          >
-            <CheckSquare className="w-4 h-4" />
-            Pronostics
-          </button>
-          <button
-            type="button"
-            onClick={() => setDetailTab("leaderboard")}
-            className={`flex-1 min-w-[70px] text-center py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
-              detailTab === "leaderboard"
-                ? "bg-emerald-600 text-white shadow-xs"
-                : "text-gray-500 hover:text-gray-800 hover:bg-gray-50"
-            }`}
-          >
-            <Trophy className="w-4 h-4" />
-            Classement
-          </button>
-          <button
-            type="button"
-            onClick={() => setDetailTab("participants")}
-            className={`flex-1 min-w-[70px] text-center py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
-              detailTab === "participants"
-                ? "bg-emerald-600 text-white shadow-xs"
-                : "text-gray-500 hover:text-gray-800 hover:bg-gray-50"
-            }`}
-          >
-            <Users className="w-4 h-4" />
-            Participants
-          </button>
-          <button
-            type="button"
-            onClick={() => setDetailTab("results")}
-            className={`flex-1 min-w-[70px] text-center py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
-              detailTab === "results"
-                ? "bg-emerald-600 text-white shadow-xs"
-                : "text-gray-500 hover:text-gray-800 hover:bg-gray-50"
-            }`}
-          >
-            <Calendar className="w-4 h-4" />
-            Résultats Réels
-          </button>
-        </div>
+        {!propSelectedChallenge && (
+          <div className="bg-white border border-gray-100 rounded-2xl p-1.5 shadow-xs flex flex-wrap gap-1">
+            <button
+              type="button"
+              onClick={() => setDetailTab("matches")}
+              className={`flex-1 min-w-[70px] text-center py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
+                detailTab === "matches"
+                  ? "bg-emerald-600 text-white shadow-xs"
+                  : "text-gray-500 hover:text-gray-800 hover:bg-gray-50"
+              }`}
+            >
+              <CheckSquare className="w-4 h-4" />
+              Pronostics
+            </button>
+            <button
+              type="button"
+              onClick={() => setDetailTab("leaderboard")}
+              className={`flex-1 min-w-[70px] text-center py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
+                detailTab === "leaderboard"
+                  ? "bg-emerald-600 text-white shadow-xs"
+                  : "text-gray-500 hover:text-gray-800 hover:bg-gray-50"
+              }`}
+            >
+              <Trophy className="w-4 h-4" />
+              Classement
+            </button>
+            <button
+              type="button"
+              onClick={() => setDetailTab("participants")}
+              className={`flex-1 min-w-[70px] text-center py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
+                detailTab === "participants"
+                  ? "bg-emerald-600 text-white shadow-xs"
+                  : "text-gray-500 hover:text-gray-800 hover:bg-gray-50"
+              }`}
+            >
+              <Users className="w-4 h-4" />
+              Participants
+            </button>
+            <button
+              type="button"
+              onClick={() => setDetailTab("results")}
+              className={`flex-1 min-w-[70px] text-center py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
+                detailTab === "results"
+                  ? "bg-emerald-600 text-white shadow-xs"
+                  : "text-gray-500 hover:text-gray-800 hover:bg-gray-50"
+              }`}
+            >
+              <Calendar className="w-4 h-4" />
+              Résultats Réels
+            </button>
+          </div>
+        )}
 
         {/* Tab contents */}
         <div className="bg-white border border-gray-100 rounded-3xl p-5 shadow-sm min-h-[300px]">

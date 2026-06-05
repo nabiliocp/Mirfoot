@@ -17,11 +17,13 @@ import {
   UsersRound,
   LogOut,
   Swords,
+  CheckSquare,
+  Calendar,
 } from "lucide-react";
 import { supabase } from "./lib/supabase";
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 import type { Session } from "@supabase/supabase-js";
-import { Match } from "./types";
+import { Match, Challenge } from "./types";
 // @ts-ignore
 import logoImage from "./assets/images/pig_football_logo_1780308392869.png";
 
@@ -93,6 +95,13 @@ export default function App() {
     "matches" | "leaderboard" | "challenges"
   >("challenges");
   const [selectedMatchForProno, setSelectedMatchForProno] = useState<{ match: Match; competitionId: number } | null>(null);
+
+  const [selectedChallenge, setSelectedChallenge] = useState<Challenge | null>(null);
+  const [detailTab, setDetailTab] = useState<"matches" | "leaderboard" | "participants" | "results">("matches");
+
+  useEffect(() => {
+    setDetailTab("matches");
+  }, [selectedChallenge]);
 
   const [inviteId, setInviteId] = useState<string | null>(null);
   const [inviteChallengeName, setInviteChallengeName] = useState<string | null>(
@@ -463,36 +472,76 @@ export default function App() {
           <ChallengesView 
             preselectedMatch={selectedMatchForProno}
             onClearPreselectedMatch={() => setSelectedMatchForProno(null)}
+            selectedChallenge={selectedChallenge}
+            setSelectedChallenge={setSelectedChallenge}
+            detailTab={detailTab}
+            setDetailTab={setDetailTab}
           />
         )}
       </main>
 
       <nav className="bg-white border-t border-gray-200 sticky bottom-0 z-10 safe-area-pb">
-        <div className="max-w-md mx-auto flex justify-around">
-          <button
-            onClick={() => setActiveTab("matches")}
-            className={`flex-1 flex flex-col items-center py-3 transition-colors cursor-pointer ${activeTab === "matches" ? "text-emerald-600" : "text-gray-400 hover:text-gray-600"}`}
-          >
-            <CalendarCheck className="w-6 h-6 mb-1" />
-            <span className="text-xs font-semibold">Matchs</span>
-          </button>
+        {activeTab === "challenges" && selectedChallenge ? (
+          <div className="max-w-md mx-auto flex justify-around animate-in slide-in-from-bottom duration-200">
+            <button
+              onClick={() => setDetailTab("matches")}
+              className={`flex-1 flex flex-col items-center py-3 transition-colors cursor-pointer ${detailTab === "matches" ? "text-emerald-600 font-bold" : "text-gray-400 hover:text-gray-600"}`}
+            >
+              <CheckSquare className="w-6 h-6 mb-1" />
+              <span className="text-xs font-semibold">Pronostics</span>
+            </button>
 
-          <button
-            onClick={() => setActiveTab("challenges")}
-            className={`flex-1 flex flex-col items-center py-3 transition-colors cursor-pointer ${activeTab === "challenges" ? "text-emerald-600" : "text-gray-400 hover:text-gray-600"}`}
-          >
-            <Users className="w-6 h-6 mb-1" />
-            <span className="text-xs font-semibold">Défis</span>
-          </button>
+            <button
+              onClick={() => setDetailTab("leaderboard")}
+              className={`flex-1 flex flex-col items-center py-3 transition-colors cursor-pointer ${detailTab === "leaderboard" ? "text-emerald-600 font-bold" : "text-gray-400 hover:text-gray-600"}`}
+            >
+              <Trophy className="w-6 h-6 mb-1" />
+              <span className="text-xs font-semibold">Classement</span>
+            </button>
 
-          <button
-            onClick={() => setActiveTab("leaderboard")}
-            className={`flex-1 flex flex-col items-center py-3 transition-colors cursor-pointer ${activeTab === "leaderboard" ? "text-emerald-600" : "text-gray-400 hover:text-gray-600"}`}
-          >
-            <Trophy className="w-6 h-6 mb-1" />
-            <span className="text-xs font-semibold">Classement</span>
-          </button>
-        </div>
+            <button
+              onClick={() => setDetailTab("participants")}
+              className={`flex-1 flex flex-col items-center py-3 transition-colors cursor-pointer ${detailTab === "participants" ? "text-emerald-600 font-bold" : "text-gray-400 hover:text-gray-600"}`}
+            >
+              <Users className="w-6 h-6 mb-1" />
+              <span className="text-xs font-semibold">Participants</span>
+            </button>
+
+            <button
+              onClick={() => setDetailTab("results")}
+              className={`flex-1 flex flex-col items-center py-3 transition-colors cursor-pointer ${detailTab === "results" ? "text-emerald-600 font-bold" : "text-gray-400 hover:text-gray-600"}`}
+            >
+              <Calendar className="w-6 h-6 mb-1" />
+              <span className="text-xs font-semibold">Résultats</span>
+            </button>
+          </div>
+        ) : (
+          <div className="max-w-md mx-auto flex justify-around">
+            <button
+              onClick={() => setActiveTab("matches")}
+              className={`flex-1 flex flex-col items-center py-3 transition-colors cursor-pointer ${activeTab === "matches" ? "text-emerald-600" : "text-gray-400 hover:text-gray-600"}`}
+            >
+              <CalendarCheck className="w-6 h-6 mb-1" />
+              <span className="text-xs font-semibold">Matchs</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab("challenges")}
+              className={`flex-1 flex flex-col items-center py-3 transition-colors cursor-pointer ${activeTab === "challenges" ? "text-emerald-600" : "text-gray-400 hover:text-gray-600"}`}
+            >
+              <Users className="w-6 h-6 mb-1" />
+              <span className="text-xs font-semibold">Défis</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab("leaderboard")}
+              className={`flex-1 flex flex-col items-center py-3 transition-colors cursor-pointer ${activeTab === "leaderboard" ? "text-emerald-600" : "text-gray-400 hover:text-gray-600"}`}
+            >
+              <Trophy className="w-6 h-6 mb-1" />
+              <span className="text-xs font-semibold">Classement</span>
+            </button>
+          </div>
+        )}
         <div className="text-center pb-2 pt-1 border-t border-gray-100 bg-gray-50">
           <span className="text-[10px] text-gray-400">
             © 2026 Tous droits réservés NRINFRA
