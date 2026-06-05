@@ -1710,8 +1710,8 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
                           matchPts !== null && matchPts > 0 
                             ? 'bg-emerald-600 text-white border-emerald-700' 
                             : matchPts !== null && matchPts < 0 
-                              ? 'bg-rose-650 text-white border-rose-700' 
-                              : 'bg-slate-705 bg-slate-700 text-white border-slate-800'
+                              ? 'bg-rose-600 text-white border-rose-700' 
+                              : 'bg-slate-700 text-white border-slate-800'
                         }`}>
                           {matchPts !== null && matchPts > 0 ? `+${matchPts}` : matchPts} {matchPts !== null && Math.abs(matchPts) > 1 ? 'pts' : 'pt'}
                         </span>
@@ -2498,7 +2498,7 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
                                             matchPts !== null && matchPts > 0 
                                               ? 'bg-emerald-600 text-white border-emerald-700' 
                                               : matchPts !== null && matchPts < 0 
-                                                ? 'bg-rose-650 text-white border-rose-700' 
+                                                ? 'bg-rose-600 text-white border-rose-700' 
                                                 : 'bg-slate-700 text-white border-slate-800'
                                           }`}>
                                             {matchPts !== null && matchPts > 0 ? `+${matchPts}` : matchPts} {matchPts !== null && Math.abs(matchPts) > 1 ? 'pts' : 'pt'}
@@ -3187,7 +3187,7 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
                                                       matchPts !== null && matchPts > 0 
                                                         ? 'bg-emerald-600 text-white border-emerald-700' 
                                                         : matchPts !== null && matchPts < 0 
-                                                          ? 'bg-rose-650 text-white border-rose-700' 
+                                                          ? 'bg-rose-600 text-white border-rose-700' 
                                                           : 'bg-slate-700 text-white border-slate-800'
                                                     }`}>
                                                       {matchPts !== null && matchPts > 0 ? `+${matchPts}` : matchPts} {matchPts !== null && Math.abs(matchPts) > 1 ? 'pts' : 'pt'}
