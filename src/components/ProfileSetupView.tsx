@@ -81,7 +81,30 @@ export default function ProfileSetupView({
   const [avatarType, setAvatarType] = useState<"emoji" | "jersey">("emoji");
   const [avatarValue, setAvatarValue] = useState("👽");
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+
+  const handleGoogleLogin = async () => {
+    if (!supabase) return;
+    setGoogleLoading(true);
+    setErrorMsg("");
+
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: window.location.origin,
+          queryParams: {
+            prompt: 'select_account consent'
+          }
+        }
+      });
+      if (error) throw error;
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Une erreur est survenue lors de la connexion avec Google.');
+      setGoogleLoading(false);
+    }
+  };
 
   // Search/Dropdown overlay states
   const [isClubFocused, setIsClubFocused] = useState(false);
@@ -366,12 +389,66 @@ export default function ProfileSetupView({
 
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || googleLoading}
             className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-xl transition-all shadow-sm disabled:opacity-50 cursor-pointer text-xs sm:text-sm hover:scale-[1.01] active:scale-[0.99] mt-3"
           >
             {loading ? "Enregistrement..." : "Créer mon profil et Jouer !"}
           </button>
         </form>
+
+        {/* Separator */}
+        <div className="relative my-4">
+          <div className="absolute inset-0 flex items-center" aria-hidden="true">
+            <div className="w-full border-t border-gray-100"></div>
+          </div>
+          <div className="relative flex justify-center text-xs font-semibold uppercase">
+            <span className="bg-white px-2.5 text-gray-400 text-[10px] tracking-wider">Ou utiliser mon compte</span>
+          </div>
+        </div>
+
+        {/* Google option at the bottom */}
+        <button
+          type="button"
+          disabled={loading || googleLoading}
+          onClick={async () => {
+            if (!supabase) return;
+            setGoogleLoading(true);
+            setErrorMsg("");
+            try {
+              const { error } = await supabase.auth.signInWithOAuth({
+                provider: "google",
+                options: {
+                  redirectTo: window.location.origin,
+                  queryParams: {
+                    prompt: "select_account consent"
+                  }
+                }
+              });
+              if (error) throw error;
+            } catch (err: any) {
+              setErrorMsg(err.message || "Une erreur est survenue lors de la connexion google.");
+              setGoogleLoading(false);
+            }
+          }}
+          className="w-full flex items-center justify-center gap-2.5 bg-white border border-gray-200 font-bold py-2.5 px-4 rounded-xl transition-all shadow-xs cursor-pointer hover:border-gray-300 hover:bg-gray-50 active:scale-[0.98] text-gray-700 text-xs sm:text-sm disabled:opacity-50"
+        >
+          {googleLoading ? (
+            <svg className="animate-spin h-4 w-4 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+          ) : (
+            <svg className="h-4.5 w-4.5" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <g transform="matrix(1, 0, 0, 1, 0, 0)">
+                <path d="M21.35,11.1H12v2.7h5.38C16.88,16.51,14.77,18,12,18a6,6,0,1,1,6-6,5.83,5.83,0,0,1-.52,2.37l2.1,1.63A8.93,8.93,0,0,0,21,12,8.79,8.79,0,0,0,21.35,11.1Z" fill="#4285F4" />
+                <path d="M12,18a6,6,0,0,1-6-6,5.89,5.89,0,0,1,.13-1.25L4,9.12a9,9,0,0,0,8,11.58,8.8,8.8,0,0,0,5.92-2.15l-2.1-1.63A5.9,5.9,0,0,1,12,18Z" fill="#34A853" />
+                <path d="M6.13,10.75A5.89,5.89,0,0,1,6,12a5.83,5.83,0,0,1,.13-1.25L4,9.12a8.88,8.88,0,0,0,0,5.76l2.13-1.63A5.89,5.89,0,0,1,6.13,10.75Z" fill="#FBBC05" />
+                <path d="M12,6A5.86,5.86,0,0,1,16.14,7.65l2.05-2.05A8.85,8.85,0,0,0,12,3,9,9,0,0,0,4,9.12l2.13,1.63A5.89,5.89,0,0,1,12,6Z" fill="#EA4335" />
+              </g>
+            </svg>
+          )}
+          Continuer avec Google
+        </button>
       </div>
     </div>
   );
