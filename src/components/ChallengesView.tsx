@@ -143,6 +143,7 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
   // States for interactive match calculations & Bonus X2 simulation
   const [isSimulationMode, setIsSimulationMode] = useState(false);
   const [simulatedScores, setSimulatedScores] = useState<Record<number, { home: number; away: number; status: string }>>({});
+  const [userEmail, setUserEmail] = useState<string | null>(null);
 
   // States for challenge editing
   const [editTitle, setEditTitle] = useState("");
@@ -555,6 +556,7 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
     if (!user) return;
 
     setUserId(user.id);
+    setUserEmail(user.email || null);
 
     let challengesRes: any[] = [];
     try {
@@ -1636,6 +1638,15 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
     const shareText = `Rejoins mon défi de pronostics sur Mirfoot : "${challenge.title}"\nParticipe ici : ${inviteUrl}`;
     const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareText)}`;
 
+    // Authorized check and limited matches definition for test simulation
+    const isAuthorizedForSimulation = userEmail === "rouijel.nabil@gmail.com" || userEmail === "rouijel.nabil.cp@gmail.com";
+    const simGroupMatches = modalMatches.filter(m => !translateStage(m.stage, m.group, m.matchday).isKnockout);
+    const simKnockoutMatches = modalMatches.filter(m => translateStage(m.stage, m.group, m.matchday).isKnockout);
+    const limitSimMatches = [
+      ...simGroupMatches.slice(0, 5),
+      ...simKnockoutMatches.slice(0, 5)
+    ];
+
     // Prepare leaderboard data
     const activeMatches = modalMatches.map(m => {
       if (isSimulationMode && simulatedScores[m.id]) {
@@ -1868,146 +1879,148 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
         </div>
 
         {/* INTERACTIVE SCORE SIMULATION/TESTING WORKSPACE */}
-        <div className="bg-slate-50 border border-slate-200/60 rounded-3xl p-5 shadow-xs transition-all duration-300">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <div className="flex items-start gap-2.5">
-              <div className="w-9 h-9 bg-indigo-50 rounded-xl flex items-center justify-center shrink-0 border border-indigo-100">
-                <Trophy className="w-5 h-5 text-indigo-600 animate-pulse" />
+        {isAuthorizedForSimulation && (
+          <div className="bg-slate-50 border border-slate-200/60 rounded-3xl p-5 shadow-xs transition-all duration-300">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <div className="flex items-start gap-2.5">
+                <div className="w-9 h-9 bg-indigo-50 rounded-xl flex items-center justify-center shrink-0 border border-indigo-100">
+                  <Trophy className="w-5 h-5 text-indigo-600 animate-pulse" />
+                </div>
+                <div className="min-w-0">
+                  <h4 className="font-bold text-slate-800 text-sm flex items-center gap-1.5 flex-wrap">
+                    Simulateur de Scores (Mode Test)
+                    {isSimulationMode && (
+                      <span className="bg-indigo-600 text-[9px] px-2 py-0.5 rounded-full text-white uppercase font-black tracking-widest animate-pulse">ACTIF</span>
+                    )}
+                  </h4>
+                  <p className="text-slate-500 text-xs mt-0.5">
+                    Idéal pour tester le calcul des points (Bon Vainqueur, Score Exact) et le fonctionnement du **Bonus X2**.
+                  </p>
+                </div>
               </div>
-              <div className="min-w-0">
-                <h4 className="font-bold text-slate-800 text-sm flex items-center gap-1.5 flex-wrap">
-                  Simulateur de Scores (Mode Test)
-                  {isSimulationMode && (
-                    <span className="bg-indigo-600 text-[9px] px-2 py-0.5 rounded-full text-white uppercase font-black tracking-widest animate-pulse">ACTIF</span>
-                  )}
-                </h4>
-                <p className="text-slate-500 text-xs mt-0.5">
-                  Idéal pour tester le calcul des points (Bon Vainqueur, Score Exact) et le fonctionnement du **Bonus X2**.
-                </p>
-              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  if (isSimulationMode) {
+                    setSimulatedScores({});
+                  } else {
+                    // Initialize simulated scores with the current match scores if they exist (limit to 5 groups and 5 knockouts)
+                    const initialSim: Record<number, { home: number; away: number; status: string }> = {};
+                    limitSimMatches.forEach(m => {
+                      initialSim[m.id] = {
+                        home: m.score.fullTime.home !== null ? m.score.fullTime.home : 0,
+                        away: m.score.fullTime.away !== null ? m.score.fullTime.away : 0,
+                        status: m.status === "FINISHED" ? "FINISHED" : "FINISHED" // Default simulated matches as finished so calculations trigger immediately!
+                      };
+                    });
+                    setSimulatedScores(initialSim);
+                  }
+                  setIsSimulationMode(!isSimulationMode);
+                }}
+                className={`text-xs font-bold px-4 py-2.5 rounded-xl transition duration-200 shadow-xs cursor-pointer select-none border whitespace-nowrap self-stretch sm:self-auto text-center ${
+                  isSimulationMode 
+                    ? "bg-rose-50 border-rose-200 text-rose-700 hover:bg-rose-100/90" 
+                    : "bg-indigo-600 border-indigo-700 text-white hover:bg-indigo-700"
+                }`}
+              >
+                {isSimulationMode ? "❌ Désactiver le Test" : "⚡ Activer le Test (Matchs Factices)"}
+              </button>
             </div>
-            <button
-              type="button"
-              onClick={() => {
-                if (isSimulationMode) {
-                  setSimulatedScores({});
-                } else {
-                  // Initialize simulated scores with the current match scores if they exist
-                  const initialSim: Record<number, { home: number; away: number; status: string }> = {};
-                  activeMatches.forEach(m => {
-                    initialSim[m.id] = {
-                      home: m.score.fullTime.home !== null ? m.score.fullTime.home : 0,
-                      away: m.score.fullTime.away !== null ? m.score.fullTime.away : 0,
-                      status: m.status === "FINISHED" ? "FINISHED" : "FINISHED" // Default simulated matches as finished so calculations trigger immediately!
-                    };
-                  });
-                  setSimulatedScores(initialSim);
-                }
-                setIsSimulationMode(!isSimulationMode);
-              }}
-              className={`text-xs font-bold px-4 py-2.5 rounded-xl transition duration-200 shadow-xs cursor-pointer select-none border whitespace-nowrap self-stretch sm:self-auto text-center ${
-                isSimulationMode 
-                  ? "bg-rose-50 border-rose-200 text-rose-700 hover:bg-rose-100/90" 
-                  : "bg-indigo-600 border-indigo-700 text-white hover:bg-indigo-700"
-              }`}
-            >
-              {isSimulationMode ? "❌ Désactiver le Test" : "⚡ Activer le Test (Matchs Factices)"}
-            </button>
+
+            {isSimulationMode && (
+              <div className="mt-4 pt-4 border-t border-slate-200/60 space-y-4 animate-in slide-in-from-top-2 duration-200">
+                <div className="bg-amber-50/60 border border-amber-200/50 p-3 rounded-2xl text-[11px] text-amber-800 font-semibold space-y-1">
+                  <p>💡 **Instructions de test :** Modifiez les scores fictifs des matchs ci-dessous (limités à un échantillon de 5 matchs de groupe et 5 matchs à élimination directe) et marquez-les comme <span className="bg-amber-100 text-amber-900 px-1 rounded font-bold">TERMINÉ</span> pour appliquer les points.</p>
+                  <p>Le classement ci-dessus (onglet Classement) se recalculera instantanément selon le barème de ce défi, en appliquant les règles de bonus X2 de chaque joueur.</p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {limitSimMatches.map(m => {
+                    const sim = simulatedScores[m.id] || { home: 0, away: 0, status: "FINISHED" };
+                    return (
+                      <div key={m.id} className="bg-white border border-slate-200/40 p-4 rounded-2xl shadow-xs space-y-3">
+                        <div className="flex justify-between items-center text-[10px] uppercase font-black tracking-wider text-slate-400">
+                          <span className="truncate max-w-[60%]">{m.stage ? translateStage(m.stage, m.group, m.matchday).name : "Match"}</span>
+                          <div className="flex items-center gap-1.5">
+                            <span>Statut :</span>
+                            <select 
+                              value={sim.status} 
+                              onChange={(e) => {
+                                setSimulatedScores(prev => ({
+                                  ...prev,
+                                  [m.id]: {
+                                    ...sim,
+                                    status: e.target.value
+                                  }
+                                }));
+                              }}
+                              className="bg-slate-100 text-slate-700 font-bold border border-slate-200/40 px-1.5 py-0.5 rounded text-[10px] focus:outline-hidden cursor-pointer"
+                            >
+                              <option value="FINISHED">TERMINÉ</option>
+                              <option value="SCHEDULED">PROGRAMMÉ</option>
+                            </select>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-between gap-1">
+                          <div className="flex items-center gap-2 min-w-0 flex-1 justify-end">
+                            <span className="font-bold text-xs text-slate-700 truncate">{m.homeTeam.shortName || m.homeTeam.name}</span>
+                            <div className="w-5 h-5 flex items-center justify-center bg-white border border-slate-100 rounded-full p-0.5 shrink-0">
+                              <img src={getFlagUrl(m.homeTeam.name, m.homeTeam.crest)} alt="" className="max-w-full max-h-full object-contain" onError={(e) => { e.currentTarget.src = "https://flagcdn.com/w80/un.png"; }} />
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-1 px-2.5 shrink-0">
+                            <input 
+                              type="number" 
+                              min="0"
+                              value={sim.home}
+                              onChange={(e) => {
+                                const val = Math.max(0, parseInt(e.target.value) || 0);
+                                setSimulatedScores(prev => ({
+                                  ...prev,
+                                  [m.id]: {
+                                    ...sim,
+                                    home: val
+                                  }
+                                }));
+                              }}
+                              className="w-10 h-8 text-center bg-slate-50 border border-slate-200 rounded-lg text-xs font-black focus:outline-hidden focus:ring-1 focus:ring-indigo-500 font-mono"
+                            />
+                            <span className="text-slate-400 font-extrabold text-xs shrink-0 font-mono">-</span>
+                            <input 
+                              type="number" 
+                              min="0"
+                              value={sim.away}
+                              onChange={(e) => {
+                                const val = Math.max(0, parseInt(e.target.value) || 0);
+                                setSimulatedScores(prev => ({
+                                  ...prev,
+                                  [m.id]: {
+                                    ...sim,
+                                    away: val
+                                  }
+                                }));
+                              }}
+                              className="w-10 h-8 text-center bg-slate-50 border border-slate-200 rounded-lg text-xs font-black focus:outline-hidden focus:ring-1 focus:ring-indigo-500 font-mono"
+                            />
+                          </div>
+
+                          <div className="flex items-center gap-2 min-w-0 flex-1">
+                            <div className="w-5 h-5 flex items-center justify-center bg-white border border-slate-100 rounded-full p-0.5 shrink-0">
+                              <img src={getFlagUrl(m.awayTeam.name, m.awayTeam.crest)} alt="" className="max-w-full max-h-full object-contain" onError={(e) => { e.currentTarget.src = "https://flagcdn.com/w80/un.png"; }} />
+                            </div>
+                            <span className="font-bold text-xs text-slate-700 truncate">{m.awayTeam.shortName || m.awayTeam.name}</span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
-
-          {isSimulationMode && (
-            <div className="mt-4 pt-4 border-t border-slate-200/60 space-y-4 animate-in slide-in-from-top-2 duration-200">
-              <div className="bg-amber-50/60 border border-amber-200/50 p-3 rounded-2xl text-[11px] text-amber-800 font-semibold space-y-1">
-                <p>💡 **Instructions de test :** Modifiez les scores fictifs des matchs ci-dessous et marquez-les comme <span className="bg-amber-100 text-amber-900 px-1 rounded font-bold">TERMINÉ</span> pour appliquer les points.</p>
-                <p>Le classement ci-dessus (onglet Classement) se recalculera instantanément selon le barème de ce défi, en appliquant les règles de bonus X2 de chaque joueur.</p>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {modalMatches.map(m => {
-                  const sim = simulatedScores[m.id] || { home: 0, away: 0, status: "FINISHED" };
-                  return (
-                    <div key={m.id} className="bg-white border border-slate-200/40 p-4 rounded-2xl shadow-xs space-y-3">
-                      <div className="flex justify-between items-center text-[10px] uppercase font-black tracking-wider text-slate-400">
-                        <span className="truncate max-w-[60%]">{m.stage ? translateStage(m.stage, m.group, m.matchday).name : "Match"}</span>
-                        <div className="flex items-center gap-1.5">
-                          <span>Statut :</span>
-                          <select 
-                            value={sim.status} 
-                            onChange={(e) => {
-                              setSimulatedScores(prev => ({
-                                ...prev,
-                                [m.id]: {
-                                  ...sim,
-                                  status: e.target.value
-                                }
-                              }));
-                            }}
-                            className="bg-slate-100 text-slate-700 font-bold border border-slate-200/40 px-1.5 py-0.5 rounded text-[10px] focus:outline-hidden cursor-pointer"
-                          >
-                            <option value="FINISHED font-bold">TERMINÉ</option>
-                            <option value="SCHEDULED font-bold">PROGRAMMÉ</option>
-                          </select>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center justify-between gap-1">
-                        <div className="flex items-center gap-2 min-w-0 flex-1 justify-end">
-                          <span className="font-bold text-xs text-slate-700 truncate">{m.homeTeam.shortName || m.homeTeam.name}</span>
-                          <div className="w-5 h-5 flex items-center justify-center bg-white border border-slate-100 rounded-full p-0.5 shrink-0">
-                            <img src={getFlagUrl(m.homeTeam.name, m.homeTeam.crest)} alt="" className="max-w-full max-h-full object-contain" onError={(e) => { e.currentTarget.src = "https://flagcdn.com/w80/un.png"; }} />
-                          </div>
-                        </div>
-
-                        <div className="flex items-center gap-1 px-2.5 shrink-0">
-                          <input 
-                            type="number" 
-                            min="0"
-                            value={sim.home}
-                            onChange={(e) => {
-                              const val = Math.max(0, parseInt(e.target.value) || 0);
-                              setSimulatedScores(prev => ({
-                                ...prev,
-                                [m.id]: {
-                                  ...sim,
-                                  home: val
-                                }
-                              }));
-                            }}
-                            className="w-10 h-8 text-center bg-slate-50 border border-slate-200 rounded-lg text-xs font-black focus:outline-hidden focus:ring-1 focus:ring-indigo-500 font-mono"
-                          />
-                          <span className="text-slate-400 font-extrabold text-xs shrink-0 font-mono">-</span>
-                          <input 
-                            type="number" 
-                            min="0"
-                            value={sim.away}
-                            onChange={(e) => {
-                              const val = Math.max(0, parseInt(e.target.value) || 0);
-                              setSimulatedScores(prev => ({
-                                ...prev,
-                                [m.id]: {
-                                  ...sim,
-                                  away: val
-                                }
-                              }));
-                            }}
-                            className="w-10 h-8 text-center bg-slate-50 border border-slate-200 rounded-lg text-xs font-black focus:outline-hidden focus:ring-1 focus:ring-indigo-500 font-mono"
-                          />
-                        </div>
-
-                        <div className="flex items-center gap-2 min-w-0 flex-1">
-                          <div className="w-5 h-5 flex items-center justify-center bg-white border border-slate-100 rounded-full p-0.5 shrink-0">
-                            <img src={getFlagUrl(m.awayTeam.name, m.awayTeam.crest)} alt="" className="max-w-full max-h-full object-contain" onError={(e) => { e.currentTarget.src = "https://flagcdn.com/w80/un.png"; }} />
-                          </div>
-                          <span className="font-bold text-xs text-slate-700 truncate">{m.awayTeam.shortName || m.awayTeam.name}</span>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-        </div>
+        )}
 
         {/* Tab selection */}
         <div className="bg-white border border-gray-100 rounded-2xl p-1.5 shadow-xs flex flex-wrap gap-1">
