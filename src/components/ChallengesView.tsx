@@ -181,6 +181,7 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
 
   // States for interactive match calculations & Bonus X2 simulation
   const [isSimulationMode, setIsSimulationMode] = useState(false);
+  const [isSimPanelCollapsed, setIsSimPanelCollapsed] = useState(false);
   const [simulatedScores, setSimulatedScores] = useState<Record<number, { home: number; away: number; status: string }>>({});
   const [userEmail, setUserEmail] = useState<string | null>(null);
 
@@ -2022,20 +2023,24 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
                 type="button"
                 onClick={() => {
                   if (isSimulationMode) {
-                    setSimulatedScores({});
+                    setIsSimulationMode(false);
+                    setIsSimPanelCollapsed(false);
                   } else {
                     // Initialize simulated scores with the current match scores if they exist (limit to 5 groups and 5 knockouts)
-                    const initialSim: Record<number, { home: number | string; away: number | string; status: string }> = {};
-                    limitSimMatches.forEach(m => {
-                      initialSim[m.id] = {
-                        home: m.score.fullTime.home !== null ? m.score.fullTime.home : "",
-                        away: m.score.fullTime.away !== null ? m.score.fullTime.away : "",
-                        status: m.status === "FINISHED" ? "FINISHED" : "FINISHED" // Default simulated matches as finished so calculations trigger immediately!
-                      };
-                    });
-                    setSimulatedScores(initialSim);
+                    if (Object.keys(simulatedScores).length === 0) {
+                      const initialSim: Record<number, { home: number | string; away: number | string; status: string }> = {};
+                      limitSimMatches.forEach(m => {
+                        initialSim[m.id] = {
+                          home: m.score.fullTime.home !== null ? m.score.fullTime.home : "",
+                          away: m.score.fullTime.away !== null ? m.score.fullTime.away : "",
+                          status: m.status === "FINISHED" ? "FINISHED" : "FINISHED" // Default simulated matches as finished so calculations trigger immediately!
+                        };
+                      });
+                      setSimulatedScores(initialSim);
+                    }
+                    setIsSimulationMode(true);
+                    setIsSimPanelCollapsed(false);
                   }
-                  setIsSimulationMode(!isSimulationMode);
                 }}
                 className={`text-xs font-bold px-4 py-2.5 rounded-xl transition duration-200 shadow-xs cursor-pointer select-none border whitespace-nowrap self-stretch sm:self-auto text-center ${
                   isSimulationMode 
@@ -2047,7 +2052,49 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
               </button>
             </div>
 
-            {isSimulationMode && (
+            {isSimulationMode && isSimPanelCollapsed && (
+              <div className="mt-4 pt-4 border-t border-slate-200/60 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-indigo-50/50 p-4 rounded-2xl border border-indigo-100 animate-in fade-in duration-200">
+                <div className="flex items-start gap-2.5">
+                  <div className="w-2 h-2 rounded-full bg-indigo-600 animate-pulse mt-1.5 shrink-0" />
+                  <div>
+                    <span className="text-xs font-bold text-indigo-950 block">
+                      Scores fictifs actifs appliqués au classement
+                    </span>
+                    <p className="text-[10px] text-slate-500 font-semibold mt-0.5">
+                      La liste des matchs de test est masquée pour libérer de l'espace sur l'écran. Vos scores restent actifs !
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 w-full sm:w-auto shrink-0 mt-2 sm:mt-0">
+                  <button
+                    type="button"
+                    onClick={() => setIsSimPanelCollapsed(false)}
+                    className="flex-1 sm:flex-initial text-center text-[11px] font-extrabold text-indigo-750 bg-white hover:bg-indigo-50 px-3.5 py-2 rounded-xl border border-indigo-200 flex items-center justify-center gap-1 cursor-pointer transition active:scale-95 shadow-xs"
+                  >
+                    <span>✏️ Modifier / Réafficher</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSimulatedScores({});
+                      setIsSimulationMode(false);
+                      setIsSimPanelCollapsed(false);
+                      setCustomAlert({
+                        type: 'info',
+                        title: 'Test Désactivé',
+                        message: 'Le mode test a été désactivé et les scores réels ont été restaurés.'
+                      });
+                    }}
+                    className="text-center text-[11px] font-extrabold text-rose-700 bg-rose-50 hover:bg-rose-100 px-3 py-2 rounded-xl border border-rose-200 flex items-center justify-center gap-1 cursor-pointer transition active:scale-95 shadow-xs"
+                    title="Réinitialiser et désactiver"
+                  >
+                    <span>Désactiver</span>
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {isSimulationMode && !isSimPanelCollapsed && (
               <div className="mt-4 pt-4 border-t border-slate-200/60 space-y-4 animate-in slide-in-from-top-2 duration-200">
                 <div className="bg-amber-50/60 border border-amber-200/50 p-3 rounded-2xl text-[11px] text-amber-800 font-semibold space-y-1">
                   <p>💡 **Instructions de test :** Modifiez les scores fictifs des matchs ci-dessous (limités à un échantillon de 5 matchs de groupe et 5 matchs à élimination directe) et marquez-les comme <span className="bg-amber-100 text-amber-900 px-1 rounded font-bold">TERMINÉ</span> pour appliquer les points.</p>
@@ -2138,6 +2185,39 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
                       </div>
                     );
                   })}
+                </div>
+
+                <div className="flex flex-col sm:flex-row justify-end gap-2.5 pt-4 border-t border-slate-200/40">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSimulatedScores({});
+                      setIsSimulationMode(false);
+                      setIsSimPanelCollapsed(false);
+                      setCustomAlert({
+                        type: 'info',
+                        title: 'Test Désactivé',
+                        message: 'Le mode test a été désactivé et les scores réels ont été restaurés.'
+                      });
+                    }}
+                    className="w-full sm:w-auto px-4 py-2.5 text-xs text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-xl transition cursor-pointer font-bold text-center"
+                  >
+                    Réinitialiser & Désactiver
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsSimPanelCollapsed(true);
+                      setCustomAlert({
+                        type: 'success',
+                        title: 'Simulation Appliquée !',
+                        message: 'Vos scores simulés ont été validés et appliqués. La liste des matchs a été réduite pour préserver l\'espace de votre écran, mais les calculs restent actifs ! Cliquez sur l\'onglet "Classement" pour voir l\'effet sur vos points de défi.'
+                      });
+                    }}
+                    className="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-5 py-2.5 rounded-xl transition duration-200 shadow-md active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer border border-indigo-700"
+                  >
+                    <span>✅ Valider & Réduire la liste</span>
+                  </button>
                 </div>
               </div>
             )}
