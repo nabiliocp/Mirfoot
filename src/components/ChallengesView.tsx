@@ -185,7 +185,7 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
             Bonus
           </h4>
           <div className="pl-4 border-l-2 border-amber-100 text-amber-800 text-xs font-medium space-y-1">
-            <p><strong>Bonus X2 :</strong> Si juste, les points sont doublés. Sinon, -4 pts.</p>
+            <p><strong>Bonus X2 :</strong> Si activé aussi dans le barème, les points sont doublés si correct. Sinon, -4 pts.</p>
           </div>
         </div>
 
@@ -2035,7 +2035,7 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
                                  Jouer Bonus X2
                               </button>
                             )}
-                            <p className="text-[9px] text-gray-400 mt-1">Si juste : Score x2 | Si faux : -4 pts</p>
+                            <p className="text-[9px] text-gray-400 mt-1">Si activé aussi dans le barème : Score x2 si correct | Si faux : -4 pts</p>
                           </div>
                         )}
 
