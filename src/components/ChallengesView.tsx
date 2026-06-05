@@ -185,7 +185,7 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
             Bonus
           </h4>
           <div className="pl-4 border-l-2 border-amber-100 text-amber-800 text-xs font-medium space-y-1">
-            <p><strong>Bonus X2 :</strong> Si activé, les points gagnés sont doublés, si 0 point -4 pts sur le score de défi de l'utilisateur.</p>
+            <p><strong>Bonus X2 :</strong> Si activé, les points gagnés sont doublés, si 0 point -4 pts sur le score du défi en cours.</p>
           </div>
         </div>
 
@@ -2035,7 +2035,7 @@ export default function ChallengesView({ preselectedMatch, onClearPreselectedMat
                                  Jouer Bonus X2
                               </button>
                             )}
-                            <p className="text-[9px] text-gray-400 mt-1">Si activé : les points gagnés sont doublés | Si 0 point : -4 pts sur votre score de défi</p>
+                            <p className="text-[9px] text-gray-400 mt-1">Si activé : les points gagnés sont doublés | Si 0 point : -4 pts sur le score du défi en cours</p>
                           </div>
                         )}
 
