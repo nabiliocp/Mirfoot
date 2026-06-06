@@ -99,8 +99,31 @@ export default function MatchesView({ onPronoClick, userProfile }: MatchesViewPr
 
   // Compute grouped matches
   const liveMatches = otherMatches.filter(m => ['LIVE', 'IN_PLAY', 'PAUSED'].includes(m.status));
-  const upcomingMatches = otherMatches.filter(m => ['TIMED', 'SCHEDULED'].includes(m.status));
+  const upcomingMatches = otherMatches.filter(m => ['TIMED', 'SCHEDULED', 'POSTPONED'].includes(m.status));
   const finishedMatches = otherMatches.filter(m => ['FINISHED'].includes(m.status));
+
+  // Compute Today's Matches across all matches in current view
+  const todayMatches = matches.filter(m => {
+    const matchDate = new Date(m.utcDate).toDateString();
+    const today = new Date().toDateString();
+    return matchDate === today;
+  });
+
+  // Find next match for favorites more explicitly
+  const getNextMatchForTeam = (teamName?: string) => {
+    if (!teamName) return null;
+    const name = teamName.toLowerCase().trim();
+    return matches
+      .filter(m => 
+        (m.homeTeam.name?.toLowerCase().includes(name) || m.homeTeam.shortName?.toLowerCase().includes(name)) ||
+        (m.awayTeam.name?.toLowerCase().includes(name) || m.awayTeam.shortName?.toLowerCase().includes(name))
+      )
+      .filter(m => ['TIMED', 'SCHEDULED', 'LIVE', 'IN_PLAY'].includes(m.status))
+      .sort((a, b) => new Date(a.utcDate).getTime() - new Date(b.utcDate).getTime())[0];
+  };
+
+  const nextClubMatch = getNextMatchForTeam(userProfile?.favorite_club);
+  const nextNationalMatch = getNextMatchForTeam(userProfile?.favorite_national);
 
   if (loading && !competitions.length && !error) {
     return <div className="flex justify-center p-12 text-emerald-600"><Clock className="animate-spin w-8 h-8" /></div>;
@@ -211,23 +234,59 @@ export default function MatchesView({ onPronoClick, userProfile }: MatchesViewPr
 
   return (
     <div className="space-y-6 animate-in fade-in zoom-in-95 duration-300">
-      {/* Heart Teams Info Zone */}
+      {/* Heart Teams Info Zone - Refined Design */}
       {userProfile && (userProfile.favorite_club || userProfile.favorite_national) && (
-        <div className="bg-gradient-to-br from-rose-500 to-rose-600 rounded-2xl p-4 shadow-lg shadow-rose-900/20 text-white relative overflow-hidden">
-          <div className="absolute -right-6 -bottom-6 opacity-10 rotate-12">
-            <div className="bg-white w-24 h-24 rounded-full flex items-center justify-center text-rose-500 text-4xl">❤️</div>
-          </div>
-          <h3 className="text-xs font-black uppercase tracking-widest mb-3 flex items-center gap-2 opacity-90">
-            ⭐ Mes Favoris de Cœur
-          </h3>
-          <div className="grid grid-cols-2 gap-3 relative z-10">
-            <div className="bg-white/15 backdrop-blur-md rounded-xl p-3 border border-white/20">
-              <span className="block text-[10px] font-bold text-rose-100 uppercase mb-1">Club</span>
-              <span className="block font-black text-sm truncate">{userProfile.favorite_club || "Non défini"}</span>
+        <div className="bg-white border-2 border-slate-100 rounded-2xl p-5 shadow-sm relative overflow-hidden">
+          <div className="flex items-center justify-between mb-4 pb-3 border-b border-gray-50">
+            <h3 className="text-xs font-black uppercase tracking-widest flex items-center gap-2 text-slate-800">
+              ⭐ Mes Équipes Favoris
+            </h3>
+            <div className="bg-emerald-50 text-emerald-600 p-1.5 rounded-lg">
+              <AlertCircle className="w-4 h-4" />
             </div>
-            <div className="bg-white/15 backdrop-blur-md rounded-xl p-3 border border-white/20">
-              <span className="block text-[10px] font-bold text-rose-100 uppercase mb-1">Équipe Nationale</span>
-              <span className="block font-black text-sm truncate">{userProfile.favorite_national || "Non défini"}</span>
+          </div>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 relative z-10">
+            {/* Club Card */}
+            <div className="bg-gray-50/50 rounded-xl p-4 border border-gray-100">
+              <span className="block text-[10px] font-bold text-gray-400 uppercase mb-2 tracking-tight">Club Favori</span>
+              <span className="block font-black text-slate-900 truncate mb-2">{userProfile.favorite_club || "Non défini"}</span>
+              {nextClubMatch ? (
+                <div className="flex flex-col gap-1">
+                  <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full self-start">
+                    Prochain: {new Date(nextClubMatch.utcDate).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
+                  </span>
+                  <span className="text-[9px] text-gray-500 font-bold uppercase tracking-tighter">
+                    {competitions.find(c => c.id === selectedCompId)?.name || "Compétition"}
+                  </span>
+                  <span className="text-[9px] text-gray-400 truncate font-semibold italic">
+                    vs {nextClubMatch.homeTeam.name?.toLowerCase().includes(userProfile.favorite_club?.toLowerCase() || "") ? nextClubMatch.awayTeam.shortName : nextClubMatch.homeTeam.shortName}
+                  </span>
+                </div>
+              ) : (
+                <span className="text-[9px] text-gray-400 font-medium italic">Aucun match détecté</span>
+              )}
+            </div>
+
+            {/* National Card */}
+            <div className="bg-gray-50/50 rounded-xl p-4 border border-gray-100">
+              <span className="block text-[10px] font-bold text-gray-400 uppercase mb-2 tracking-tight">Équipe Nationale</span>
+              <span className="block font-black text-slate-900 truncate mb-2">{userProfile.favorite_national || "Non défini"}</span>
+              {nextNationalMatch ? (
+                <div className="flex flex-col gap-1">
+                  <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full self-start">
+                    Prochain: {new Date(nextNationalMatch.utcDate).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
+                  </span>
+                  <span className="text-[9px] text-gray-500 font-bold uppercase tracking-tighter">
+                    {competitions.find(c => c.id === selectedCompId)?.name || "Compétition"}
+                  </span>
+                  <span className="text-[9px] text-gray-400 truncate font-semibold italic">
+                    vs {nextNationalMatch.homeTeam.name?.toLowerCase().includes(userProfile.favorite_national?.toLowerCase() || "") ? nextNationalMatch.awayTeam.shortName : nextNationalMatch.homeTeam.shortName}
+                  </span>
+                </div>
+              ) : (
+                <span className="text-[9px] text-gray-400 font-medium italic">Aucun match détecté</span>
+              )}
             </div>
           </div>
         </div>
@@ -252,6 +311,19 @@ export default function MatchesView({ onPronoClick, userProfile }: MatchesViewPr
         {!loading && matches.length === 0 && (
           <div className="text-center p-8 bg-white rounded-2xl shadow-sm text-gray-500 border border-gray-100">
             Aucun match programmé trouvé pour le moment.
+          </div>
+        )}
+
+        {/* Matches of Today Section */}
+        {!loading && todayMatches.length > 0 && (
+          <div className="space-y-4">
+            <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest pl-1 border-l-4 border-slate-900 flex items-center gap-2">
+              <span>⚡ Matchs du Jour</span>
+              <div className="h-[1px] bg-slate-100 flex-1"></div>
+            </h3>
+            <div className="grid grid-cols-1 gap-4">
+              {todayMatches.map(match => renderMatchCard(match, userHeartMatches.some(hm => hm.id === match.id)))}
+            </div>
           </div>
         )}
 

@@ -67,4 +67,10 @@ export interface Match {
     tla: string;
     crest: string;
   };
+  score: {
+    fullTime: {
+      home: number;
+      away: number;
+    };
+  };
 }
