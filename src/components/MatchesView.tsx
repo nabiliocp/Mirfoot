@@ -623,7 +623,7 @@ export default function MatchesView({ onPronoClick, userProfile, onProfileUpdate
                       </div>
                       <div className="min-w-0">
                         <span className="block text-[8px] font-black text-amber-500 uppercase tracking-tight">Compétition</span>
-                        <span className="font-black text-slate-900 text-sm truncate block">{compName}</span>
+                        <span className="font-black text-slate-900 text-sm block leading-tight">{compName}</span>
                       </div>
                     </div>
                   </div>
@@ -651,7 +651,7 @@ export default function MatchesView({ onPronoClick, userProfile, onProfileUpdate
                       </div>
                       <div className="min-w-0">
                         <span className="block text-[8px] font-black text-gray-400 uppercase tracking-tight">Club</span>
-                        <span className="font-black text-slate-900 text-sm truncate block">{clubName}</span>
+                        <span className="font-black text-slate-900 text-sm block leading-tight">{clubName}</span>
                       </div>
                     </div>
                     
@@ -663,12 +663,12 @@ export default function MatchesView({ onPronoClick, userProfile, onProfileUpdate
                         </span>
                         {data.last ? (
                           <div className="space-y-1.5">
-                            <div className="flex items-center justify-between gap-1.5 min-w-0">
-                              <span className="text-[10px] font-extrabold text-slate-800 truncate">{data.last.homeTeam.shortName || data.last.homeTeam.name}</span>
-                              <div className="bg-slate-900 text-white px-1.5 py-0.5 rounded font-mono text-[9px] font-black">
+                            <div className="flex items-center justify-between gap-1 min-w-0">
+                              <span className="text-[10px] font-extrabold text-slate-800 flex-1 text-right">{data.last.homeTeam.shortName || data.last.homeTeam.name}</span>
+                              <div className="bg-slate-900 text-white px-1.5 py-0.5 rounded font-mono text-[9px] font-black shrink-0">
                                 {data.last.score.fullTime.home}-{data.last.score.fullTime.away}
                               </div>
-                              <span className="text-[10px] font-extrabold text-slate-800 truncate">{data.last.awayTeam.shortName || data.last.awayTeam.name}</span>
+                              <span className="text-[10px] font-extrabold text-slate-800 flex-1 text-left">{data.last.awayTeam.shortName || data.last.awayTeam.name}</span>
                             </div>
                             <div className="flex justify-between items-center text-[7px] font-bold text-gray-400 uppercase tracking-tighter">
                               <span>{new Date(data.last.utcDate).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })} • {new Date(data.last.utcDate).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</span>
@@ -688,10 +688,10 @@ export default function MatchesView({ onPronoClick, userProfile, onProfileUpdate
                         {data.next ? (
                           <div className="space-y-1.5">
                             <div className="flex items-center justify-between">
-                              <span className="text-[10px] font-black text-emerald-950 truncate max-w-[100px]">
-                                vs {data.next.homeTeam.name?.toLowerCase().includes(clubName.toLowerCase()) ? data.next.awayTeam.shortName : data.next.homeTeam.shortName}
+                              <span className="text-[10px] font-black text-emerald-950 flex-1">
+                                vs {data.next.homeTeam.name?.toLowerCase().includes(clubName.toLowerCase()) ? (data.next.awayTeam.shortName || data.next.awayTeam.name) : (data.next.homeTeam.shortName || data.next.homeTeam.name)}
                               </span>
-                              <span className="text-[8px] font-black text-emerald-600 bg-white border border-emerald-100 px-1 rounded">
+                              <span className="text-[8px] font-black text-emerald-600 bg-white border border-emerald-100 px-1 rounded shrink-0">
                                 {new Date(data.next.utcDate).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
                               </span>
                             </div>
@@ -744,7 +744,7 @@ export default function MatchesView({ onPronoClick, userProfile, onProfileUpdate
                     </div>
                       <div className="min-w-0">
                         <span className="block text-[8px] font-black text-gray-400 uppercase tracking-tight">Nation</span>
-                        <span className="font-black text-slate-900 text-sm truncate block">{name}</span>
+                        <span className="font-black text-slate-900 text-sm block leading-tight">{name}</span>
                       </div>
                     </div>
                     
@@ -756,12 +756,12 @@ export default function MatchesView({ onPronoClick, userProfile, onProfileUpdate
                         </span>
                         {data.last ? (
                           <div className="space-y-1.5">
-                            <div className="flex items-center justify-between gap-1.5 min-w-0">
-                              <span className="text-[10px] font-extrabold text-slate-800 truncate">{data.last.homeTeam.shortName || data.last.homeTeam.name}</span>
-                              <div className="bg-slate-900 text-white px-1.5 py-0.5 rounded font-mono text-[9px] font-black">
+                            <div className="flex items-center justify-between gap-1 min-w-0">
+                              <span className="text-[10px] font-extrabold text-slate-800 flex-1 text-right">{data.last.homeTeam.shortName || data.last.homeTeam.name}</span>
+                              <div className="bg-slate-900 text-white px-1.5 py-0.5 rounded font-mono text-[9px] font-black shrink-0">
                                 {data.last.score.fullTime.home}-{data.last.score.fullTime.away}
                               </div>
-                              <span className="text-[10px] font-extrabold text-slate-800 truncate">{data.last.awayTeam.shortName || data.last.awayTeam.name}</span>
+                              <span className="text-[10px] font-extrabold text-slate-800 flex-1 text-left">{data.last.awayTeam.shortName || data.last.awayTeam.name}</span>
                             </div>
                             <div className="flex justify-between items-center text-[7px] font-bold text-gray-400 uppercase tracking-tighter">
                               <span>{new Date(data.last.utcDate).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })} • {new Date(data.last.utcDate).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</span>
@@ -781,10 +781,10 @@ export default function MatchesView({ onPronoClick, userProfile, onProfileUpdate
                         {data.next ? (
                           <div className="space-y-1.5">
                             <div className="flex items-center justify-between">
-                              <span className="text-[10px] font-black text-indigo-950 truncate max-w-[100px]">
-                                vs {data.next.homeTeam.name?.toLowerCase().includes(name.toLowerCase()) ? data.next.awayTeam.shortName : data.next.homeTeam.shortName}
+                              <span className="text-[10px] font-black text-indigo-950 flex-1">
+                                vs {data.next.homeTeam.name?.toLowerCase().includes(name.toLowerCase()) ? (data.next.awayTeam.shortName || data.next.awayTeam.name) : (data.next.homeTeam.shortName || data.next.homeTeam.name)}
                               </span>
-                              <span className="text-[8px] font-black text-indigo-600 bg-white border border-indigo-100 px-1 rounded">
+                              <span className="text-[8px] font-black text-indigo-600 bg-white border border-indigo-100 px-1 rounded shrink-0">
                                 {new Date(data.next.utcDate).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
                               </span>
                             </div>

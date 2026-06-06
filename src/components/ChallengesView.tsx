@@ -408,6 +408,23 @@ export default function ChallengesView({
         return `https://flagcdn.com/w80/${code}.png`;
       }
     }
+
+    // Top clubs fallback
+    if (nameLower.includes("real madrid")) return "https://crests.football-data.org/86.svg";
+    if (nameLower.includes("barcelona") || nameLower.includes("barcelone")) return "https://crests.football-data.org/81.svg";
+    if (nameLower.includes("manchester city")) return "https://crests.football-data.org/65.svg";
+    if (nameLower.includes("manchester united")) return "https://crests.football-data.org/66.svg";
+    if (nameLower.includes("liverpool")) return "https://crests.football-data.org/64.svg";
+    if (nameLower.includes("arsenal")) return "https://crests.football-data.org/57.svg";
+    if (nameLower.includes("bayern")) return "https://crests.football-data.org/5.svg";
+    if (nameLower.includes("psg") || nameLower.includes("paris saint-germain")) return "https://crests.football-data.org/524.svg";
+    if (nameLower.includes("milan")) return "https://crests.football-data.org/98.svg";
+    if (nameLower.includes("inter")) return "https://crests.football-data.org/108.svg";
+    if (nameLower.includes("juventus")) return "https://crests.football-data.org/109.svg";
+    if (nameLower.includes("dortmund")) return "https://crests.football-data.org/4.svg";
+    if (nameLower.includes("olympique de marseille") || nameLower.includes(" om ")) return "https://crests.football-data.org/516.svg";
+    if (nameLower.includes("monaco")) return "https://crests.football-data.org/548.svg";
+
     return "https://flagcdn.com/w80/un.png";
   };
 
@@ -1920,6 +1937,8 @@ export default function ChallengesView({
           username: profile.username,
           avatar_type: profile.avatar_type,
           avatar_value: profile.avatar_value,
+          firstName: profile.first_name,
+          lastName: profile.last_name,
           points: pts,
           isExact,
           isWinner,
@@ -1987,6 +2006,8 @@ export default function ChallengesView({
           username: profile.username,
           avatar_type: profile.avatar_type,
           avatar_value: profile.avatar_value,
+          firstName: profile.first_name,
+          lastName: profile.last_name,
           points: pts,
           exactCount,
           winnerCount,
@@ -2683,6 +2704,27 @@ export default function ChallengesView({
                             <span className={`text-xs font-bold flex items-center gap-1.5 flex-wrap ${isCurrentUser ? "text-emerald-950 font-black" : "text-gray-800"}`}>
                               <span>{player.username}</span>
                               {isCurrentUser && <span className="font-black text-[9px] bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded">Moi</span>}
+                              
+                              <div className="flex items-center gap-1">
+                                {player.firstName && (
+                                  <div className="w-3.5 h-3.5 bg-white rounded-full overflow-hidden border border-gray-100 flex items-center justify-center shadow-xs" title={player.firstName}>
+                                    <img 
+                                      src={getFlagUrl(player.firstName)} 
+                                      className="w-full h-full object-contain" 
+                                      onError={(e) => { e.currentTarget.style.display='none' }}
+                                    />
+                                  </div>
+                                )}
+                                {player.lastName && (
+                                  <div className="w-3.5 h-3.5 bg-white rounded-full overflow-hidden border border-gray-100 flex items-center justify-center shadow-xs" title={player.lastName}>
+                                    <img 
+                                      src={getFlagUrl(player.lastName)} 
+                                      className="w-full h-full object-contain" 
+                                      onError={(e) => { e.currentTarget.style.display='none' }}
+                                    />
+                                  </div>
+                                )}
+                              </div>
                             </span>
                             <span className="text-[10px] text-gray-400 font-semibold">{player.predictionsCount} pronostic(s)</span>
                           </div>
@@ -2726,13 +2768,33 @@ export default function ChallengesView({
                   {participants.map(userId => {
                     const profile = allProfiles.find(p => p.id === userId) || { username: "Joueur", first_name: "", last_name: "", points: 0, avatar_type: "emoji", avatar_value: "⚽" };
                     return (
-                      <div key={userId} className="bg-gray-50/50 p-3 rounded-xl border border-gray-100 flex items-center gap-3">
+                      <div key={userId} className="bg-gray-50/50 p-3 rounded-xl border border-gray-100 flex items-center gap-3 relative overflow-hidden">
                         <div className="w-9 h-9 flex items-center justify-center bg-white border border-gray-100 rounded-lg text-lg shrink-0">
                           {profile.avatar_type === "emoji" ? profile.avatar_value : "⚽"}
                         </div>
                         <div className="min-w-0 flex-1">
                           <span className="block font-bold text-xs text-gray-800 truncate">{profile.username}</span>
                           <span className="block text-[9px] text-gray-400 font-semibold truncate">Score Général: {profile.points || 0} pts</span>
+                          <div className="flex items-center gap-1.5 mt-1">
+                            {profile.first_name && (
+                              <div className="w-4 h-4 bg-white rounded-full overflow-hidden border border-gray-100 flex items-center justify-center shadow-xs" title={profile.first_name}>
+                                <img 
+                                  src={getFlagUrl(profile.first_name)} 
+                                  className="w-full h-full object-contain" 
+                                  onError={(e) => { e.currentTarget.style.display='none' }}
+                                />
+                              </div>
+                            )}
+                            {profile.last_name && (
+                              <div className="w-4 h-4 bg-white rounded-full overflow-hidden border border-gray-100 flex items-center justify-center shadow-xs" title={profile.last_name}>
+                                <img 
+                                  src={getFlagUrl(profile.last_name)} 
+                                  className="w-full h-full object-contain" 
+                                  onError={(e) => { e.currentTarget.style.display='none' }}
+                                />
+                              </div>
+                            )}
+                          </div>
                         </div>
                         <span className="text-[10px] bg-emerald-50 text-emerald-700 font-extrabold px-2 py-0.5 rounded uppercase font-mono">Inscrit</span>
                       </div>
