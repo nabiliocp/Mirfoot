@@ -295,12 +295,18 @@ async function startServer() {
 
   // Fetch all challenges for a user (both created and joined invitations), bypassing RLS
   app.get("/api/challenges/user/:userId", async (req, res) => {
-    if (!supabase) return res.status(500).json({ error: "Configuration Supabase manquante." });
+    if (!supabase) {
+      console.warn("Supabase client not initialized - missing keys?");
+      return res.status(500).json({ error: "Configuration Supabase manquante (URL ou Service Role Key)." });
+    }
+    
     try {
       const { userId } = req.params;
       if (!userId) {
         return res.status(400).json({ error: "userId est requis." });
       }
+
+      console.log(`Fetching challenges for user: ${userId}`);
 
       // 1. Fetch created challenges
       const { data: createdChallenges, error: createdError } = await supabase
@@ -310,6 +316,7 @@ async function startServer() {
 
       if (createdError) {
         console.error("Error loading created challenges in backend:", createdError);
+        // We continue even if one part fails to be resilient
       }
 
       // 2. Fetch invitations for this user
@@ -324,38 +331,58 @@ async function startServer() {
 
       // Extract challenge IDs from accepted invitations
       const invitedChallengeIds = (invitations || [])
-        .filter((inv: any) => inv.accepted)
+        .filter((inv: any) => inv && inv.accepted && inv.challenge_id)
         .map((inv: any) => inv.challenge_id);
+      
+      // Remove duplicates and filter out any non-truthy IDs
+      const uniqueInvitedIds = Array.from(new Set(invitedChallengeIds)).filter(Boolean);
 
       // If there are invited challenge IDs, fetch those challenges too
       let joinedChallenges: any[] = [];
-      if (invitedChallengeIds.length > 0) {
-        const { data: joinedData, error: joinedError } = await supabase
-          .from("challenges")
-          .select("*")
-          .in("id", invitedChallengeIds);
+      if (uniqueInvitedIds.length > 0) {
+        try {
+          const { data: joinedData, error: joinedError } = await supabase
+            .from("challenges")
+            .select("*")
+            .in("id", uniqueInvitedIds);
 
-        if (joinedError) {
-          console.error("Error loading joined challenges in backend:", joinedError);
-        } else if (joinedData) {
-          joinedChallenges = joinedData;
+          if (joinedError) {
+            console.error("Error loading joined challenges in backend:", joinedError);
+          } else if (joinedData) {
+            joinedChallenges = joinedData;
+          }
+        } catch (innerErr) {
+          console.error("Exception fetching joined challenges:", innerErr);
         }
       }
 
       // Combine and remove duplicates
       const allUniqueChallengesMap: Record<string, any> = {};
-      (createdChallenges || []).forEach((c: any) => {
-        allUniqueChallengesMap[c.id] = c;
-      });
-      joinedChallenges.forEach((c: any) => {
-        allUniqueChallengesMap[c.id] = c;
-      });
+      
+      // Add created challenges
+      if (Array.isArray(createdChallenges)) {
+        createdChallenges.forEach((c: any) => {
+          if (c && c.id) allUniqueChallengesMap[c.id] = c;
+        });
+      }
+      
+      // Add joined challenges
+      if (Array.isArray(joinedChallenges)) {
+        joinedChallenges.forEach((c: any) => {
+          if (c && c.id) allUniqueChallengesMap[c.id] = c;
+        });
+      }
 
       const challengesList = Object.values(allUniqueChallengesMap);
+      console.log(`Successfully combined ${challengesList.length} unique challenges for user ${userId}`);
       return res.json({ challenges: challengesList });
     } catch (err: any) {
-      console.error("Error in challenges user endpoint:", err);
-      res.status(500).json({ error: "Erreur interne du serveur: " + err.message });
+      console.error("CRITICAL error in challenges user endpoint:", err);
+      return res.status(500).json({ 
+        error: "Erreur interne du serveur lors de la récupération des défis.",
+        details: err.message,
+        hint: "Vérifiez que les tables 'challenges' et 'challenge_invitations' existent et sont accessibles."
+      });
     }
   });
 

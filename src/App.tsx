@@ -38,6 +38,7 @@ export default function App() {
     avatar_value: string;
     favorite_club?: string;
     favorite_national?: string;
+    favorite_competitions?: string;
   } | null>(null);
 
   const profileCheckedRef = useRef(false);
@@ -196,6 +197,7 @@ export default function App() {
             avatar_value: data.avatar_value || "👽",
             favorite_club: data.first_name || "",
             favorite_national: data.last_name || "",
+            favorite_competitions: localStorage.getItem(`fav_comps_${data.username}`) || "",
           });
           profileCheckedRef.current = true;
         }
@@ -465,6 +467,7 @@ export default function App() {
               setSelectedMatchForProno({ match, competitionId });
               setActiveTab("challenges");
             }} 
+            onProfileUpdate={(updated) => setUserProfile(updated)}
           />
         )}
         {activeTab === "leaderboard" && <LeaderboardView />}
