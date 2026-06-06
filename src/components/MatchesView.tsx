@@ -114,8 +114,8 @@ export default function MatchesView({ onPronoClick, userProfile, onProfileUpdate
   const liveMatches = otherMatches.filter(m => ['LIVE', 'IN_PLAY', 'PAUSED'].includes(m.status));
   const upcomingMatches = otherMatches.filter(m => ['TIMED', 'SCHEDULED', 'POSTPONED'].includes(m.status));
 
-  // Helper to get national flag crest from flagcdn
-  const getNationalFlag = (name: string) => {
+  // Helper to get team crest (national or club) fallback
+  const getTeamCrest = (name: string) => {
     if (!name) return null;
     
     // Normalize string: remove accents, lowercase, trim
@@ -135,7 +135,7 @@ export default function MatchesView({ onPronoClick, userProfile, onProfileUpdate
       "argentine": "ar", "argentia": "ar",
       "suisse": "ch", "switzerland": "ch",
       "croatie": "hr", "croatia": "hr",
-      "senegal": "sn", "senegal": "sn",
+      "senegal": "sn",
       "algerie": "dz", "algeria": "dz",
       "tunisie": "tn", "tunisia": "tn",
       "egypte": "eg", "egypt": "eg",
@@ -153,6 +153,22 @@ export default function MatchesView({ onPronoClick, userProfile, onProfileUpdate
     for (const [key, code] of Object.entries(mapping)) {
       if (n.includes(key)) return `https://flagcdn.com/w160/${code}.png`;
     }
+
+    // Top clubs fallback
+    if (n.includes("real madrid")) return "https://crests.football-data.org/86.svg";
+    if (n.includes("barcelona")) return "https://crests.football-data.org/81.svg";
+    if (n.includes("manchester city")) return "https://crests.football-data.org/65.svg";
+    if (n.includes("manchester united")) return "https://crests.football-data.org/66.svg";
+    if (n.includes("liverpool")) return "https://crests.football-data.org/64.svg";
+    if (n.includes("arsenal")) return "https://crests.football-data.org/57.svg";
+    if (n.includes("bayern")) return "https://crests.football-data.org/5.svg";
+    if (n.includes("psg") || n.includes("paris saint-germain")) return "https://crests.football-data.org/524.svg";
+    if (n.includes("milan")) return "https://crests.football-data.org/98.svg";
+    if (n.includes("inter")) return "https://crests.football-data.org/108.svg";
+    if (n.includes("juventus")) return "https://crests.football-data.org/109.svg";
+    if (n.includes("dortmund")) return "https://crests.football-data.org/4.svg";
+    if (n.includes("monaco")) return "https://crests.football-data.org/548.svg";
+    
     return null;
   };
 
@@ -184,9 +200,9 @@ export default function MatchesView({ onPronoClick, userProfile, onProfileUpdate
     const teamRecord = teamMatches.find(m => matchesTeam(m.homeTeam))?.homeTeam || teamMatches.find(m => matchesTeam(m.awayTeam))?.awayTeam;
     if (teamRecord) crest = teamRecord.crest;
 
-    // Fallback for national teams
+    // Fallback for teams
     if (!crest) {
-      crest = getNationalFlag(teamName) || "";
+      crest = getTeamCrest(teamName) || "";
     }
 
     return { last, next, crest };
@@ -377,52 +393,57 @@ export default function MatchesView({ onPronoClick, userProfile, onProfileUpdate
         </div>
         
         <div className="flex items-center justify-between">
-          <div className="flex flex-col items-center flex-1 relative">
-            <img 
-              src={match.homeTeam.crest} 
-              alt={match.homeTeam.name} 
-              className="w-12 h-12 object-contain mb-2" 
-              onError={(e) => { 
-                const fallback = getNationalFlag(match.homeTeam.name);
-                if (fallback && e.currentTarget.src !== fallback) {
-                  e.currentTarget.src = fallback;
-                } else {
-                  e.currentTarget.style.display='none';
-                }
-              }} 
-            />
-            <span className={`font-bold text-center text-sm md:text-base text-gray-800 ${isHomeHeart ? "text-emerald-700 underline decoration-emerald-400 decoration-2" : ""}`}>
-              {match.homeTeam.shortName || match.homeTeam.name} {isHomeHeart && "⭐"}
-            </span>
-          </div>
-          
-          <div className="flex-1 flex flex-col justify-center items-center px-4">
-            {(isLive || isFinished) ? (
-              <div className="font-black text-slate-900 text-2xl tracking-tighter flex items-center gap-1.5">
-                <span>{match.score.fullTime.home}</span>
-                <span className="text-gray-300">-</span>
-                <span>{match.score.fullTime.away}</span>
-              </div>
-            ) : (
-              <div className="font-black text-gray-300 text-xl">VS</div>
-            )}
-            {isLive && <span className="text-[10px] font-bold text-rose-500 mt-1 uppercase">Match en cours</span>}
-          </div>
-          
-          <div className="flex flex-col items-center flex-1 relative">
-            <img 
-              src={match.awayTeam.crest} 
-              alt={match.awayTeam.name} 
-              className="w-12 h-12 object-contain mb-2" 
-              onError={(e) => { 
-                const fallback = getNationalFlag(match.awayTeam.name);
-                if (fallback && e.currentTarget.src !== fallback) {
-                  e.currentTarget.src = fallback;
-                } else {
-                  e.currentTarget.style.display='none'; 
-                }
-              }} 
-            />
+            <div className="flex flex-col items-center flex-1 relative">
+              <img 
+                src={match.homeTeam.crest} 
+                alt={match.homeTeam.name} 
+                className="w-12 h-12 object-contain mb-2" 
+                onError={(e) => { 
+                  const fallback = getTeamCrest(match.homeTeam.name);
+                  if (fallback && e.currentTarget.src !== fallback) {
+                    e.currentTarget.src = fallback;
+                  } else {
+                    e.currentTarget.src = "https://www.google.com/s2/favicons?domain=fifa.com&sz=128";
+                  }
+                }} 
+              />
+              <span className={`font-bold text-center text-sm md:text-base text-gray-800 ${isHomeHeart ? "text-emerald-700 underline decoration-emerald-400 decoration-2" : ""}`}>
+                {match.homeTeam.shortName || match.homeTeam.name} {isHomeHeart && "⭐"}
+              </span>
+            </div>
+            
+            <div className="flex-1 flex flex-col justify-center items-center px-4">
+              {(isLive || isFinished) ? (
+                <div className="font-black text-slate-900 text-2xl tracking-tighter flex items-center gap-1.5">
+                  <span>{match.score.fullTime.home}</span>
+                  <span className="text-gray-300">-</span>
+                  <span>{match.score.fullTime.away}</span>
+                </div>
+              ) : (
+                <div className="font-black text-gray-300 text-xl">VS</div>
+              )}
+              {isLive && <span className="text-[10px] font-bold text-rose-500 mt-1 uppercase">Match en cours</span>}
+              {match.venue && (
+                <span className="text-[8px] font-bold text-gray-400 mt-2 uppercase text-center leading-tight">
+                  🏟️ {match.venue}
+                </span>
+              )}
+            </div>
+            
+            <div className="flex flex-col items-center flex-1 relative">
+              <img 
+                src={match.awayTeam.crest} 
+                alt={match.awayTeam.name} 
+                className="w-12 h-12 object-contain mb-2" 
+                onError={(e) => { 
+                  const fallback = getTeamCrest(match.awayTeam.name);
+                  if (fallback && e.currentTarget.src !== fallback) {
+                    e.currentTarget.src = fallback;
+                  } else {
+                    e.currentTarget.src = "https://www.google.com/s2/favicons?domain=fifa.com&sz=128";
+                  }
+                }} 
+              />
             <span className={`font-bold text-center text-sm md:text-base text-gray-800 ${isAwayHeart ? "text-emerald-700 underline decoration-emerald-400 decoration-2" : ""}`}>
               {match.awayTeam.shortName || match.awayTeam.name} {isAwayHeart && "⭐"}
             </span>
@@ -554,13 +575,29 @@ export default function MatchesView({ onPronoClick, userProfile, onProfileUpdate
           )}
 
           {getFavoriteClubs().length === 0 && getFavoriteNationals().length === 0 && getFavoriteCompetitionNames().length === 0 ? (
-            <div className="py-12 bg-gray-50/50 rounded-2xl border border-dashed border-gray-100 flex flex-col items-center gap-4">
-              <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-sm">
-                <AlertCircle className="w-8 h-8 text-gray-200" />
+            <div className="py-12 bg-emerald-50/20 rounded-3xl border-2 border-dashed border-emerald-100 flex flex-col items-center gap-6 px-4">
+              <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center shadow-lg shadow-emerald-600/10 border-4 border-emerald-50">
+                <Search className="w-10 h-10 text-emerald-500" />
               </div>
-              <div className="text-center">
-                <p className="text-sm font-black text-gray-400">Aucun favori configuré.</p>
-                <p className="text-[10px] text-gray-300 font-bold uppercase tracking-tight mt-1">Ajoutez vos équipes pour suivre leurs résultats ici</p>
+              <div className="text-center max-w-sm">
+                <h4 className="text-lg font-black text-slate-900 mb-2">Configurez votre expérience</h4>
+                <p className="text-sm font-bold text-slate-500 leading-relaxed mb-6">
+                  Ajoutez vos clubs et nations de cœur pour ne plus jamais rater un match ou un résultat important !
+                </p>
+                <div className="flex flex-wrap justify-center gap-3">
+                  <button 
+                    onClick={() => setIsAddingTeam({type: 'club'})}
+                    className="bg-emerald-600 text-white px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider hover:bg-emerald-700 transition-all shadow-md shadow-emerald-200 cursor-pointer active:scale-95"
+                  >
+                    Ajouter mon Club
+                  </button>
+                  <button 
+                    onClick={() => setIsAddingTeam({type: 'national'})}
+                    className="bg-indigo-600 text-white px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider hover:bg-indigo-700 transition-all shadow-md shadow-indigo-200 cursor-pointer active:scale-95"
+                  >
+                    Ajouter ma Nation
+                  </button>
+                </div>
               </div>
             </div>
           ) : (
@@ -635,7 +672,7 @@ export default function MatchesView({ onPronoClick, userProfile, onProfileUpdate
                             </div>
                             <div className="flex justify-between items-center text-[7px] font-bold text-gray-400 uppercase tracking-tighter">
                               <span>{new Date(data.last.utcDate).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })} • {new Date(data.last.utcDate).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</span>
-                              <span className="truncate max-w-[70px] text-right">{data.last.competition.name}</span>
+                              <span className="text-right ml-1">{data.last.competition.name}</span>
                             </div>
                           </div>
                         ) : (
@@ -660,7 +697,7 @@ export default function MatchesView({ onPronoClick, userProfile, onProfileUpdate
                             </div>
                             <div className="flex justify-between items-center text-[7px] font-bold text-emerald-600/70 uppercase tracking-tighter">
                               <span>{new Date(data.next.utcDate).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}</span>
-                              <span className="truncate max-w-[70px] text-right">{data.next.competition.name || "Match Amical"}</span>
+                              <span className="text-right ml-1">{data.next.competition.name || "Match Amical"}</span>
                             </div>
                           </div>
                         ) : (
@@ -684,24 +721,23 @@ export default function MatchesView({ onPronoClick, userProfile, onProfileUpdate
                       <X className="w-4 h-4" />
                     </button>
                     <div className="flex items-center gap-3 mb-4">
-                    <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center p-1.5 shadow-sm font-bold text-lg">
-                      {data.crest ? (
-                        <img 
-                          src={data.crest} 
-                          alt={name} 
-                          className="w-full h-full object-contain" 
-                          onError={(e) => {
-                            // If API crest fails, try the national flag fallback
-                            const fallback = getNationalFlag(name);
-                            if (fallback && e.currentTarget.src !== fallback) {
-                              e.currentTarget.src = fallback;
-                            } else {
-                              e.currentTarget.style.display = 'none';
-                              // If there is no image after all, we can show the emoji placeholder if we had one
-                            }
-                          }}
-                        />
-                      ) : null}
+                             <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center p-1.5 shadow-sm font-bold text-lg">
+                               {data.crest ? (
+                                 <img 
+                                   src={data.crest} 
+                                   alt={name} 
+                                   className="w-full h-full object-contain" 
+                                   onError={(e) => {
+                                     // If API crest fails, try the national flag fallback
+                                     const fallback = getTeamCrest(name);
+                                     if (fallback && e.currentTarget.src !== fallback) {
+                                       e.currentTarget.src = fallback;
+                                     } else {
+                                       e.currentTarget.style.display = 'none';
+                                     }
+                                   }}
+                                 />
+                               ) : null}
                       {(!data.crest || data.crest === "") && (
                         <span className="text-2xl">🏳️</span>
                       )}
@@ -729,7 +765,7 @@ export default function MatchesView({ onPronoClick, userProfile, onProfileUpdate
                             </div>
                             <div className="flex justify-between items-center text-[7px] font-bold text-gray-400 uppercase tracking-tighter">
                               <span>{new Date(data.last.utcDate).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })} • {new Date(data.last.utcDate).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</span>
-                              <span className="truncate max-w-[70px] text-right">{data.last.competition.name}</span>
+                              <span className="text-right ml-1">{data.last.competition.name}</span>
                             </div>
                           </div>
                         ) : (
@@ -754,7 +790,7 @@ export default function MatchesView({ onPronoClick, userProfile, onProfileUpdate
                             </div>
                             <div className="flex justify-between items-center text-[7px] font-bold text-indigo-600/70 uppercase tracking-tighter">
                               <span>{new Date(data.next.utcDate).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}</span>
-                              <span className="truncate max-w-[70px] text-right">{data.next.competition.name || "Match Amical"}</span>
+                              <span className="text-right ml-1">{data.next.competition.name || "Match Amical"}</span>
                             </div>
                           </div>
                         ) : (

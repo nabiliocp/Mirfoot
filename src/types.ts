@@ -73,4 +73,10 @@ export interface Match {
       away: number;
     };
   };
+  venue?: string;
+  competition: {
+    id: number;
+    name: string;
+    emblem: string;
+  };
 }
