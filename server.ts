@@ -40,6 +40,24 @@ async function startServer() {
     }
   });
 
+  app.get("/api/matches/today", async (req, res) => {
+    try {
+      const apiKey = process.env.FOOTBALL_DATA_API_KEY;
+      if (!apiKey) return res.status(401).json({ error: "Clé API manquante" });
+
+      // football-data.org /matches endpoint returns matches for today by default
+      const response = await fetch("https://api.football-data.org/v4/matches", {
+        headers: { "X-Auth-Token": apiKey }
+      });
+      
+      if (!response.ok) throw new Error("API Error");
+      const data = await response.json();
+      res.json(data);
+    } catch (err) {
+      res.status(500).json({ error: "Erreur réseau" });
+    }
+  });
+
   app.get("/api/matches/:competitionId", async (req, res) => {
     try {
       const apiKey = process.env.FOOTBALL_DATA_API_KEY;

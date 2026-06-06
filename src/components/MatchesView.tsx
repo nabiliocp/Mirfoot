@@ -17,79 +17,77 @@ export default function MatchesView({ onPronoClick, userProfile }: MatchesViewPr
   const [competitions, setCompetitions] = useState<Competition[]>([]);
   const [selectedCompId, setSelectedCompId] = useState<number | null>(null);
   const [matches, setMatches] = useState<Match[]>([]);
+  const [todayMatches, setTodayMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [retryTrigger, setRetryTrigger] = useState(0);
 
   useEffect(() => {
+    // Fetch competitions and Today's matches
     setLoading(true);
     setError(null);
-    fetch('/api/competitions')
-      .then(res => {
-        if (!res.ok) {
-          throw new Error("Temporairement indisponible");
-        }
-        return res.json();
-      })
-      .then(data => {
-        // Football Data API puts competitions in 'competitions'
-        setCompetitions(data.competitions || []);
-        if (data.competitions?.length > 0) {
-          // Premier League, Ligue 1, Champions League... try to pick Ligue 1 (FL1, id 2015) if available, else first
-          const defaultComp = data.competitions.find((c: Competition) => c.id === 2015) || data.competitions[0];
-          setSelectedCompId(defaultComp.id);
-        }
-        setLoading(false);
-      })
-      .catch(err => {
-        setError("Chargement temporairement indisponible.");
-        setLoading(false);
-      });
+
+    Promise.all([
+      fetch('/api/competitions').then(res => res.json()),
+      fetch('/api/matches/today').then(res => res.json())
+    ])
+    .then(([compData, todayData]) => {
+      setCompetitions(compData.competitions || []);
+      setTodayMatches(todayData.matches || []);
+      
+      if (compData.competitions?.length > 0) {
+        const defaultComp = compData.competitions.find((c: Competition) => c.id === 2015) || compData.competitions[0];
+        setSelectedCompId(defaultComp.id);
+      }
+      setLoading(false);
+    })
+    .catch(err => {
+      console.error(err);
+      setError("Chargement temporairement indisponible.");
+      setLoading(false);
+    });
   }, [retryTrigger]);
 
   useEffect(() => {
     if (!selectedCompId) return;
     setLoading(true);
     fetch(`/api/matches/${selectedCompId}`)
-      .then(res => {
-        if (!res.ok) throw new Error("Temporairement indisponible");
-        return res.json();
-      })
+      .then(res => res.json())
       .then(data => {
         setMatches(data.matches || []);
         setLoading(false);
       })
       .catch(err => {
         console.error(err);
-        setError("Chargement temporairement indisponible.");
         setLoading(false);
       });
   }, [selectedCompId]);
 
+  // Combine matches to search favorites
+  const allLoadedMatches = [...todayMatches, ...matches].reduce((acc, curr) => {
+    if (!acc.find(m => m.id === curr.id)) acc.push(curr);
+    return acc;
+  }, [] as Match[]);
+
   // Compute Favorite Matches
-  const userHeartMatches = userProfile && matches.filter(match => {
+  const userHeartMatches = userProfile && allLoadedMatches.filter(match => {
     const club = userProfile.favorite_club?.toLowerCase().trim();
     const national = userProfile.favorite_national?.toLowerCase().trim();
     if (!club && !national) return false;
 
-    const homeName = (match.homeTeam.name || "").toLowerCase();
-    const homeShort = (match.homeTeam.shortName || "").toLowerCase();
-    const awayName = (match.awayTeam.name || "").toLowerCase();
-    const awayShort = (match.awayTeam.shortName || "").toLowerCase();
+    const matchesTeam = (team: any, query: string) => {
+      const name = (team.name || "").toLowerCase();
+      const short = (team.shortName || "").toLowerCase();
+      const tla = (team.tla || "").toLowerCase();
+      
+      if (name.includes(query) || short.includes(query) || tla.includes(query)) return true;
+      if (query === "maroc" && (name.includes("morocco") || tla === "mar")) return true;
+      if (query === "real madrid" && (name.includes("real madrid") || tla === "rma")) return true;
+      return false;
+    };
 
-    const matchesClub = club && (
-      homeName.includes(club) || 
-      homeShort.includes(club) || 
-      awayName.includes(club) || 
-      awayShort.includes(club)
-    );
-
-    const matchesNational = national && (
-      homeName.includes(national) || 
-      homeShort.includes(national) || 
-      awayName.includes(national) || 
-      awayShort.includes(national)
-    );
+    const matchesClub = club && (matchesTeam(match.homeTeam, club) || matchesTeam(match.awayTeam, club));
+    const matchesNational = national && (matchesTeam(match.homeTeam, national) || matchesTeam(match.awayTeam, national));
 
     return matchesClub || matchesNational;
   }) || [];
@@ -100,24 +98,24 @@ export default function MatchesView({ onPronoClick, userProfile }: MatchesViewPr
   // Compute grouped matches
   const liveMatches = otherMatches.filter(m => ['LIVE', 'IN_PLAY', 'PAUSED'].includes(m.status));
   const upcomingMatches = otherMatches.filter(m => ['TIMED', 'SCHEDULED', 'POSTPONED'].includes(m.status));
-  const finishedMatches = otherMatches.filter(m => ['FINISHED'].includes(m.status));
 
-  // Compute Today's Matches across all matches in current view
-  const todayMatches = matches.filter(m => {
-    const matchDate = new Date(m.utcDate).toDateString();
-    const today = new Date().toDateString();
-    return matchDate === today;
-  });
-
-  // Find next match for favorites more explicitly
+  // Find next match for favorites
   const getNextMatchForTeam = (teamName?: string) => {
     if (!teamName) return null;
-    const name = teamName.toLowerCase().trim();
-    return matches
-      .filter(m => 
-        (m.homeTeam.name?.toLowerCase().includes(name) || m.homeTeam.shortName?.toLowerCase().includes(name)) ||
-        (m.awayTeam.name?.toLowerCase().includes(name) || m.awayTeam.shortName?.toLowerCase().includes(name))
-      )
+    const query = teamName.toLowerCase().trim();
+    
+    const matchesTeam = (team: any) => {
+      const name = (team.name || "").toLowerCase();
+      const short = (team.shortName || "").toLowerCase();
+      const tla = (team.tla || "").toLowerCase();
+      if (name.includes(query) || short.includes(query) || tla.includes(query)) return true;
+      if (query === "maroc" && (name.includes("morocco") || tla === "mar")) return true;
+      if (query === "real madrid" && (name.includes("real madrid") || tla === "rma")) return true;
+      return false;
+    };
+
+    return allLoadedMatches
+      .filter(m => matchesTeam(m.homeTeam) || matchesTeam(m.awayTeam))
       .filter(m => ['TIMED', 'SCHEDULED', 'LIVE', 'IN_PLAY'].includes(m.status))
       .sort((a, b) => new Date(a.utcDate).getTime() - new Date(b.utcDate).getTime())[0];
   };
@@ -168,13 +166,13 @@ export default function MatchesView({ onPronoClick, userProfile }: MatchesViewPr
         key={match.id} 
         className={`rounded-2xl p-5 border-2 transition duration-200 relative overflow-hidden ${
           isHeart 
-            ? "bg-rose-50/50 border-rose-300 shadow-md ring-2 ring-rose-500/10 hover:shadow-lg" 
+            ? "bg-emerald-50/30 border-emerald-200 shadow-md ring-2 ring-emerald-500/5 hover:shadow-lg" 
             : "bg-white border-slate-200/95 shadow-md hover:shadow-lg hover:border-emerald-300"
         }`}
       >
         {isHeart && (
-          <div className="absolute top-0 right-0 bg-rose-500 text-white text-[10px] font-bold px-2.5 py-1 rounded-bl-xl uppercase tracking-wider flex items-center gap-1">
-            ❤️ Cœur ♥️
+          <div className="absolute top-0 right-0 bg-emerald-600 text-white text-[10px] font-bold px-2.5 py-1 rounded-bl-xl uppercase tracking-wider flex items-center gap-1">
+            ⭐ Favori
           </div>
         )}
 
@@ -192,8 +190,8 @@ export default function MatchesView({ onPronoClick, userProfile }: MatchesViewPr
         <div className="flex items-center justify-between">
           <div className="flex flex-col items-center flex-1 relative">
             <img src={match.homeTeam.crest} alt={match.homeTeam.name} className="w-12 h-12 object-contain mb-2" onError={(e) => { e.currentTarget.style.display='none' }} />
-            <span className={`font-bold text-center text-sm md:text-base text-gray-800 ${isHomeHeart ? "text-rose-650 underline decoration-rose-450 decoration-2" : ""}`}>
-              {match.homeTeam.shortName || match.homeTeam.name} {isHomeHeart && "❤️"}
+            <span className={`font-bold text-center text-sm md:text-base text-gray-800 ${isHomeHeart ? "text-emerald-700 underline decoration-emerald-400 decoration-2" : ""}`}>
+              {match.homeTeam.shortName || match.homeTeam.name} {isHomeHeart && "⭐"}
             </span>
           </div>
           
@@ -212,8 +210,8 @@ export default function MatchesView({ onPronoClick, userProfile }: MatchesViewPr
           
           <div className="flex flex-col items-center flex-1 relative">
             <img src={match.awayTeam.crest} alt={match.awayTeam.name} className="w-12 h-12 object-contain mb-2" onError={(e) => { e.currentTarget.style.display='none' }} />
-            <span className={`font-bold text-center text-sm md:text-base text-gray-800 ${isAwayHeart ? "text-rose-650 underline decoration-rose-450 decoration-2" : ""}`}>
-              {match.awayTeam.shortName || match.awayTeam.name} {isAwayHeart && "❤️"}
+            <span className={`font-bold text-center text-sm md:text-base text-gray-800 ${isAwayHeart ? "text-emerald-700 underline decoration-emerald-400 decoration-2" : ""}`}>
+              {match.awayTeam.shortName || match.awayTeam.name} {isAwayHeart && "⭐"}
             </span>
           </div>
         </div>
@@ -239,7 +237,7 @@ export default function MatchesView({ onPronoClick, userProfile }: MatchesViewPr
         <div className="bg-white border-2 border-slate-100 rounded-2xl p-5 shadow-sm relative overflow-hidden">
           <div className="flex items-center justify-between mb-4 pb-3 border-b border-gray-50">
             <h3 className="text-xs font-black uppercase tracking-widest flex items-center gap-2 text-slate-800">
-              ⭐ Mes Équipes Favoris
+              ⭐ Mes Équipes Favorites
             </h3>
             <div className="bg-emerald-50 text-emerald-600 p-1.5 rounded-lg">
               <AlertCircle className="w-4 h-4" />
@@ -257,14 +255,14 @@ export default function MatchesView({ onPronoClick, userProfile }: MatchesViewPr
                     Prochain: {new Date(nextClubMatch.utcDate).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
                   </span>
                   <span className="text-[9px] text-gray-500 font-bold uppercase tracking-tighter">
-                    {competitions.find(c => c.id === selectedCompId)?.name || "Compétition"}
+                    {competitions.find(c => c.id === nextClubMatch.competition?.id)?.name || "Compétition"}
                   </span>
                   <span className="text-[9px] text-gray-400 truncate font-semibold italic">
                     vs {nextClubMatch.homeTeam.name?.toLowerCase().includes(userProfile.favorite_club?.toLowerCase() || "") ? nextClubMatch.awayTeam.shortName : nextClubMatch.homeTeam.shortName}
                   </span>
                 </div>
               ) : (
-                <span className="text-[9px] text-gray-400 font-medium italic">Aucun match détecté</span>
+                <span className="text-[9px] text-gray-400 font-medium italic">Aucun prochain match trouvé</span>
               )}
             </div>
 
@@ -278,14 +276,14 @@ export default function MatchesView({ onPronoClick, userProfile }: MatchesViewPr
                     Prochain: {new Date(nextNationalMatch.utcDate).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
                   </span>
                   <span className="text-[9px] text-gray-500 font-bold uppercase tracking-tighter">
-                    {competitions.find(c => c.id === selectedCompId)?.name || "Compétition"}
+                    {competitions.find(c => c.id === nextNationalMatch.competition?.id)?.name || "Compétition"}
                   </span>
                   <span className="text-[9px] text-gray-400 truncate font-semibold italic">
                     vs {nextNationalMatch.homeTeam.name?.toLowerCase().includes(userProfile.favorite_national?.toLowerCase() || "") ? nextNationalMatch.awayTeam.shortName : nextNationalMatch.homeTeam.shortName}
                   </span>
                 </div>
               ) : (
-                <span className="text-[9px] text-gray-400 font-medium italic">Aucun match détecté</span>
+                <span className="text-[9px] text-gray-400 font-medium italic">Aucun prochain match trouvé</span>
               )}
             </div>
           </div>
@@ -308,7 +306,7 @@ export default function MatchesView({ onPronoClick, userProfile }: MatchesViewPr
       <div className="space-y-8 pb-8">
         {loading && <div className="flex justify-center p-6"><Clock className="animate-spin text-emerald-500 w-6 h-6" /></div>}
         
-        {!loading && matches.length === 0 && (
+        {!loading && matches.length === 0 && todayMatches.length === 0 && (
           <div className="text-center p-8 bg-white rounded-2xl shadow-sm text-gray-500 border border-gray-100">
             Aucun match programmé trouvé pour le moment.
           </div>
@@ -318,7 +316,7 @@ export default function MatchesView({ onPronoClick, userProfile }: MatchesViewPr
         {!loading && todayMatches.length > 0 && (
           <div className="space-y-4">
             <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest pl-1 border-l-4 border-slate-900 flex items-center gap-2">
-              <span>⚡ Matchs du Jour</span>
+              <span>⚡ Matchs du Jour (Toutes Compétitions)</span>
               <div className="h-[1px] bg-slate-100 flex-1"></div>
             </h3>
             <div className="grid grid-cols-1 gap-4">
@@ -330,9 +328,9 @@ export default function MatchesView({ onPronoClick, userProfile }: MatchesViewPr
         {/* Heart Matches Section */}
         {!loading && userHeartMatches.length > 0 && (
           <div className="space-y-4">
-            <h3 className="text-xs font-black text-rose-600 uppercase tracking-widest pl-1 border-l-4 border-rose-500 flex items-center gap-2">
-              <span>❤️ Focus : Mes Équipes ❤️</span>
-              <div className="h-[1px] bg-rose-200 flex-1"></div>
+            <h3 className="text-xs font-black text-emerald-600 uppercase tracking-widest pl-1 border-l-4 border-emerald-500 flex items-center gap-2">
+              <span>⭐ Mes Matchs Favoris</span>
+              <div className="h-[1px] bg-emerald-100 flex-1"></div>
             </h3>
             <div className="grid grid-cols-1 gap-4">
               {userHeartMatches.map(match => renderMatchCard(match, true))}
@@ -342,7 +340,7 @@ export default function MatchesView({ onPronoClick, userProfile }: MatchesViewPr
 
         {/* Live Matches */}
         {!loading && liveMatches.length > 0 && (
-          <div className="space-y-4 border-t border-rose-100 pt-6">
+          <div className="space-y-4 border-t border-slate-100 pt-6">
             <h3 className="text-xs font-black text-rose-500 uppercase tracking-widest pl-1 border-l-4 border-rose-400 flex items-center gap-2">
               <span className="flex items-center gap-1.5">🔴 En Direct <span className="w-1.5 h-1.5 bg-rose-500 rounded-full animate-ping"></span></span>
               <div className="h-[1px] bg-rose-100 flex-1"></div>
@@ -357,24 +355,11 @@ export default function MatchesView({ onPronoClick, userProfile }: MatchesViewPr
         {!loading && upcomingMatches.length > 0 && (
           <div className="space-y-4 border-t border-emerald-100 pt-6">
             <h3 className="text-xs font-black text-emerald-600 uppercase tracking-widest pl-1 border-l-4 border-emerald-500 flex items-center gap-2">
-              <span>📅 Prochains Matchs</span>
+              <span>📅 Prochains Matchs de la Compétition</span>
               <div className="h-[1px] bg-emerald-100 flex-1"></div>
             </h3>
             <div className="grid grid-cols-1 gap-4">
               {upcomingMatches.map(match => renderMatchCard(match, false))}
-            </div>
-          </div>
-        )}
-
-        {/* Finished Matches */}
-        {!loading && finishedMatches.length > 0 && (
-          <div className="space-y-4 border-t border-slate-100 pt-6">
-            <h3 className="text-xs font-black text-slate-500 uppercase tracking-widest pl-1 border-l-4 border-slate-400 flex items-center gap-2">
-              <span>✅ Matchs Terminés</span>
-              <div className="h-[1px] bg-slate-100 flex-1"></div>
-            </h3>
-            <div className="grid grid-cols-1 gap-4">
-              {finishedMatches.map(match => renderMatchCard(match, false))}
             </div>
           </div>
         )}
