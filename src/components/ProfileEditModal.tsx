@@ -105,6 +105,10 @@ export default function ProfileEditModal({
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
+  // Admin API config states
+  const [activeApi, setActiveApi] = useState<"football-data" | "api-football">("football-data");
+  const [apiStatusMsg, setApiStatusMsg] = useState("");
+
   // Dropdown visibility states
   const [isClubFocused, setIsClubFocused] = useState(false);
   const [isNationalFocused, setIsNationalFocused] = useState(false);
@@ -123,6 +127,22 @@ export default function ProfileEditModal({
       );
 
   useEffect(() => {
+    const fetchApiProvider = async () => {
+      const allowedEmails = ["rouijel.nabil@gmail.com", "rouijel.nabil.cp@gmail.com"];
+      if (!allowedEmails.includes(email.toLowerCase())) return;
+      try {
+        const response = await fetch("/api/admin/api-provider");
+        if (response.ok) {
+          const data = await response.json();
+          if (data.active_api) {
+            setActiveApi(data.active_api);
+          }
+        }
+      } catch (err) {
+        console.error("Error fetching API provider:", err);
+      }
+    };
+
     if (isOpen) {
       setUsername(initialProfile.username);
       setAvatarType(initialProfile.avatar_type);
@@ -132,8 +152,41 @@ export default function ProfileEditModal({
       setErrorMsg("");
       setIsClubFocused(false);
       setIsNationalFocused(false);
+      fetchApiProvider();
+      setApiStatusMsg("");
     }
-  }, [isOpen, initialProfile]);
+  }, [isOpen, initialProfile, email]);
+
+  const handleUpdateApiProvider = async (provider: "football-data" | "api-football") => {
+    try {
+      setApiStatusMsg("Mise à jour en cours...");
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token || "";
+
+      const response = await fetch("/api/admin/api-provider", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({ provider })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setActiveApi(data.active_api);
+        setApiStatusMsg("API mise à jour avec succès (recharge...) !");
+        setTimeout(() => {
+          window.location.reload();
+        }, 1200);
+      } else {
+        const errData = await response.json();
+        setApiStatusMsg(`Erreur: ${errData.error || "Inconnue"}`);
+      }
+    } catch (err: any) {
+      setApiStatusMsg(`Erreur: ${err.message || err}`);
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -429,6 +482,47 @@ export default function ProfileEditModal({
                   ))}
             </div>
           </div>
+
+          {/* Admin API Switch */}
+          {(email.toLowerCase() === "rouijel.nabil@gmail.com" ||
+            email.toLowerCase() === "rouijel.nabil.cp@gmail.com") && (
+            <div className="pt-4 border-t border-gray-100 text-left">
+              <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                🔧 Configuration API (Admin Only)
+              </label>
+              <div className="grid grid-cols-2 gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => handleUpdateApiProvider("football-data")}
+                  className={`py-2 px-3 rounded-xl font-bold text-xs transition border cursor-pointer flex flex-col items-center justify-center gap-1 ${
+                    activeApi === "football-data"
+                      ? "bg-amber-50 text-amber-800 border-amber-500/30 shadow-xs"
+                      : "bg-gray-50 text-gray-500 hover:bg-gray-100 border-gray-200/55"
+                  }`}
+                >
+                  <span className="font-extrabold text-[10px]">FOOTBALL-DATA</span>
+                  <span className="text-[9px] text-gray-400">Gratuit / Standard</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleUpdateApiProvider("api-football")}
+                  className={`py-2 px-3 rounded-xl font-bold text-xs transition border cursor-pointer flex flex-col items-center justify-center gap-1 ${
+                    activeApi === "api-football"
+                      ? "bg-blue-50 text-blue-800 border-blue-500/30 shadow-xs"
+                      : "bg-gray-50 text-gray-500 hover:bg-gray-100 border-gray-200/55"
+                  }`}
+                >
+                  <span className="font-extrabold text-[10px]">API-FOOTBALL</span>
+                  <span className="text-[9px] text-gray-400">Premium Dashboard</span>
+                </button>
+              </div>
+              {apiStatusMsg && (
+                <span className="block mt-1.5 text-[10px] text-emerald-600 font-bold">
+                  {apiStatusMsg}
+                </span>
+              )}
+            </div>
+          )}
 
           {/* Action buttons */}
           <div className="pt-2 flex gap-3">

@@ -83,7 +83,7 @@ export default function MatchesView({ onPronoClick, userProfile, onProfileUpdate
     return queryList.some(query => {
       const q = query.toLowerCase();
       if (name.includes(q) || short.includes(q) || tla.includes(q)) return true;
-      if (q === "maroc" && (name.includes("morocco") || tla === "mar")) return true;
+      if (q === "maroc" && (name.includes("morocco") || name.includes("maroc") || (tla === "mar" && !name.includes("marseille") && !short.includes("marseille")))) return true;
       if (q === "real madrid" && (name.includes("real madrid") || tla === "rma")) return true;
       return false;
     });
@@ -180,7 +180,7 @@ export default function MatchesView({ onPronoClick, userProfile, onProfileUpdate
       const short = (team.shortName || "").toLowerCase();
       const tla = (team.tla || "").toLowerCase();
       if (name.includes(query) || short.includes(query) || tla.includes(query)) return true;
-      if (query === "maroc" && (name.includes("morocco") || tla === "mar")) return true;
+      if (query === "maroc" && (name.includes("morocco") || name.includes("maroc") || (tla === "mar" && !name.includes("marseille") && !short.includes("marseille")))) return true;
       if (query === "real madrid" && (name.includes("real madrid") || tla === "rma")) return true;
       return false;
     };
