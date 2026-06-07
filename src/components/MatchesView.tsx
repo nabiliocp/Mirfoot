@@ -40,14 +40,30 @@ export default function MatchesView({ onPronoClick, userProfile, onProfileUpdate
       fetch('/api/matches/today').then(res => res.json())
     ])
     .then(([compData, todayData]) => {
+      if (compData.error) {
+        throw new Error(compData.error);
+      }
+      if (todayData.error) {
+        throw new Error(todayData.error);
+      }
+      
       setCompetitions(compData.competitions || []);
       setTodayMatches(todayData.matches || []);
       
-      setSelectedCompId('all');
+      const validComps = compData.competitions || [];
+      const hasTodayMatches = (todayData.matches || []).length > 0;
+      
+      if (!hasTodayMatches && validComps.length > 0) {
+        const defaultComp = validComps.find((c: Competition) => c.id === 2015) || validComps[0];
+        setSelectedCompId(defaultComp.id);
+      } else {
+        setSelectedCompId('all');
+      }
+      
       setLoading(false);
     })
     .catch(err => {
-      console.error(err);
+      console.error("Erreur lors de la récupération :", err);
       setError("Chargement temporairement indisponible.");
       setLoading(false);
     });

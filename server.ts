@@ -247,40 +247,8 @@ async function startServer() {
   // Real Integration with football-data.org / api-football.com
   app.get("/api/competitions", async (req, res) => {
     try {
-      const activeProvider = getActiveApiProvider();
-
-      if (activeProvider === "api-football") {
-        return res.json({ competitions: AVAILABLE_COMPETITIONS });
-      }
-
-      const apiKey = process.env.FOOTBALL_DATA_API_KEY;
-      if (!apiKey) {
-        return res
-          .status(401)
-          .json({
-            error:
-              "Configuration requise: Veuillez ajouter FOOTBALL_DATA_API_KEY dans les 'Secrets'.",
-          });
-      }
-
-      const response = await fetch(
-        "https://api.football-data.org/v4/competitions",
-        {
-          headers: { "X-Auth-Token": apiKey },
-        },
-      );
-
-      if (!response.ok) throw new Error("API Error");
-      const data = await response.json();
-
-      // Inject friendly matches (competition 679) into football-data competitions list
-      if (data && Array.isArray(data.competitions)) {
-        const friendlyComp = AVAILABLE_COMPETITIONS.find((c) => c.id === 679);
-        if (friendlyComp && !data.competitions.some((c: any) => c.id === 679)) {
-          data.competitions.push(friendlyComp);
-        }
-      }
-      res.json(data);
+      // Use cached static available competitions
+      return res.json({ competitions: AVAILABLE_COMPETITIONS });
     } catch (err) {
       res.status(500).json({ error: "Erreur réseau" });
     }
