@@ -55,36 +55,31 @@ const getNationalFlagEmoji = (countryName?: string): string => {
   return "🏳️";
 };
 
-const getClubEmoji = (clubName?: string): string => {
-  if (!clubName) return "";
+const getClubCrest = (clubName?: string): string | null => {
+  if (!clubName) return null;
   const name = clubName.toLowerCase().trim();
-  if (name.includes("paris") || name.includes("psg")) return "🗼";
-  if (name.includes("marseille") || name.includes("om")) return "🔵";
-  if (name.includes("real madrid") || name.includes("real")) return "👑";
-  if (name.includes("barcelone") || name.includes("barca") || name.includes("barça")) return "🔴";
-  if (name.includes("manchester city") || name.includes("man city") || name.includes("mancity")) return "🩵";
-  if (name.includes("bayern") || name.includes("munich")) return "🔴";
-  if (name.includes("juventus") || name.includes("juve")) return "⚫";
-  if (name.includes("liverpool")) return "🔴";
-  if (name.includes("chelsea")) return "🔵";
-  if (name.includes("arsenal")) return "🔴";
-  if (name.includes("inter milan") || name.includes("inter")) return "⚫🔵";
-  if (name.includes("ac milan") || name.includes("milan")) return "🔴⚫";
-  if (name.includes("atletico") || name.includes("atlético")) return "🔴";
-  if (name.includes("dortmund") || name.includes("borussia")) return "🟡";
-  if (name.includes("manchester united") || name.includes("man united") || name.includes("manutd")) return "😈";
-  if (name.includes("lyon") || name.includes("ol")) return "🦁";
-  if (name.includes("monaco")) return "🇲🇨";
-  if (name.includes("lens")) return "🟡";
-  if (name.includes("lille")) return "🔴";
-  if (name.includes("nice")) return "🦅";
-  if (name.includes("saint-étienne") || name.includes("st etienne")) return "🟢";
-  if (name.includes("benfica")) return "🦅";
-  if (name.includes("sporting")) return "🦁🟢";
-  if (name.includes("ajax")) return "❌❌❌";
-  if (name.includes("nassr")) return "🟡";
-  if (name.includes("hilal")) return "🔵";
-  return "⚽";
+  if (name.includes("real madrid")) return "https://crests.football-data.org/86.svg";
+  if (name.includes("barcelon") || name.includes("barca") || name.includes("barça")) return "https://crests.football-data.org/81.svg";
+  if (name.includes("manchester city")) return "https://crests.football-data.org/65.svg";
+  if (name.includes("manchester united") || name.includes("man united") || name.includes("manutd")) return "https://crests.football-data.org/66.svg";
+  if (name.includes("liverpool")) return "https://crests.football-data.org/64.svg";
+  if (name.includes("arsenal")) return "https://crests.football-data.org/57.svg";
+  if (name.includes("chelsea")) return "https://crests.football-data.org/61.svg";
+  if (name.includes("tottenham") || name.includes("spurs")) return "https://crests.football-data.org/73.svg";
+  if (name.includes("bayern") || name.includes("munich")) return "https://crests.football-data.org/5.svg";
+  if (name.includes("dortmund") || name.includes("borussia")) return "https://crests.football-data.org/4.svg";
+  if (name.includes("psg") || name.includes("paris saint-germain") || name.includes("paris")) return "https://crests.football-data.org/524.svg";
+  if (name.includes("marseille") || name.includes("om")) return "https://crests.football-data.org/516.svg";
+  if (name.includes("lyon") || name.includes("ol")) return "https://crests.football-data.org/523.svg";
+  if (name.includes("monaco")) return "https://crests.football-data.org/548.svg";
+  if (name.includes("milan") && !name.includes("inter")) return "https://crests.football-data.org/98.svg";
+  if (name.includes("inter")) return "https://crests.football-data.org/108.svg";
+  if (name.includes("juventus") || name.includes("juve")) return "https://crests.football-data.org/109.svg";
+  if (name.includes("napoli")) return "https://crests.football-data.org/113.svg";
+  if (name.includes("roma")) return "https://crests.football-data.org/100.svg";
+  if (name.includes("atletico") || name.includes("atlético")) return "https://crests.football-data.org/78.svg";
+  
+  return null;
 };
 
 export default function App() {
@@ -504,10 +499,12 @@ export default function App() {
                     )}
                     {userProfile.favorite_club && (
                       <span 
-                        className="text-xs hover:scale-110 transition duration-150 inline-flex" 
+                        className="text-xs hover:scale-110 transition duration-150 inline-flex flex items-center justify-center w-5 h-5 bg-white rounded-full p-0.5" 
                         title={`Club de cœur : ${userProfile.favorite_club}`}
                       >
-                        {getClubEmoji(userProfile.favorite_club)}
+                        {getClubCrest(userProfile.favorite_club) ? (
+                          <img src={getClubCrest(userProfile.favorite_club)!} className="w-full h-full object-contain" alt="Club" />
+                        ) : "⚽"}
                       </span>
                     )}
                   </div>

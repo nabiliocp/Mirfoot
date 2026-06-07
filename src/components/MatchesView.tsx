@@ -226,7 +226,7 @@ export default function MatchesView({ onPronoClick, userProfile, onProfileUpdate
       crest = getTeamCrest(teamName) || "";
     }
 
-    return { last, next, crest };
+    return { last, next, crest, teamId: teamRecord?.id };
   };
 
   const handleAddTeam = async () => {
@@ -682,7 +682,7 @@ export default function MatchesView({ onPronoClick, userProfile, onProfileUpdate
                           <div className="space-y-1.5">
                             <div className="flex items-center justify-between">
                               <span className="text-[10px] font-black text-emerald-950 flex-1">
-                                vs {data.next.homeTeam.name?.toLowerCase().includes(clubName.toLowerCase()) ? (data.next.awayTeam.shortName || data.next.awayTeam.name) : (data.next.homeTeam.shortName || data.next.homeTeam.name)}
+                                vs {(data.teamId && data.next.homeTeam.id === data.teamId) || (!data.teamId && data.next.homeTeam.name?.toLowerCase().includes(clubName.toLowerCase())) ? (data.next.awayTeam.shortName || data.next.awayTeam.name) : (data.next.homeTeam.shortName || data.next.homeTeam.name)}
                               </span>
                               <span className="text-[8px] font-black text-emerald-600 bg-white border border-emerald-100 px-1 rounded shrink-0">
                                 {new Date(data.next.utcDate).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
@@ -774,7 +774,7 @@ export default function MatchesView({ onPronoClick, userProfile, onProfileUpdate
                           <div className="space-y-1.5">
                             <div className="flex items-center justify-between">
                               <span className="text-[10px] font-black text-indigo-950 flex-1">
-                                vs {data.next.homeTeam.name?.toLowerCase().includes(name.toLowerCase()) ? (data.next.awayTeam.shortName || data.next.awayTeam.name) : (data.next.homeTeam.shortName || data.next.homeTeam.name)}
+                                vs {(data.teamId && data.next.homeTeam.id === data.teamId) || (!data.teamId && data.next.homeTeam.name?.toLowerCase().includes(name.toLowerCase())) ? (data.next.awayTeam.shortName || data.next.awayTeam.name) : (data.next.homeTeam.shortName || data.next.homeTeam.name)}
                               </span>
                               <span className="text-[8px] font-black text-indigo-600 bg-white border border-indigo-100 px-1 rounded shrink-0">
                                 {new Date(data.next.utcDate).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
@@ -800,14 +800,14 @@ export default function MatchesView({ onPronoClick, userProfile, onProfileUpdate
 
       {/* 2. Mode Filtre Matchs de la Journée */}
       <div className="space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pl-1 border-l-4 border-emerald-600 pt-1">
-          <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest flex items-center gap-2">
-            <span>⚡ Matchs du Jour</span>
-          </h3>
-          
-          <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex flex-col gap-4 pl-1 border-l-4 border-emerald-600 pt-1 pb-1">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest flex items-center gap-2">
+              <span>⚡ Matchs du Jour</span>
+            </h3>
+            
             <select 
-              className="bg-white border border-gray-200 outline-none text-[10px] font-black uppercase tracking-tight text-slate-700 py-1.5 px-3 rounded-full shadow-sm cursor-pointer"
+              className="bg-white border border-gray-200 outline-none text-[10px] font-black uppercase tracking-tight text-slate-700 py-1.5 px-3 rounded-full shadow-sm cursor-pointer w-full sm:w-auto"
               value={todayCompIdFilter === 'all' ? 'all' : todayCompIdFilter}
               onChange={(e) => setTodayCompIdFilter(e.target.value === 'all' ? 'all' : Number(e.target.value))}
             >
@@ -816,9 +816,9 @@ export default function MatchesView({ onPronoClick, userProfile, onProfileUpdate
                 <option key={comp.id} value={comp.id}>{comp.name}</option>
               ))}
             </select>
-
-            <div className="h-4 w-[1px] bg-gray-200 mx-1 hidden sm:block"></div>
-
+          </div>
+          
+          <div className="flex items-center gap-2 flex-wrap">
             <button
               onClick={() => setTodayFilter('all')}
               className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-tight cursor-pointer transition-all ${todayFilter === 'all' ? 'bg-emerald-600 text-white shadow-sm shadow-emerald-200' : 'bg-gray-100 text-slate-600 hover:bg-gray-200'}`}
