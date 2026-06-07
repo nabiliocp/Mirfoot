@@ -1383,40 +1383,86 @@ export default function ChallengesView({
     if (!userId) { alert("Vous devez être connecté"); return; }
     if (challenge.locked || challenge.resolved) { alert("Le défi est verrouillé ou terminé"); return; }
 
-    const pred = predictionForms[challenge.id];
+    const draftForm = predictionForms[challenge.id] || {};
+    const userPred = userPredictions[challenge.id] || {};
 
     if (challenge.type === "custom") {
-      if (!pred || !pred.customAnswer) {
+      const finalAnswer = draftForm.customAnswer !== undefined ? draftForm.customAnswer : userPred?.customAnswer;
+      if (!finalAnswer) {
         alert("Veuillez sélectionner une option !");
         return;
       }
+
+      const finalPred = {
+        ...userPred,
+        ...draftForm,
+        customAnswer: finalAnswer,
+      };
+
+      setUserPredictions((prev) => ({ ...prev, [challenge.id]: finalPred }));
+      setPredictionForms((prev) => ({ ...prev, [challenge.id]: finalPred }));
+
+      const { error } = await supabase.from("bets").upsert(
+        {
+          user_id: userId,
+          challenge_id: challenge.id,
+          predictions: finalPred,
+        },
+        { onConflict: "user_id,challenge_id" },
+      );
+
+      if (error) {
+        console.error("Erreur lors de l'enregistrement du pari:", error);
+        alert("Erreur lors de l'enregistrement : " + error.message);
+      } else {
+        refreshChallengeBets();
+      }
     } else {
+      const finalHomeScore = draftForm.homeScore !== undefined ? draftForm.homeScore : userPred?.homeScore;
+      const finalAwayScore = draftForm.awayScore !== undefined ? draftForm.awayScore : userPred?.awayScore;
+
       if (
-        !pred ||
-        pred.homeScore === undefined ||
-        pred.awayScore === undefined
+        finalHomeScore === undefined ||
+        finalAwayScore === undefined ||
+        isNaN(Number(finalHomeScore)) ||
+        isNaN(Number(finalAwayScore))
       ) {
         alert("Veuillez remplir les scores !");
         return;
       }
-    }
 
-    setUserPredictions((prev) => ({ ...prev, [challenge.id]: pred }));
+      const finalQualifies = draftForm.qualifies !== undefined ? draftForm.qualifies : userPred?.qualifies;
+      const finalBonus = draftForm.bonus !== undefined ? draftForm.bonus : userPred?.bonus;
+      const finalEndStage = draftForm.endStage !== undefined ? draftForm.endStage : userPred?.endStage;
 
-    const { error } = await supabase.from("bets").upsert(
-      {
-        user_id: userId,
-        challenge_id: challenge.id,
-        predictions: pred,
-      },
-      { onConflict: "user_id,challenge_id" },
-    );
+      const finalPred = {
+        ...userPred,
+        ...draftForm,
+        homeScore: finalHomeScore,
+        awayScore: finalAwayScore,
+        qualifies: finalQualifies,
+        bonus: finalBonus,
+        endStage: finalEndStage,
+      };
 
-    if (error) {
-      console.error("Erreur lors de l'enregistrement du pari:", error);
-      alert("Erreur lors de l'enregistrement : " + error.message);
-    } else {
-      refreshChallengeBets();
+      setUserPredictions((prev) => ({ ...prev, [challenge.id]: finalPred }));
+      setPredictionForms((prev) => ({ ...prev, [challenge.id]: finalPred }));
+
+      const { error } = await supabase.from("bets").upsert(
+        {
+          user_id: userId,
+          challenge_id: challenge.id,
+          predictions: finalPred,
+        },
+        { onConflict: "user_id,challenge_id" },
+      );
+
+      if (error) {
+        console.error("Erreur lors de l'enregistrement du pari:", error);
+        alert("Erreur lors de l'enregistrement : " + error.message);
+      } else {
+        refreshChallengeBets();
+      }
     }
   };
 
