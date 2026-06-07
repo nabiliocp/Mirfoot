@@ -28,6 +28,7 @@ export default function MatchesView({ onPronoClick, userProfile, onProfileUpdate
   const [newTeamName, setNewTeamName] = useState("");
   const [selectedCompObj, setSelectedCompObj] = useState<Competition | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [todayFilter, setTodayFilter] = useState<'all' | 'live' | 'upcoming' | 'finished'>('all');
 
   useEffect(() => {
     // Fetch competitions and Today's matches
@@ -118,6 +119,14 @@ export default function MatchesView({ onPronoClick, userProfile, onProfileUpdate
   const liveMatches = otherMatches.filter(m => ['LIVE', 'IN_PLAY', 'PAUSED'].includes(m.status));
   const upcomingMatches = otherMatches.filter(m => ['TIMED', 'SCHEDULED', 'POSTPONED'].includes(m.status));
   const finishedMatches = otherMatches.filter(m => ['FINISHED', 'AWARDED'].includes(m.status));
+
+  const filteredTodayMatches = todayMatches.filter(m => {
+    if (todayFilter === 'all') return true;
+    if (todayFilter === 'live') return ['LIVE', 'IN_PLAY', 'PAUSED'].includes(m.status);
+    if (todayFilter === 'upcoming') return ['TIMED', 'SCHEDULED', 'POSTPONED'].includes(m.status);
+    if (todayFilter === 'finished') return ['FINISHED', 'AWARDED'].includes(m.status);
+    return true;
+  });
 
   // Helper to get team crest (national or club) fallback
   const getTeamCrest = (name: string) => {
@@ -471,96 +480,10 @@ export default function MatchesView({ onPronoClick, userProfile, onProfileUpdate
 
   return (
     <div className="space-y-6 animate-in fade-in zoom-in-95 duration-300">
-      {/* 1. Selector (Ligue) first */}
-      <div className="space-y-4">
-        <div className="flex items-center space-x-2 bg-white rounded-xl shadow-sm px-4 py-2 border border-gray-100">
-          <Search className="w-5 h-5 text-gray-400" />
-          <select 
-            className="flex-1 bg-transparent py-2 text-sm font-medium outline-none text-gray-700 w-full cursor-pointer"
-            value={selectedCompId || ''}
-            onChange={(e) => {
-              setSelectedCompId(Number(e.target.value));
-              setSelectedSeason(null);
-            }}
-          >
-            {competitions.map(comp => (
-              <option key={comp.id} value={comp.id}>{comp.name}</option>
-            ))}
-          </select>
-        </div>
-
-        {/* Season Selector with customized pills */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 bg-slate-50 p-3 rounded-2xl border border-slate-100">
-          <div>
-            <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider block">Saison active</span>
-            <span className="text-xs font-bold text-slate-700">
-              {selectedSeason ? `Historique : ${selectedSeason}` : "Saison en cours (2025/2026)"}
-            </span>
-          </div>
-          <div className="flex items-center gap-1.5 flex-wrap">
-            <button
-              onClick={() => setSelectedSeason(null)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold cursor-pointer transition-all ${!selectedSeason ? 'bg-emerald-600 text-white shadow-xs' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'}`}
-            >
-              En cours
-            </button>
-            {[2024, 2023, 2022].map(yr => (
-              <button
-                key={yr}
-                onClick={() => setSelectedSeason(yr)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold cursor-pointer transition-all ${selectedSeason === yr ? 'bg-emerald-600 text-white shadow-xs' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'}`}
-              >
-                {yr}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Info Banner when selecting Friendly Matches */}
-        {selectedCompId === 679 && (
-          <div className="bg-emerald-50 border border-emerald-200/50 rounded-2xl p-4 text-xs font-medium text-emerald-900 leading-relaxed shadow-xs flex items-start gap-3">
-            <AlertCircle className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
-            <div className="space-y-1.5">
-              <p className="font-extrabold text-emerald-800">💡 Information : Matchs Amicaux de la Journée</p>
-              <p>
-                ⚽ Les matchs amicaux internationaux planifiés pour <strong>Aujourd'hui</strong> sont entièrement récupérés et affichés en temps réel.
-              </p>
-              <p>
-                👉 Pour l'historique complet des saisons passées, le Plan Gratuit de l'API restreint l'accès aux saisons antérieures. Nous affichons donc la <strong>Saison 2024</strong> par défaut de manière transparente.
-              </p>
-              <p>
-                💡 Essayez le bouton <strong className="bg-white/80 border border-emerald-200/60 font-black px-1.5 py-0.5 rounded-md text-emerald-800">2023</strong> pour voir le duel mythique <strong className="font-black text-emerald-950">Maroc vs Brésil (25 mars 2023)</strong> et soumettre vos pronostics rétro !
-              </p>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* 4. Zone Matchs du Jour - MOVED ABOVE FOR BETTER VISIBILITY */}
-      <div className="space-y-4">
-        <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest pl-1 border-l-4 border-slate-900 flex items-center gap-2">
-          <span>⚡ Matchs du Jour (Toutes Compétitions)</span>
-          <div className="h-[1px] bg-slate-100 flex-1"></div>
-        </h3>
-        
-        {loading ? (
-          <div className="flex justify-center p-8"><Clock className="animate-spin text-emerald-500 w-6 h-6" /></div>
-        ) : todayMatches.length > 0 ? (
-          <div className="grid grid-cols-1 gap-4">
-            {todayMatches.map(match => renderMatchCard(match, userHeartMatches.some(hm => hm.id === match.id)))}
-          </div>
-        ) : (
-          <div className="bg-gray-50 rounded-2xl p-8 border-2 border-dashed border-gray-200 text-center flex flex-col items-center gap-3">
-            <CalendarCheck className="w-8 h-8 text-gray-300" />
-            <p className="text-sm font-bold text-gray-400">Aucun match détecté aujourd'hui.</p>
-          </div>
-        )}
-      </div>
-
-      {/* 2. Heart Teams & Compétitions Info Zone */}
+      {/* 1. Heart Teams & Compétitions Info Zone (at the very top) */}
       {userProfile && (
         <div className="bg-white border-2 border-slate-100 rounded-3xl p-6 shadow-sm relative overflow-hidden">
-          <div className="flex flex-wrap items-center justify-between gap-4 mb-6 pb-4 border-b border-gray-50">
+          <div className="flex flex-wrap items-center justify-between gap-4 mb-6 pb-4 border-b border-gray-50 font-sans">
             <h3 className="text-xs font-black uppercase tracking-widest flex items-center gap-2 text-slate-800">
               ⭐ Mes Équipes & Compétitions Favorites
             </h3>
@@ -632,10 +555,10 @@ export default function MatchesView({ onPronoClick, userProfile, onProfileUpdate
 
           {getFavoriteClubs().length === 0 && getFavoriteNationals().length === 0 && getFavoriteCompetitionNames().length === 0 ? (
             <div className="py-12 bg-emerald-50/20 rounded-3xl border-2 border-dashed border-emerald-100 flex flex-col items-center gap-6 px-4">
-              <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center shadow-lg shadow-emerald-600/10 border-4 border-emerald-50">
+              <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center shadow-lg shadow-emerald-600/10 border-4 border-emerald-50 font-sans">
                 <Search className="w-10 h-10 text-emerald-500" />
               </div>
-              <div className="text-center max-w-sm">
+              <div className="text-center max-w-sm font-sans">
                 <h4 className="text-lg font-black text-slate-900 mb-2">Configurez votre expérience</h4>
                 <p className="text-sm font-bold text-slate-500 leading-relaxed mb-6">
                   Ajoutez vos clubs et nations de cœur pour ne plus jamais rater un match ou un résultat important !
@@ -657,7 +580,7 @@ export default function MatchesView({ onPronoClick, userProfile, onProfileUpdate
               </div>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 relative z-10">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 relative z-10 font-sans">
               {/* Display Competitions Favorites first */}
               {getFavoriteCompetitionNames().map((compName, idx) => {
                 const compObj = competitions.find(c => c.name === compName);
@@ -777,27 +700,26 @@ export default function MatchesView({ onPronoClick, userProfile, onProfileUpdate
                       <X className="w-4 h-4" />
                     </button>
                     <div className="flex items-center gap-3 mb-4">
-                             <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center p-1.5 shadow-sm font-bold text-lg">
-                               {data.crest ? (
-                                 <img 
-                                   src={data.crest} 
-                                   alt={name} 
-                                   className="w-full h-full object-contain" 
-                                   onError={(e) => {
-                                     // If API crest fails, try the national flag fallback
-                                     const fallback = getTeamCrest(name);
-                                     if (fallback && e.currentTarget.src !== fallback) {
-                                       e.currentTarget.src = fallback;
-                                     } else {
-                                       e.currentTarget.style.display = 'none';
-                                     }
-                                   }}
-                                 />
-                               ) : null}
-                      {(!data.crest || data.crest === "") && (
-                        <span className="text-2xl">🏳️</span>
-                      )}
-                    </div>
+                      <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center p-1.5 shadow-sm font-bold text-lg">
+                        {data.crest ? (
+                          <img 
+                            src={data.crest} 
+                            alt={name} 
+                            className="w-full h-full object-contain" 
+                            onError={(e) => {
+                              const fallback = getTeamCrest(name);
+                              if (fallback && e.currentTarget.src !== fallback) {
+                                e.currentTarget.src = fallback;
+                              } else {
+                                e.currentTarget.style.display = 'none';
+                              }
+                            }}
+                          />
+                        ) : null}
+                        {(!data.crest || data.crest === "") && (
+                          <span className="text-2xl">🏳️</span>
+                        )}
+                      </div>
                       <div className="min-w-0">
                         <span className="block text-[8px] font-black text-gray-400 uppercase tracking-tight">Nation</span>
                         <span className="font-black text-slate-900 text-sm block leading-tight">{name}</span>
@@ -862,8 +784,79 @@ export default function MatchesView({ onPronoClick, userProfile, onProfileUpdate
         </div>
       )}
 
+      {/* 2. Mode Filtre Matchs de la Journée */}
+      <div className="space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pl-1 border-l-4 border-emerald-600 pt-1">
+          <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest flex items-center gap-2">
+            <span>⚡ Matchs du Jour (Toutes Compétitions)</span>
+          </h3>
+          
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <button
+              onClick={() => setTodayFilter('all')}
+              className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-tight cursor-pointer transition-all ${todayFilter === 'all' ? 'bg-emerald-600 text-white shadow-sm shadow-emerald-200' : 'bg-gray-100 text-slate-600 hover:bg-gray-200'}`}
+            >
+              Tous
+            </button>
+            <button
+              onClick={() => setTodayFilter('live')}
+              className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-tight cursor-pointer transition-all ${todayFilter === 'live' ? 'bg-rose-600 text-white shadow-sm shadow-rose-200' : 'bg-gray-100 text-slate-600 hover:bg-gray-200'}`}
+            >
+              🔴 En Direct
+            </button>
+            <button
+              onClick={() => setTodayFilter('upcoming')}
+              className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-tight cursor-pointer transition-all ${todayFilter === 'upcoming' ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-200' : 'bg-gray-100 text-slate-600 hover:bg-gray-200'}`}
+            >
+              📅 À Venir
+            </button>
+            <button
+              onClick={() => setTodayFilter('finished')}
+              className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-tight cursor-pointer transition-all ${todayFilter === 'finished' ? 'bg-slate-500 text-white shadow-sm shadow-slate-200' : 'bg-gray-100 text-slate-600 hover:bg-gray-200'}`}
+            >
+              🏁 Terminés
+            </button>
+          </div>
+        </div>
+        
+        {loading ? (
+          <div className="flex justify-center p-8"><Clock className="animate-spin text-emerald-500 w-6 h-6" /></div>
+        ) : filteredTodayMatches.length > 0 ? (
+          <div className="grid grid-cols-1 gap-4">
+            {filteredTodayMatches.map(match => renderMatchCard(match, userHeartMatches.some(hm => hm.id === match.id)))}
+          </div>
+        ) : (
+          <div className="bg-gray-50 rounded-2xl p-8 border-2 border-dashed border-gray-200 text-center flex flex-col items-center gap-3">
+            <CalendarCheck className="w-8 h-8 text-gray-300" />
+            <p className="text-sm font-bold text-gray-400">Aucun match ne correspond aux filtres d’aujourd'hui.</p>
+          </div>
+        )}
+      </div>
+
+      {/* 3. Selector (Ligue) */}
+      <div className="space-y-4 pt-4 border-t border-slate-100">
+        <div className="flex items-center justify-between mb-1">
+          <label className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Pronostiquer par Ligue/Compétition</label>
+        </div>
+        <div className="flex items-center space-x-2 bg-white rounded-xl shadow-sm px-4 py-2 border border-gray-100">
+          <Search className="w-5 h-5 text-gray-400" />
+          <select 
+            className="flex-1 bg-transparent py-2 text-sm font-semibold outline-none text-gray-700 w-full cursor-pointer"
+            value={selectedCompId || ''}
+            onChange={(e) => {
+              setSelectedCompId(Number(e.target.value));
+              setSelectedSeason(null);
+            }}
+          >
+            {competitions.map(comp => (
+              <option key={comp.id} value={comp.id}>{comp.name}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+
       <div className="space-y-8 pb-8">
-        {!loading && liveMatches.length === 0 && upcomingMatches.length === 0 && finishedMatches.length === 0 && todayMatches.length === 0 && (
+        {!loading && liveMatches.length === 0 && upcomingMatches.length === 0 && todayMatches.length === 0 && (
           <div className="text-center p-8 bg-white rounded-2xl shadow-sm text-gray-500 border border-gray-100">
             Aucun match trouvé pour le moment dans cette compétition.
           </div>
@@ -886,24 +879,11 @@ export default function MatchesView({ onPronoClick, userProfile, onProfileUpdate
         {!loading && upcomingMatches.length > 0 && (
           <div className="space-y-4 border-t border-emerald-100 pt-6">
             <h3 className="text-xs font-black text-emerald-600 uppercase tracking-widest pl-1 border-l-4 border-emerald-500 flex items-center gap-2">
-              <span>📅 Prochains Matchs de la Compétition</span>
+              <span>📅 Matchs à venir de la Compétition</span>
               <div className="h-[1px] bg-emerald-100 flex-1"></div>
             </h3>
             <div className="grid grid-cols-1 gap-4">
               {upcomingMatches.map(match => renderMatchCard(match, false))}
-            </div>
-          </div>
-        )}
-
-        {/* Finished Matches */}
-        {!loading && finishedMatches.length > 0 && (
-          <div className="space-y-4 border-t border-slate-100 pt-6">
-            <h3 className="text-xs font-black text-slate-500 uppercase tracking-widest pl-1 border-l-4 border-slate-400 flex items-center gap-2">
-              <span>🏆 Matchs Récents / Terminés</span>
-              <div className="h-[1px] bg-slate-100 flex-1"></div>
-            </h3>
-            <div className="grid grid-cols-1 gap-4">
-              {finishedMatches.slice(0, 15).map(match => renderMatchCard(match, false))}
             </div>
           </div>
         )}

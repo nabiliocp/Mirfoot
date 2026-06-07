@@ -27,6 +27,66 @@ import { Match, Challenge } from "./types";
 // @ts-ignore
 import logoImage from "./assets/images/pig_football_logo_1780308392869.png";
 
+const getNationalFlagEmoji = (countryName?: string): string => {
+  if (!countryName) return "";
+  const name = countryName.toLowerCase().trim();
+  if (name.includes("france")) return "🇫🇷";
+  if (name.includes("maroc") || name.includes("morocco")) return "🇲🇦";
+  if (name.includes("alg") || name.includes("algeria")) return "🇩🇿";
+  if (name.includes("tunis")) return "🇹🇳";
+  if (name.includes("sénégal") || name.includes("senegal")) return "🇸🇳";
+  if (name.includes("ivoire") || name.includes("ivory")) return "🇨🇮";
+  if (name.includes("cameroun") || name.includes("cameroon")) return "🇨🇲";
+  if (name.includes("égypte") || name.includes("egypt")) return "🇪🇬";
+  if (name.includes("mali")) return "🇲🇱";
+  if (name.includes("espagne") || name.includes("spain")) return "🇪🇸";
+  if (name.includes("ital")) return "🇮🇹";
+  if (name.includes("allemagne") || name.includes("germany")) return "🇩🇪";
+  if (name.includes("angleterre") || name.includes("england") || name.includes("royaume-uni")) return "🇬🇧";
+  if (name.includes("portugal")) return "🇵🇹";
+  if (name.includes("belgique") || name.includes("belgium")) return "🇧🇪";
+  if (name.includes("pays-bas") || name.includes("netherlands")) return "🇳🇱";
+  if (name.includes("brésil") || name.includes("brazil")) return "🇧🇷";
+  if (name.includes("argen")) return "🇦🇷";
+  if (name.includes("croat")) return "🇭🇷";
+  if (name.includes("urug")) return "🇺🇾";
+  if (name.includes("japon") || name.includes("japan")) return "🇯🇵";
+  if (name.includes("suisse") || name.includes("switzerland")) return "🇨🇭";
+  return "🏳️";
+};
+
+const getClubEmoji = (clubName?: string): string => {
+  if (!clubName) return "";
+  const name = clubName.toLowerCase().trim();
+  if (name.includes("paris") || name.includes("psg")) return "🗼";
+  if (name.includes("marseille") || name.includes("om")) return "🔵";
+  if (name.includes("real madrid") || name.includes("real")) return "👑";
+  if (name.includes("barcelone") || name.includes("barca") || name.includes("barça")) return "🔴";
+  if (name.includes("manchester city") || name.includes("man city") || name.includes("mancity")) return "🩵";
+  if (name.includes("bayern") || name.includes("munich")) return "🔴";
+  if (name.includes("juventus") || name.includes("juve")) return "⚫";
+  if (name.includes("liverpool")) return "🔴";
+  if (name.includes("chelsea")) return "🔵";
+  if (name.includes("arsenal")) return "🔴";
+  if (name.includes("inter milan") || name.includes("inter")) return "⚫🔵";
+  if (name.includes("ac milan") || name.includes("milan")) return "🔴⚫";
+  if (name.includes("atletico") || name.includes("atlético")) return "🔴";
+  if (name.includes("dortmund") || name.includes("borussia")) return "🟡";
+  if (name.includes("manchester united") || name.includes("man united") || name.includes("manutd")) return "😈";
+  if (name.includes("lyon") || name.includes("ol")) return "🦁";
+  if (name.includes("monaco")) return "🇲🇨";
+  if (name.includes("lens")) return "🟡";
+  if (name.includes("lille")) return "🔴";
+  if (name.includes("nice")) return "🦅";
+  if (name.includes("saint-étienne") || name.includes("st etienne")) return "🟢";
+  if (name.includes("benfica")) return "🦅";
+  if (name.includes("sporting")) return "🦁🟢";
+  if (name.includes("ajax")) return "❌❌❌";
+  if (name.includes("nassr")) return "🟡";
+  if (name.includes("hilal")) return "🔵";
+  return "⚽";
+};
+
 export default function App() {
   const [session, setSession] = useState<Session | null>(null);
   const [loadingSession, setLoadingSession] = useState(true);
@@ -421,15 +481,38 @@ export default function App() {
           </div>
 
           <div className="flex items-center gap-3">
-            {/* Dynamic User Profile Block - Display Username text next to LogOut arrow */}
+            {/* Dynamic User Profile Block - Display Username text with custom heart flags/logos */}
             {userProfile && (
-              <span 
+              <div 
                 onClick={() => setIsProfileModalOpen(true)}
-                className="font-extrabold text-sm sm:text-base text-emerald-100 hover:text-white hover:underline transition cursor-pointer select-none"
+                className="flex items-center gap-2 bg-emerald-800/40 hover:bg-emerald-800/70 border border-emerald-600/30 hover:border-emerald-500/40 px-3 py-1.5 rounded-full transition cursor-pointer select-none"
                 title="Modifier mon profil"
               >
-                {userProfile.username}
-              </span>
+                <span className="font-extrabold text-xs sm:text-sm text-emerald-50 hover:text-white">
+                  {userProfile.username}
+                </span>
+                
+                {(userProfile.favorite_national || userProfile.favorite_club) && (
+                  <div className="flex items-center gap-1.5 border-l border-emerald-600/40 pl-2">
+                    {userProfile.favorite_national && (
+                      <span 
+                        className="text-sm hover:scale-110 transition duration-150 inline-flex" 
+                        title={`Équipe nationale de cœur : ${userProfile.favorite_national}`}
+                      >
+                        {getNationalFlagEmoji(userProfile.favorite_national)}
+                      </span>
+                    )}
+                    {userProfile.favorite_club && (
+                      <span 
+                        className="text-xs hover:scale-110 transition duration-150 inline-flex" 
+                        title={`Club de cœur : ${userProfile.favorite_club}`}
+                      >
+                        {getClubEmoji(userProfile.favorite_club)}
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
             )}
 
             {/* Logout button */}
