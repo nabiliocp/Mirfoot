@@ -8,7 +8,7 @@ import fs from "fs";
 dotenv.config();
 
 const supabaseUrl = process.env.VITE_SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY;
 
 // Only initialize if we have credentials, otherwise log and handle gracefully
 const supabase =
@@ -57,6 +57,7 @@ const COMPETITION_ID_MAP: Record<number, number> = {
   2013: 62, // Ligue 2
   2016: 141, // Segunda Division
   2022: 3, // UEFA Europa League
+  679: 679, // Matchs Amicaux Internationaux
 };
 
 const REVERSE_COMPETITION_ID_MAP: Record<number, number> = Object.fromEntries(
@@ -100,13 +101,19 @@ const AVAILABLE_COMPETITIONS = [
     emblem: "https://media.api-sports.io/football/leagues/78.png",
     type: "LEAGUE",
   },
+  {
+    id: 679,
+    name: "Matchs Amicaux Internationaux",
+    emblem: "https://media.api-sports.io/football/leagues/679.png",
+    type: "CUP",
+  },
 ];
 
 const getSeasonYearForLeague = (leagueId: number) => {
   const d = new Date();
   const year = d.getFullYear();
   const month = d.getMonth();
-  if ([1, 2, 3, 4, 32].includes(leagueId)) {
+  if ([1, 2, 3, 4, 32, 679].includes(leagueId)) {
     return year;
   }
   if (month < 7) {
@@ -365,6 +372,10 @@ async function startServer() {
 
       const apiKey = process.env.FOOTBALL_DATA_API_KEY;
       if (!apiKey) return res.status(401).json({ error: "Clé API manquante" });
+
+      if (Number(req.params.competitionId) === 679) {
+        return res.json({ matches: [] });
+      }
 
       const response = await fetch(
         `https://api.football-data.org/v4/competitions/${req.params.competitionId}/matches`,
