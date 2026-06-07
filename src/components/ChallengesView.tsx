@@ -2182,17 +2182,21 @@ export default function ChallengesView({
                     setIsSimulationMode(false);
                     setIsSimPanelCollapsed(false);
                   } else {
-                    // Initialize simulated scores with the current match scores if they exist (limit to 5 groups and 5 knockouts)
-                    if (Object.keys(simulatedScores).length === 0) {
-                      const initialSim: Record<number, { home: number | string; away: number | string; status: string }> = {};
-                      defaultSimMatches.forEach(m => {
-                        initialSim[m.id] = {
+                    // Initialize or expand simulated scores with current challenge matches if not present in simulatedScores
+                    const nextSimulatedScores = { ...simulatedScores };
+                    let updated = false;
+                    defaultSimMatches.forEach(m => {
+                      if (nextSimulatedScores[m.id] === undefined) {
+                        nextSimulatedScores[m.id] = {
                           home: m.score.fullTime.home !== null ? m.score.fullTime.home : "",
                           away: m.score.fullTime.away !== null ? m.score.fullTime.away : "",
-                          status: m.status === "FINISHED" ? "FINISHED" : "FINISHED" // Default simulated matches as finished so calculations trigger immediately!
+                          status: "FINISHED" // Default simulated matches as finished so calculations trigger immediately!
                         };
-                      });
-                      setSimulatedScores(initialSim);
+                        updated = true;
+                      }
+                    });
+                    if (updated || Object.keys(simulatedScores).length === 0) {
+                      setSimulatedScores(nextSimulatedScores);
                     }
                     setIsSimulationMode(true);
                     setIsSimPanelCollapsed(false);
