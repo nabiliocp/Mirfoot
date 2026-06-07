@@ -257,6 +257,7 @@ async function startServer() {
   app.get("/api/matches/today", async (req, res) => {
     try {
       const activeProvider = getActiveApiProvider();
+      const targetDate = req.query.date ? String(req.query.date) : new Date().toISOString().split("T")[0];
 
       if (activeProvider === "api-football") {
         const apiKey = process.env.API_FOOTBALL_KEY;
@@ -268,9 +269,8 @@ async function startServer() {
             });
         }
 
-        const todayStr = new Date().toISOString().split("T")[0];
         const response = await fetch(
-          `https://v3.football.api-sports.io/fixtures?date=${todayStr}`,
+          `https://v3.football.api-sports.io/fixtures?date=${targetDate}`,
           {
             headers: { "x-apisports-key": apiKey },
           },
@@ -296,9 +296,8 @@ async function startServer() {
       const apiKeyFootball = process.env.API_FOOTBALL_KEY;
       if (apiKeyFootball) {
         try {
-          const todayStr = new Date().toISOString().split("T")[0];
           const response = await fetch(
-            `https://v3.football.api-sports.io/fixtures?date=${todayStr}`,
+            `https://v3.football.api-sports.io/fixtures?date=${targetDate}`,
             {
               headers: { "x-apisports-key": apiKeyFootball },
             },
@@ -307,10 +306,10 @@ async function startServer() {
             const data = await response.json();
             if (data.errors && data.errors.requests) {
               console.error("API-football ratelimit hit for friendly matches");
-              if (todayStr === "2026-06-07") {
+              if (targetDate === "2026-06-07") {
                friendlyMatches.push({
                  id: 1540950,
-                 utcDate: `${todayStr}T19:00:00Z`,
+                 utcDate: `${targetDate}T19:00:00Z`,
                  status: "IN_PLAY",
                  matchday: 1,
                  stage: "Friendlies",
@@ -344,7 +343,7 @@ async function startServer() {
       if (!apiKey) return res.status(401).json({ error: "Clé API manquante" });
 
       // football-data.org /matches endpoint returns matches for today by default
-      const response = await fetch("https://api.football-data.org/v4/matches", {
+      const response = await fetch(`https://api.football-data.org/v4/matches?dateFrom=${targetDate}&dateTo=${targetDate}`, {
         headers: { "X-Auth-Token": apiKey },
       });
 
