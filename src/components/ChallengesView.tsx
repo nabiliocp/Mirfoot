@@ -134,6 +134,62 @@ const calculateMatchPoints = (
   return matchPts;
 };
 
+const getMatchPointsDetail = (
+  m: any,
+  pHome?: number,
+  pAway?: number,
+  isBonusActive?: boolean,
+  pointRules?: PointRules
+): { points: number | null; reason: string; label: string; basePoints: number; isBonus: boolean } | null => {
+  if (pHome === undefined || pAway === undefined) return null;
+  const rHome = m.score?.fullTime?.home;
+  const rAway = m.score?.fullTime?.away;
+  if (rHome === null || rAway === null || rHome === undefined || rAway === undefined) return null;
+
+  const rules = pointRules || { exact_score: 3, close_score: 2, correct_winner: 1, qualification: 1 };
+  const isExact = pHome === rHome && pAway === rAway;
+  const actualWinner = rHome > rAway ? 'home' : rHome < rAway ? 'away' : 'draw';
+  const predWinner = pHome > pAway ? 'home' : pHome < pAway ? 'away' : 'draw';
+
+  let basePoints = 0;
+  let reason = "Aucun point";
+
+  if (isExact) {
+    basePoints = rules.exact_score;
+    reason = "Score Exact";
+  } else if (actualWinner === predWinner) {
+    const diff = Math.abs(pHome - rHome) + Math.abs(pAway - rAway);
+    if (rules?.close_score && diff <= 2) {
+      basePoints = rules.close_score;
+      reason = "Score Proche";
+    } else {
+      basePoints = rules.correct_winner;
+      reason = "Bon Vainqueur";
+    }
+  }
+
+  let finalPoints = basePoints;
+  let label = reason;
+  if (isBonusActive) {
+    if (basePoints > 0) {
+      finalPoints = basePoints * 2;
+      label = `${reason} (Doublé ×2)`;
+    } else {
+      finalPoints = -4;
+      reason = "Pénalité Bonus";
+      label = "Pénalité Bonus ×2 manqué";
+    }
+  }
+
+  return {
+    points: finalPoints,
+    reason,
+    label,
+    basePoints,
+    isBonus: !!isBonusActive
+  };
+};
+
 interface ChallengesViewProps {
   preselectedMatch?: { match: Match; competitionId: number } | null;
   onClearPreselectedMatch?: () => void;
@@ -1822,7 +1878,8 @@ export default function ChallengesView({
                 const realHome = singleMatch.score?.fullTime?.home;
                 const realAway = singleMatch.score?.fullTime?.away;
                 if (realHome !== null && realAway !== null && realHome !== undefined && realAway !== undefined) {
-                  const matchPts = calculateMatchPoints(singleMatch, userPred.homeScore, userPred.awayScore, !!userPred.bonus, challenge.pointRules);
+                  const ptsDetail = getMatchPointsDetail(singleMatch, userPred.homeScore, userPred.awayScore, !!userPred.bonus, challenge.pointRules);
+                  const matchPts = ptsDetail?.points;
                   return (
                     <div className={`text-xs rounded-xl p-3 border shadow-xs flex flex-col gap-2 text-left font-sans ${
                       matchPts !== null && matchPts > 0 
@@ -1837,7 +1894,7 @@ export default function ChallengesView({
                         }`}>
                           {isInProgress ? (
                             <>
-                              <span className="inline-block w-2 h-2 rounded-full bg-amber-500 animate-ping" />
+                              <span className="inline-block w-2.5 h-2.5 rounded-full bg-amber-500 animate-ping" />
                               <span>🔥 Match en cours</span>
                             </>
                           ) : (
@@ -1855,8 +1912,15 @@ export default function ChallengesView({
                         </span>
                       </div>
                       <div className="flex justify-between items-center border-t border-slate-200/60 pt-2 mt-0.5">
-                        <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Points remportés :</span>
-                        <span className={`px-2.5 py-1 rounded-lg font-black text-[11px] font-mono shadow-xs border ${
+                        <div className="flex flex-col min-w-0 flex-1 pr-2">
+                          <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Points remportés :</span>
+                          {ptsDetail && (
+                            <span className="text-[10px] text-indigo-700 font-extrabold mt-0.5 truncate bg-indigo-50/50 px-1.5 py-0.5 rounded border border-indigo-100/40 w-fit">
+                              🎯 {ptsDetail.label}
+                            </span>
+                          )}
+                        </div>
+                        <span className={`px-2.5 py-1 rounded-lg font-black text-[11px] font-mono shadow-xs border shrink-0 ${
                           matchPts !== null && matchPts > 0 
                             ? 'bg-emerald-600 text-white border-emerald-700' 
                             : matchPts !== null && matchPts < 0 
@@ -2717,7 +2781,8 @@ export default function ChallengesView({
                                   const realHome = m.score?.fullTime?.home;
                                   const realAway = m.score?.fullTime?.away;
                                   if (realHome !== null && realAway !== null && realHome !== undefined && realAway !== undefined) {
-                                    const matchPts = calculateMatchPoints(m, userPredMatch.homeScore, userPredMatch.awayScore, !!userPredMatch.bonus, challenge.pointRules);
+                                    const ptsDetail = getMatchPointsDetail(m, userPredMatch.homeScore, userPredMatch.awayScore, !!userPredMatch.bonus, challenge.pointRules);
+                                    const matchPts = ptsDetail?.points;
                                     return (
                                       <div className={`text-xs rounded-xl p-3 border shadow-xs flex flex-col gap-2 text-left font-sans animate-fade-in ${
                                         matchPts !== null && matchPts > 0 
@@ -2750,8 +2815,15 @@ export default function ChallengesView({
                                           </span>
                                         </div>
                                         <div className="flex justify-between items-center border-t border-slate-200/60 pt-2 mt-0.5">
-                                          <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Points remportés :</span>
-                                          <span className={`px-2.5 py-1 rounded-lg font-black text-[11px] font-mono shadow-xs border ${
+                                          <div className="flex flex-col min-w-0 flex-1 pr-2">
+                                            <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Points remportés :</span>
+                                            {ptsDetail && (
+                                              <span className="text-[10px] text-indigo-700 font-extrabold mt-0.5 truncate bg-indigo-50/50 px-1.5 py-0.5 rounded border border-indigo-100/40 w-fit">
+                                                🎯 {ptsDetail.label}
+                                              </span>
+                                            )}
+                                          </div>
+                                          <span className={`px-2.5 py-1 rounded-lg font-black text-[11px] font-mono shadow-xs border shrink-0 ${
                                             matchPts !== null && matchPts > 0 
                                               ? 'bg-emerald-600 text-white border-emerald-700' 
                                               : matchPts !== null && matchPts < 0 
@@ -3460,7 +3532,8 @@ export default function ChallengesView({
                                             const realHome = m.score?.fullTime?.home;
                                             const realAway = m.score?.fullTime?.away;
                                             if (realHome !== null && realAway !== null && realHome !== undefined && realAway !== undefined) {
-                                              const matchPts = calculateMatchPoints(m, userPredMatch.homeScore, userPredMatch.awayScore, !!userPredMatch.bonus, activeModal.challenge.pointRules);
+                                              const ptsDetail = getMatchPointsDetail(m, userPredMatch.homeScore, userPredMatch.awayScore, !!userPredMatch.bonus, activeModal.challenge.pointRules);
+                                              const matchPts = ptsDetail?.points;
                                               return (
                                                 <div className={`text-xs rounded-xl p-2.5 border shadow-xs flex flex-col gap-1.5 text-left font-sans mt-2 animate-fade-in ${
                                                   matchPts !== null && matchPts > 0 
@@ -3493,8 +3566,15 @@ export default function ChallengesView({
                                                     </span>
                                                   </div>
                                                   <div className="flex justify-between items-center border-t border-slate-200/60 pt-1.5 mt-0.5">
-                                                    <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider">Points remportés :</span>
-                                                    <span className={`px-2 py-0.5 rounded-lg font-black text-[10px] font-mono shadow-xs border ${
+                                                    <div className="flex flex-col min-w-0 flex-1 pr-2">
+                                                      <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider">Points remportés :</span>
+                                                      {ptsDetail && (
+                                                        <span className="text-[9px] text-indigo-700 font-extrabold mt-0.5 truncate bg-indigo-50/50 px-1 py-0.5 rounded border border-indigo-100/40 w-fit">
+                                                          🎯 {ptsDetail.label}
+                                                        </span>
+                                                      )}
+                                                    </div>
+                                                    <span className={`px-2 py-0.5 rounded-lg font-black text-[10px] font-mono shadow-xs border shrink-0 ${
                                                       matchPts !== null && matchPts > 0 
                                                         ? 'bg-emerald-600 text-white border-emerald-700' 
                                                         : matchPts !== null && matchPts < 0 
