@@ -2062,9 +2062,9 @@ export default function ChallengesView({
         let isExact = false;
         let isWinner = false;
         
-        if (singleMatch && singleMatch.status === "FINISHED") {
-          const rHome = singleMatch.score.fullTime.home;
-          const rAway = singleMatch.score.fullTime.away;
+        if (singleMatch && ["FINISHED", "IN_PLAY", "LIVE", "PAUSED"].includes(singleMatch.status)) {
+          const rHome = singleMatch.score.fullTime.home ?? singleMatch.score.regularTime?.home ?? 0;
+          const rAway = singleMatch.score.fullTime.away ?? singleMatch.score.regularTime?.away ?? 0;
           const rules = challenge.pointRules;
           
           const predVal = typeof bet.predictions === 'string' ? JSON.parse(bet.predictions) : bet.predictions;
@@ -2131,9 +2131,9 @@ export default function ChallengesView({
           if (pMatch && pMatch.homeScore !== undefined && pMatch.awayScore !== undefined) {
             predictedCount++;
             
-            if (m.status === "FINISHED") {
-              const rHome = m.score.fullTime.home;
-              const rAway = m.score.fullTime.away;
+            if (["FINISHED", "IN_PLAY", "LIVE", "PAUSED"].includes(m.status)) {
+              const rHome = m.score.fullTime.home ?? m.score.regularTime?.home ?? 0;
+              const rAway = m.score.fullTime.away ?? m.score.regularTime?.away ?? 0;
               const rules = challenge.pointRules;
               const isMatchBonusActive = !!pMatch.bonus;
               

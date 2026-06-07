@@ -21,6 +21,7 @@ export default function MatchesView({ onPronoClick, userProfile, onProfileUpdate
   const [selectedSeason, setSelectedSeason] = useState<number | null>(null);
   const [matches, setMatches] = useState<Match[]>([]);
   const [todayMatches, setTodayMatches] = useState<Match[]>([]);
+  const [todayCompIdFilter, setTodayCompIdFilter] = useState<number | 'all'>('all');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [retryTrigger, setRetryTrigger] = useState(0);
@@ -82,6 +83,11 @@ export default function MatchesView({ onPronoClick, userProfile, onProfileUpdate
     fetch(url)
       .then(res => res.json())
       .then(data => {
+        if (data.error) {
+           setError(data.error);
+        } else {
+           setError(null);
+        }
         setMatches(data.matches || []);
         setLoading(false);
       })
@@ -138,7 +144,9 @@ export default function MatchesView({ onPronoClick, userProfile, onProfileUpdate
   const finishedMatches = otherMatches.filter(m => ['FINISHED', 'AWARDED'].includes(m.status));
 
   // Compute displayed matches based on mode
-  const rawTargetMatches = selectedCompId === 'all' ? todayMatches : otherMatches;
+  const rawTargetMatches = selectedCompId === 'all' 
+    ? (todayCompIdFilter === 'all' ? todayMatches : todayMatches.filter((m: Match) => m.competition.id === todayCompIdFilter))
+    : otherMatches;
 
   const displayedMatches = rawTargetMatches.filter(m => {
     let matchesStatusFilter = true;
@@ -842,16 +850,31 @@ export default function MatchesView({ onPronoClick, userProfile, onProfileUpdate
               <span>{selectedCompId === 'all' ? '⚡ Matchs du Jour' : '⚽ Tous les Matchs'}</span>
             </h3>
             
-            <select 
-              className="bg-white border border-gray-200 outline-none text-[10px] font-black uppercase tracking-tight text-slate-700 py-1.5 px-3 rounded-full shadow-sm cursor-pointer w-full sm:w-auto"
-              value={selectedCompId === 'all' ? 'all' : selectedCompId}
-              onChange={(e) => setSelectedCompId(e.target.value === 'all' ? 'all' : Number(e.target.value))}
-            >
-              <option value="all">Toutes Compétitions</option>
-              {competitions.map(comp => (
-                <option key={comp.id} value={comp.id}>{comp.name}</option>
-              ))}
-            </select>
+            <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">
+              {selectedCompId === 'all' && (
+                <select 
+                  className="bg-emerald-50 border border-emerald-200 outline-none text-[10px] font-black uppercase tracking-tight text-emerald-800 py-1.5 px-3 rounded-full shadow-sm cursor-pointer w-full sm:w-auto"
+                  value={todayCompIdFilter === 'all' ? 'all' : todayCompIdFilter}
+                  onChange={(e) => setTodayCompIdFilter(e.target.value === 'all' ? 'all' : Number(e.target.value))}
+                >
+                  <option value="all">Matchs du Jour (Toutes)</option>
+                  {Array.from(new Set(todayMatches.map(m => JSON.stringify({id: m.competition.id, name: m.competition.name})))).map(s => {
+                    const comp = JSON.parse(s as string);
+                    return <option key={comp.id} value={comp.id}>{comp.name}</option>
+                  })}
+                </select>
+              )}
+              <select 
+                className="bg-white border border-gray-200 outline-none text-[10px] font-black uppercase tracking-tight text-slate-700 py-1.5 px-3 rounded-full shadow-sm cursor-pointer w-full sm:w-auto"
+                value={selectedCompId === 'all' ? 'all' : selectedCompId}
+                onChange={(e) => setSelectedCompId(e.target.value === 'all' ? 'all' : Number(e.target.value))}
+              >
+                <option value="all">Saisons (Toutes)</option>
+                {competitions.map(comp => (
+                  <option key={comp.id} value={comp.id}>{comp.name}</option>
+                ))}
+              </select>
+            </div>
           </div>
           
           <div className="flex items-center gap-2 flex-wrap pt-2 border-t border-gray-100">

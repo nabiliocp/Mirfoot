@@ -395,6 +395,9 @@ async function startServer() {
 
         // Handle Free Plan restrictions gracefully (only if the user did NOT explicitly request a custom successful season)
         if (data && data.errors && Object.keys(data.errors).length > 0) {
+          if (data.errors.requests) {
+             return res.json({ error: "Limite API-Football atteinte pour la journée. Essayez le mode simulation en attendant le renouvellement de la limite !", matches: [] });
+          }
           const hasPlanError = JSON.stringify(data.errors).toLowerCase().includes("plan");
           if (hasPlanError) {
             console.log("Free plan restriction detected for season", season, "- Falling back to season 2024.");
