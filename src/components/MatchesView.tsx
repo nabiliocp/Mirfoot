@@ -29,6 +29,7 @@ export default function MatchesView({ onPronoClick, userProfile, onProfileUpdate
   const [selectedCompObj, setSelectedCompObj] = useState<Competition | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
   const [todayFilter, setTodayFilter] = useState<'all' | 'live' | 'upcoming' | 'finished'>('all');
+  const [todayCompIdFilter, setTodayCompIdFilter] = useState<number | 'all'>('all');
 
   useEffect(() => {
     // Fetch competitions and Today's matches
@@ -121,11 +122,17 @@ export default function MatchesView({ onPronoClick, userProfile, onProfileUpdate
   const finishedMatches = otherMatches.filter(m => ['FINISHED', 'AWARDED'].includes(m.status));
 
   const filteredTodayMatches = todayMatches.filter(m => {
-    if (todayFilter === 'all') return true;
-    if (todayFilter === 'live') return ['LIVE', 'IN_PLAY', 'PAUSED'].includes(m.status);
-    if (todayFilter === 'upcoming') return ['TIMED', 'SCHEDULED', 'POSTPONED'].includes(m.status);
-    if (todayFilter === 'finished') return ['FINISHED', 'AWARDED'].includes(m.status);
-    return true;
+    let matchesCompFilter = true;
+    if (todayCompIdFilter !== 'all') {
+      matchesCompFilter = m.competition?.id === todayCompIdFilter;
+    }
+    
+    let matchesStatusFilter = true;
+    if (todayFilter === 'live') matchesStatusFilter = ['LIVE', 'IN_PLAY', 'PAUSED'].includes(m.status);
+    if (todayFilter === 'upcoming') matchesStatusFilter = ['TIMED', 'SCHEDULED', 'POSTPONED'].includes(m.status);
+    if (todayFilter === 'finished') matchesStatusFilter = ['FINISHED', 'AWARDED'].includes(m.status);
+
+    return matchesCompFilter && matchesStatusFilter;
   });
 
   // Helper to get team crest (national or club) fallback
@@ -795,10 +802,23 @@ export default function MatchesView({ onPronoClick, userProfile, onProfileUpdate
       <div className="space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pl-1 border-l-4 border-emerald-600 pt-1">
           <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest flex items-center gap-2">
-            <span>⚡ Matchs du Jour (Toutes Compétitions)</span>
+            <span>⚡ Matchs du Jour</span>
           </h3>
           
-          <div className="flex items-center gap-1.5 flex-wrap">
+          <div className="flex items-center gap-2 flex-wrap">
+            <select 
+              className="bg-white border border-gray-200 outline-none text-[10px] font-black uppercase tracking-tight text-slate-700 py-1.5 px-3 rounded-full shadow-sm cursor-pointer"
+              value={todayCompIdFilter === 'all' ? 'all' : todayCompIdFilter}
+              onChange={(e) => setTodayCompIdFilter(e.target.value === 'all' ? 'all' : Number(e.target.value))}
+            >
+              <option value="all">Toutes Compétitions</option>
+              {competitions.filter(c => todayMatches.some(m => m.competition?.id === c.id)).map(comp => (
+                <option key={comp.id} value={comp.id}>{comp.name}</option>
+              ))}
+            </select>
+
+            <div className="h-4 w-[1px] bg-gray-200 mx-1 hidden sm:block"></div>
+
             <button
               onClick={() => setTodayFilter('all')}
               className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-tight cursor-pointer transition-all ${todayFilter === 'all' ? 'bg-emerald-600 text-white shadow-sm shadow-emerald-200' : 'bg-gray-100 text-slate-600 hover:bg-gray-200'}`}
@@ -836,62 +856,6 @@ export default function MatchesView({ onPronoClick, userProfile, onProfileUpdate
           <div className="bg-gray-50 rounded-2xl p-8 border-2 border-dashed border-gray-200 text-center flex flex-col items-center gap-3">
             <CalendarCheck className="w-8 h-8 text-gray-300" />
             <p className="text-sm font-bold text-gray-400">Aucun match ne correspond aux filtres d’aujourd'hui.</p>
-          </div>
-        )}
-      </div>
-
-      {/* 3. Selector (Ligue) */}
-      <div className="space-y-4 pt-4 border-t border-slate-100">
-        <div className="flex items-center justify-between mb-1">
-          <label className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Pronostiquer par Ligue/Compétition</label>
-        </div>
-        <div className="flex items-center space-x-2 bg-white rounded-xl shadow-sm px-4 py-2 border border-gray-100">
-          <Search className="w-5 h-5 text-gray-400" />
-          <select 
-            className="flex-1 bg-transparent py-2 text-sm font-semibold outline-none text-gray-700 w-full cursor-pointer"
-            value={selectedCompId || ''}
-            onChange={(e) => {
-              setSelectedCompId(Number(e.target.value));
-              setSelectedSeason(null);
-            }}
-          >
-            {competitions.map(comp => (
-              <option key={comp.id} value={comp.id}>{comp.name}</option>
-            ))}
-          </select>
-        </div>
-      </div>
-
-      <div className="space-y-8 pb-8">
-        {!loading && liveMatches.length === 0 && upcomingMatches.length === 0 && todayMatches.length === 0 && (
-          <div className="text-center p-8 bg-white rounded-2xl shadow-sm text-gray-500 border border-gray-100">
-            Aucun match trouvé pour le moment dans cette compétition.
-          </div>
-        )}
-
-        {/* Live Matches */}
-        {!loading && liveMatches.length > 0 && (
-          <div className="space-y-4 border-t border-slate-100 pt-6">
-            <h3 className="text-xs font-black text-rose-500 uppercase tracking-widest pl-1 border-l-4 border-rose-400 flex items-center gap-2">
-              <span className="flex items-center gap-1.5">🔴 En Direct <span className="w-1.5 h-1.5 bg-rose-500 rounded-full animate-ping"></span></span>
-              <div className="h-[1px] bg-rose-100 flex-1"></div>
-            </h3>
-            <div className="grid grid-cols-1 gap-4">
-              {liveMatches.map(match => renderMatchCard(match, false))}
-            </div>
-          </div>
-        )}
-
-        {/* Upcoming Matches */}
-        {!loading && upcomingMatches.length > 0 && (
-          <div className="space-y-4 border-t border-emerald-100 pt-6">
-            <h3 className="text-xs font-black text-emerald-600 uppercase tracking-widest pl-1 border-l-4 border-emerald-500 flex items-center gap-2">
-              <span>📅 Matchs à venir de la Compétition</span>
-              <div className="h-[1px] bg-emerald-100 flex-1"></div>
-            </h3>
-            <div className="grid grid-cols-1 gap-4">
-              {upcomingMatches.map(match => renderMatchCard(match, false))}
-            </div>
           </div>
         )}
       </div>
