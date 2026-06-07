@@ -480,16 +480,7 @@ export default function MatchesView({ onPronoClick, userProfile, onProfileUpdate
           </div>
         </div>
 
-        {!isFinished && (
-          <div className="mt-4 pt-4 border-t border-gray-50 flex justify-center">
-            <button 
-              onClick={() => onPronoClick?.(match, selectedCompId!)}
-              className="text-sm font-semibold text-emerald-600 hover:text-emerald-700 flex items-center gap-1 transition-all cursor-pointer hover:scale-105 active:scale-95"
-            >
-              Faire mon prono <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
-        )}
+
       </div>
     );
   };
