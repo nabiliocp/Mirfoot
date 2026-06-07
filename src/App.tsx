@@ -72,6 +72,9 @@ const getClubCrest = (clubName?: string): string | null => {
   if (name.includes("marseille") || name.includes("om")) return "https://crests.football-data.org/516.svg";
   if (name.includes("lyon") || name.includes("ol")) return "https://crests.football-data.org/523.svg";
   if (name.includes("monaco")) return "https://crests.football-data.org/548.svg";
+  if (name.includes("lille")) return "https://crests.football-data.org/521.svg";
+  if (name.includes("lens")) return "https://crests.football-data.org/546.svg";
+  if (name.includes("nice")) return "https://crests.football-data.org/522.svg";
   if (name.includes("milan") && !name.includes("inter")) return "https://crests.football-data.org/98.svg";
   if (name.includes("inter")) return "https://crests.football-data.org/108.svg";
   if (name.includes("juventus") || name.includes("juve")) return "https://crests.football-data.org/109.svg";
@@ -499,12 +502,14 @@ export default function App() {
                     )}
                     {userProfile.favorite_club && (
                       <span 
-                        className="text-xs hover:scale-110 transition duration-150 inline-flex flex items-center justify-center w-5 h-5 bg-white rounded-full p-0.5" 
+                        className="text-xs hover:scale-110 transition duration-150 flex items-center justify-center w-5 h-5 bg-white rounded-full overflow-hidden shadow-sm border border-emerald-100 shrink-0" 
                         title={`Club de cœur : ${userProfile.favorite_club}`}
                       >
                         {getClubCrest(userProfile.favorite_club) ? (
-                          <img src={getClubCrest(userProfile.favorite_club)!} className="w-full h-full object-contain" alt="Club" />
-                        ) : "⚽"}
+                          <img src={getClubCrest(userProfile.favorite_club)!} className="w-[14px] h-[14px] object-contain" alt="Club" />
+                        ) : (
+                          <span className="text-[10px] font-black text-emerald-800">{userProfile.favorite_club.substring(0, 2).toUpperCase()}</span>
+                        )}
                       </span>
                     )}
                   </div>

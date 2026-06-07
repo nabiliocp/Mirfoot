@@ -193,6 +193,28 @@ export default function MatchesView({ onPronoClick, userProfile, onProfileUpdate
     return null;
   };
 
+  const getMatchOpponentName = (match: Match, query: string, teamId?: number) => {
+    if (!match) return "";
+    const q = query.toLowerCase();
+    
+    // Attempt by ID first
+    if (teamId && match.homeTeam.id === teamId) return match.awayTeam.shortName || match.awayTeam.name;
+    if (teamId && match.awayTeam.id === teamId) return match.homeTeam.shortName || match.homeTeam.name;
+
+    // By Name
+    const homeName = (match.homeTeam.name || "").toLowerCase();
+    const awayName = (match.awayTeam.name || "").toLowerCase();
+    
+    const isHome = homeName.includes(q) || match.homeTeam.tla?.toLowerCase() === q || match.homeTeam.shortName?.toLowerCase().includes(q) || (q === "maroc" && homeName.includes("morocco"));
+    const isAway = awayName.includes(q) || match.awayTeam.tla?.toLowerCase() === q || match.awayTeam.shortName?.toLowerCase().includes(q) || (q === "maroc" && awayName.includes("morocco"));
+
+    if (isHome) return match.awayTeam.shortName || match.awayTeam.name;
+    if (isAway) return match.homeTeam.shortName || match.homeTeam.name;
+
+    // Fallback if we couldn't match
+    return match.awayTeam.shortName || match.awayTeam.name;
+  };
+
   // Find next/last matches for a team
   const getMatchesForTeam = (teamName: string) => {
     const query = teamName.toLowerCase().trim();
@@ -682,7 +704,7 @@ export default function MatchesView({ onPronoClick, userProfile, onProfileUpdate
                           <div className="space-y-1.5">
                             <div className="flex items-center justify-between">
                               <span className="text-[10px] font-black text-emerald-950 flex-1">
-                                vs {(data.teamId && data.next.homeTeam.id === data.teamId) || (!data.teamId && data.next.homeTeam.name?.toLowerCase().includes(clubName.toLowerCase())) ? (data.next.awayTeam.shortName || data.next.awayTeam.name) : (data.next.homeTeam.shortName || data.next.homeTeam.name)}
+                                vs {getMatchOpponentName(data.next, clubName, data.teamId)}
                               </span>
                               <span className="text-[8px] font-black text-emerald-600 bg-white border border-emerald-100 px-1 rounded shrink-0">
                                 {new Date(data.next.utcDate).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
@@ -774,7 +796,7 @@ export default function MatchesView({ onPronoClick, userProfile, onProfileUpdate
                           <div className="space-y-1.5">
                             <div className="flex items-center justify-between">
                               <span className="text-[10px] font-black text-indigo-950 flex-1">
-                                vs {(data.teamId && data.next.homeTeam.id === data.teamId) || (!data.teamId && data.next.homeTeam.name?.toLowerCase().includes(name.toLowerCase())) ? (data.next.awayTeam.shortName || data.next.awayTeam.name) : (data.next.homeTeam.shortName || data.next.homeTeam.name)}
+                                vs {getMatchOpponentName(data.next, name, data.teamId)}
                               </span>
                               <span className="text-[8px] font-black text-indigo-600 bg-white border border-indigo-100 px-1 rounded shrink-0">
                                 {new Date(data.next.utcDate).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
@@ -812,13 +834,13 @@ export default function MatchesView({ onPronoClick, userProfile, onProfileUpdate
               onChange={(e) => setTodayCompIdFilter(e.target.value === 'all' ? 'all' : Number(e.target.value))}
             >
               <option value="all">Toutes Compétitions</option>
-              {competitions.filter(c => todayMatches.some(m => m.competition?.id === c.id)).map(comp => (
+              {competitions.map(comp => (
                 <option key={comp.id} value={comp.id}>{comp.name}</option>
               ))}
             </select>
           </div>
           
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-2 flex-wrap pt-2 border-t border-gray-100">
             <button
               onClick={() => setTodayFilter('all')}
               className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-tight cursor-pointer transition-all ${todayFilter === 'all' ? 'bg-emerald-600 text-white shadow-sm shadow-emerald-200' : 'bg-gray-100 text-slate-600 hover:bg-gray-200'}`}
