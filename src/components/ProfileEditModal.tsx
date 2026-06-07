@@ -261,46 +261,46 @@ export default function ProfileEditModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in">
-      <div className="bg-white rounded-3xl max-w-md w-full shadow-2xl border border-gray-100 overflow-hidden transform animate-scale-up">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 z-50 animate-fade-in">
+      <div className="bg-white rounded-2xl sm:rounded-3xl max-w-sm sm:max-w-md w-full shadow-2xl border border-gray-100 overflow-hidden transform animate-scale-up flex flex-col max-h-[90vh]">
         {/* Header */}
-        <div className="relative bg-emerald-700 text-white px-6 py-5 flex items-center justify-between">
+        <div className="relative bg-emerald-700 text-white px-5 py-3.5 flex items-center justify-between shrink-0">
           <div>
-            <h2 className="text-xl font-bold">Modifier mon profil</h2>
-            <p className="text-emerald-100 text-xs mt-0.5">Personnalise tes informations de jeu</p>
+            <h2 className="text-base sm:text-lg font-bold">Modifier mon profil</h2>
+            <p className="text-emerald-100 text-[10px] mt-0.5">Personnalise tes informations de jeu</p>
           </div>
           <button
             onClick={onClose}
-            className="text-white/80 hover:text-white bg-white/10 hover:bg-white/20 p-2 rounded-full transition-all cursor-pointer"
+            className="text-white/80 hover:text-white bg-white/10 hover:bg-white/20 p-1.5 rounded-full transition-all cursor-pointer"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Content */}
-        <form onSubmit={handleSave} className="p-6 space-y-5">
+        <form onSubmit={handleSave} className="p-4 sm:p-5 space-y-3.5 overflow-y-auto max-h-[calc(90vh-68px)] scrollbar-thin">
           {errorMsg && (
-            <div className="bg-rose-50 text-rose-700 p-3.5 rounded-xl text-xs border border-rose-100 flex items-start gap-2.5">
-              <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+            <div className="bg-rose-50 text-rose-700 p-2.5 rounded-xl text-[11px] border border-rose-100 flex items-start gap-2 max-h-24 overflow-y-auto">
+              <AlertCircle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
               <span className="font-medium">{errorMsg}</span>
             </div>
           )}
 
           {/* Readonly email */}
-          <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 text-left flex items-center gap-3">
-            <div className="bg-slate-200 text-slate-500 p-2 rounded-lg">
-              <Mail className="w-4 h-4" />
+          <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-100 text-left flex items-center gap-2.5">
+            <div className="bg-slate-200 text-slate-500 p-1.5 rounded-lg">
+              <Mail className="w-3.5 h-3.5" />
             </div>
             <div className="flex-1 min-w-0">
-              <span className="block text-[10px] text-gray-400 font-bold uppercase tracking-wider">Adresse e-mail (liée)</span>
-              <span className="block text-sm text-gray-600 font-medium truncate">{email}</span>
+              <span className="block text-[9px] text-gray-400 font-bold uppercase tracking-wider">Adresse e-mail (liée)</span>
+              <span className="block text-xs text-gray-600 font-semibold truncate">{email}</span>
             </div>
           </div>
 
           {/* Username Input */}
           <div className="text-left">
-            <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
-              <User className="w-3.5 h-3.5" />
+            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1 flex items-center gap-1.5">
+              <User className="w-3 h-3" />
               Pseudo de champion
             </label>
             <input
@@ -308,7 +308,7 @@ export default function ProfileEditModal({
               required
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 hover:border-gray-300 outline-none transition text-sm font-semibold text-gray-800"
+              className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 hover:border-gray-300 outline-none transition text-xs font-semibold text-gray-800"
               placeholder="Ex: Zizou98"
               maxLength={20}
             />
@@ -316,7 +316,7 @@ export default function ProfileEditModal({
 
           {/* Favorite Club Dropdown Autocomplete */}
           <div className="text-left relative">
-            <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">
+            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">
               ⚽️ Club de cœur
             </label>
             <input
@@ -334,13 +334,13 @@ export default function ProfileEditModal({
               onBlur={() => {
                 setTimeout(() => setIsClubFocused(false), 200);
               }}
-              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 hover:border-gray-300 outline-none transition text-sm font-semibold text-gray-800"
+              className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 hover:border-gray-300 outline-none transition text-xs font-semibold text-gray-800"
               placeholder="Ex: PSG, OM, Real Madrid"
               autoComplete="off"
             />
 
             {isClubFocused && (
-              <div className="absolute z-30 left-0 right-0 mt-1 max-h-40 overflow-y-auto bg-white border border-gray-100 rounded-2xl shadow-xl shadow-gray-200/50">
+              <div className="absolute z-30 left-0 right-0 mt-1 max-h-32 overflow-y-auto bg-white border border-gray-100 rounded-xl shadow-xl shadow-gray-200/50">
                 {filteredClubs.length > 0 ? (
                   filteredClubs.map((club) => (
                     <button
@@ -350,13 +350,13 @@ export default function ProfileEditModal({
                         setFavoriteClub(club);
                         setIsClubFocused(false);
                       }}
-                      className="w-full text-left px-4 py-2 hover:bg-emerald-50 text-xs font-semibold text-gray-700 transition border-b border-gray-50 last:border-0"
+                      className="w-full text-left px-3 py-1.5 hover:bg-emerald-50 text-[11px] font-semibold text-gray-700 transition border-b border-gray-50 last:border-0"
                     >
                       ⚽️ {club}
                     </button>
                   ))
                 ) : (
-                  <div className="px-4 py-3 text-xs text-gray-400 italic">
+                  <div className="px-3 py-2 text-[10px] text-gray-400 italic">
                     Aucun club suggéré (saisie libre)
                   </div>
                 )}
@@ -366,7 +366,7 @@ export default function ProfileEditModal({
 
           {/* Favorite National Team Dropdown Autocomplete */}
           <div className="text-left relative">
-            <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">
+            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">
               🏆 Équipe nationale de cœur
             </label>
             <input
@@ -384,13 +384,13 @@ export default function ProfileEditModal({
               onBlur={() => {
                 setTimeout(() => setIsNationalFocused(false), 200);
               }}
-              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 hover:border-gray-300 outline-none transition text-sm font-semibold text-gray-800"
+              className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 hover:border-gray-300 outline-none transition text-xs font-semibold text-gray-800"
               placeholder="Ex: France, Maroc, Algérie"
               autoComplete="off"
             />
 
             {isNationalFocused && (
-              <div className="absolute z-20 left-0 right-0 mt-1 max-h-40 overflow-y-auto bg-white border border-gray-100 rounded-2xl shadow-xl shadow-gray-200/50">
+              <div className="absolute z-20 left-0 right-0 mt-1 max-h-32 overflow-y-auto bg-white border border-gray-100 rounded-xl shadow-xl shadow-gray-200/50">
                 {filteredNationals.length > 0 ? (
                   filteredNationals.map((nat) => (
                     <button
@@ -400,13 +400,13 @@ export default function ProfileEditModal({
                         setFavoriteNational(nat);
                         setIsNationalFocused(false);
                       }}
-                      className="w-full text-left px-4 py-2 hover:bg-emerald-50 text-xs font-semibold text-gray-700 transition border-b border-gray-50 last:border-0"
+                      className="w-full text-left px-3 py-1.5 hover:bg-emerald-50 text-[11px] font-semibold text-gray-700 transition border-b border-gray-50 last:border-0"
                     >
                       💪 {nat}
                     </button>
                   ))
                 ) : (
-                  <div className="px-4 py-3 text-xs text-gray-400 italic">
+                  <div className="px-3 py-2 text-[10px] text-gray-400 italic">
                     Aucun pays suggéré (saisie libre)
                   </div>
                 )}
@@ -416,16 +416,16 @@ export default function ProfileEditModal({
 
           {/* Avatar Selection */}
           <div className="text-left">
-            <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">
               Style de l'avatar
             </label>
             
             {/* Avatar Type Selector tabs */}
-            <div className="flex gap-2.5 mb-3">
+            <div className="flex gap-2 mb-2">
               <button
                 type="button"
                 onClick={() => setAvatarType("emoji")}
-                className={`flex-1 py-1.5 px-3 rounded-xl font-bold text-xs transition-with-duration cursor-pointer ${
+                className={`flex-1 py-1 px-2.5 rounded-lg font-bold text-[11px] transition-with-duration cursor-pointer ${
                   avatarType === "emoji" 
                     ? "bg-emerald-50 text-emerald-700 border border-emerald-500/30 shadow-xs" 
                     : "bg-gray-50 text-gray-500 hover:bg-gray-100 border border-gray-200/55"
@@ -436,7 +436,7 @@ export default function ProfileEditModal({
               <button
                 type="button"
                 onClick={() => setAvatarType("jersey")}
-                className={`flex-1 py-1.5 px-3 rounded-xl font-bold text-xs transition-with-duration cursor-pointer ${
+                className={`flex-1 py-1 px-2.5 rounded-lg font-bold text-[11px] transition-with-duration cursor-pointer ${
                   avatarType === "jersey" 
                     ? "bg-emerald-50 text-emerald-700 border border-emerald-500/30 shadow-xs" 
                     : "bg-gray-50 text-gray-500 hover:bg-gray-100 border border-gray-200/55"
@@ -447,14 +447,14 @@ export default function ProfileEditModal({
             </div>
 
             {/* Selection Grid */}
-            <div className="grid grid-cols-5 gap-2 bg-gray-50 p-3 rounded-2xl border border-gray-100 max-h-[140px] overflow-y-auto">
+            <div className="grid grid-cols-6 gap-1.5 bg-gray-50 p-2 rounded-xl border border-gray-100 max-h-[96px] overflow-y-auto">
               {avatarType === "emoji"
                 ? EMOJIS.map((emoji) => (
                     <button
                       key={emoji}
                       type="button"
                       onClick={() => setAvatarValue(emoji)}
-                      className={`aspect-square text-2xl flex items-center justify-center rounded-xl transition ${
+                      className={`aspect-square text-lg flex items-center justify-center rounded-lg transition ${
                         avatarValue === emoji 
                           ? "bg-white shadow-md ring-2 ring-emerald-500 scale-105" 
                           : "hover:bg-gray-200"
@@ -469,14 +469,14 @@ export default function ProfileEditModal({
                       type="button"
                       onClick={() => setAvatarValue(color)}
                       style={{ backgroundColor: color }}
-                      className={`aspect-square rounded-xl transition border-4 border-white shadow-sm flex items-center justify-center ${
+                      className={`aspect-square rounded-lg transition border-2 border-white shadow-xs flex items-center justify-center ${
                         avatarValue === color 
                           ? "ring-2 ring-emerald-500 scale-105" 
                           : "hover:scale-105 opacity-80 hover:opacity-100"
                       }`}
                     >
                       {avatarValue === color && (
-                        <Check className={`w-4 h-4 ${color === "#ffffff" ? "text-emerald-600" : "text-white"}`} />
+                        <Check className={`w-3.5 h-3.5 ${color === "#ffffff" ? "text-emerald-600" : "text-white"}`} />
                       )}
                     </button>
                   ))}
@@ -486,38 +486,38 @@ export default function ProfileEditModal({
           {/* Admin API Switch */}
           {(email.toLowerCase() === "rouijel.nabil@gmail.com" ||
             email.toLowerCase() === "rouijel.nabil.cp@gmail.com") && (
-            <div className="pt-4 border-t border-gray-100 text-left">
-              <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+            <div className="pt-3 border-t border-gray-100 text-left">
+              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5 flex items-center gap-1">
                 🔧 Configuration API (Admin Only)
               </label>
-              <div className="grid grid-cols-2 gap-2.5">
+              <div className="grid grid-cols-2 gap-2">
                 <button
                   type="button"
                   onClick={() => handleUpdateApiProvider("football-data")}
-                  className={`py-2 px-3 rounded-xl font-bold text-xs transition border cursor-pointer flex flex-col items-center justify-center gap-1 ${
+                  className={`py-1.5 px-2 rounded-lg font-bold text-[10px] transition border cursor-pointer flex flex-col items-center justify-center gap-0.5 ${
                     activeApi === "football-data"
                       ? "bg-amber-50 text-amber-800 border-amber-500/30 shadow-xs"
                       : "bg-gray-50 text-gray-500 hover:bg-gray-100 border-gray-200/55"
                   }`}
                 >
-                  <span className="font-extrabold text-[10px]">FOOTBALL-DATA</span>
-                  <span className="text-[9px] text-gray-400">Gratuit / Standard</span>
+                  <span className="font-extrabold text-[9px]">FOOTBALL-DATA</span>
+                  <span className="text-[8px] text-gray-400">Gratuit / Standard</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => handleUpdateApiProvider("api-football")}
-                  className={`py-2 px-3 rounded-xl font-bold text-xs transition border cursor-pointer flex flex-col items-center justify-center gap-1 ${
+                  className={`py-1.5 px-2 rounded-lg font-bold text-[10px] transition border cursor-pointer flex flex-col items-center justify-center gap-0.5 ${
                     activeApi === "api-football"
                       ? "bg-blue-50 text-blue-800 border-blue-500/30 shadow-xs"
                       : "bg-gray-50 text-gray-500 hover:bg-gray-100 border-gray-200/55"
                   }`}
                 >
-                  <span className="font-extrabold text-[10px]">API-FOOTBALL</span>
-                  <span className="text-[9px] text-gray-400">Premium Dashboard</span>
+                  <span className="font-extrabold text-[9px]">API-FOOTBALL</span>
+                  <span className="text-[8px] text-gray-400">Premium Dashboard</span>
                 </button>
               </div>
               {apiStatusMsg && (
-                <span className="block mt-1.5 text-[10px] text-emerald-600 font-bold">
+                <span className="block mt-1 text-[9px] text-emerald-600 font-bold">
                   {apiStatusMsg}
                 </span>
               )}
@@ -525,19 +525,19 @@ export default function ProfileEditModal({
           )}
 
           {/* Action buttons */}
-          <div className="pt-2 flex gap-3">
+          <div className="pt-1.5 flex gap-2.5">
             <button
               type="button"
               onClick={onClose}
               disabled={loading}
-              className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold py-3 rounded-xl transition duration-150 text-xs"
+              className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold py-2.5 rounded-xl transition duration-150 text-[11px]"
             >
               Annuler
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl transition duration-150 text-xs disabled:opacity-50 flex items-center justify-center gap-1.5 shadow-md shadow-emerald-950/10 cursor-pointer"
+              className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-xl transition duration-150 text-[11px] disabled:opacity-50 flex items-center justify-center gap-1 cursor-pointer"
             >
               {loading ? "Enregistrement..." : "Enregistrer"}
             </button>
