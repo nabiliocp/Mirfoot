@@ -1318,6 +1318,7 @@ export default function ChallengesView({
         ...prev,
         [challenge.id]: updatedChallengePreds,
       }));
+      refreshChallengeBets();
     }
   };
 
@@ -1358,6 +1359,8 @@ export default function ChallengesView({
     if (error) {
       console.error("Erreur lors de l'enregistrement du pari:", error);
       alert("Erreur lors de l'enregistrement : " + error.message);
+    } else {
+      refreshChallengeBets();
     }
   };
 
@@ -2919,6 +2922,8 @@ export default function ChallengesView({
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {participants.map(userId => {
                     const profile = allProfiles.find(p => p.id === userId) || { username: "Joueur", first_name: "", last_name: "", points: 0, avatar_type: "emoji", avatar_value: "⚽" };
+                    const challengePlayer = leaderboard.find(l => l.userId === userId);
+                    const challengePts = challengePlayer ? challengePlayer.points : 0;
                     return (
                       <div key={userId} className="bg-gray-50/50 p-3 rounded-xl border border-gray-100 flex items-center gap-3 relative overflow-hidden">
                         <div className="w-9 h-9 flex items-center justify-center bg-white border border-gray-100 rounded-lg text-lg shrink-0">
@@ -2926,7 +2931,14 @@ export default function ChallengesView({
                         </div>
                         <div className="min-w-0 flex-1">
                           <span className="block font-bold text-xs text-gray-800 truncate">{profile.username}</span>
-                          <span className="block text-[9px] text-gray-400 font-semibold truncate">Score Général: {profile.points || 0} pts</span>
+                          <div className="flex flex-col gap-0.5 mt-0.5">
+                            <span className="block text-[10px] text-emerald-600 font-extrabold truncate">
+                              Points de ce Défi : {challengePts} {challengePts > 1 ? "pts" : "pt"}
+                            </span>
+                            <span className="block text-[8.5px] text-gray-400 font-semibold truncate">
+                              Score Général : {profile.points || 0} {profile.points > 1 ? "pts" : "pt"}
+                            </span>
+                          </div>
                           <div className="flex items-center gap-1.5 mt-1">
                             {profile.first_name && (
                               <div className="w-4 h-4 bg-white rounded-full overflow-hidden border border-gray-100 flex items-center justify-center shadow-xs" title={profile.first_name}>
