@@ -272,6 +272,14 @@ async function startServer() {
 
       if (!response.ok) throw new Error("API Error");
       const data = await response.json();
+
+      // Inject friendly matches (competition 679) into football-data competitions list
+      if (data && Array.isArray(data.competitions)) {
+        const friendlyComp = AVAILABLE_COMPETITIONS.find((c) => c.id === 679);
+        if (friendlyComp && !data.competitions.some((c: any) => c.id === 679)) {
+          data.competitions.push(friendlyComp);
+        }
+      }
       res.json(data);
     } catch (err) {
       res.status(500).json({ error: "Erreur réseau" });
@@ -315,6 +323,30 @@ async function startServer() {
         return res.json({ matches: mappedMatches });
       }
 
+      // If activeProvider is football-data, we also fetch today's friendly matches (league 679) from api-football.com if available
+      let friendlyMatches: any[] = [];
+      const apiKeyFootball = process.env.API_FOOTBALL_KEY;
+      if (apiKeyFootball) {
+        try {
+          const todayStr = new Date().toISOString().split("T")[0];
+          const response = await fetch(
+            `https://v3.football.api-sports.io/fixtures?date=${todayStr}&league=679`,
+            {
+              headers: { "x-apisports-key": apiKeyFootball },
+            },
+          );
+          if (response.ok) {
+            const data = await response.json();
+            const fixtures = data.response || [];
+            friendlyMatches = fixtures
+              .map(translateApiFootballMatchToFootballData)
+              .filter(Boolean);
+          }
+        } catch (err) {
+          console.error("Error fetching today's friendly matches:", err);
+        }
+      }
+
       const apiKey = process.env.FOOTBALL_DATA_API_KEY;
       if (!apiKey) return res.status(401).json({ error: "Clé API manquante" });
 
@@ -325,6 +357,11 @@ async function startServer() {
 
       if (!response.ok) throw new Error("API Error");
       const data = await response.json();
+
+      // Append friendly matches if any found
+      if (friendlyMatches.length > 0 && data && Array.isArray(data.matches)) {
+        data.matches = [...data.matches, ...friendlyMatches];
+      }
       res.json(data);
     } catch (err) {
       console.error(err);
@@ -335,6 +372,36 @@ async function startServer() {
   app.get("/api/matches/:competitionId", async (req, res) => {
     try {
       const activeProvider = getActiveApiProvider();
+      const fdCompId = Number(req.params.competitionId);
+
+      // If requested competition ID is 679 (Matchs Amicaux Internationaux), we MUST use api-football regardless of active provider
+      if (fdCompId === 679) {
+        const apiKey = process.env.API_FOOTBALL_KEY;
+        if (!apiKey) {
+          return res
+            .status(401)
+            .json({
+              error: "Clé API_FOOTBALL_KEY manquante dans votre environnement.",
+            });
+        }
+
+        const season = getSeasonYearForLeague(679);
+        const response = await fetch(
+          `https://v3.football.api-sports.io/fixtures?league=679&season=${season}`,
+          {
+            headers: { "x-apisports-key": apiKey },
+          },
+        );
+
+        if (!response.ok) throw new Error("API-Football Error");
+        const data = await response.json();
+        const fixtures = data.response || [];
+
+        const mappedMatches = fixtures
+          .map(translateApiFootballMatchToFootballData)
+          .filter(Boolean);
+        return res.json({ matches: mappedMatches });
+      }
 
       if (activeProvider === "api-football") {
         const apiKey = process.env.API_FOOTBALL_KEY;
@@ -346,7 +413,6 @@ async function startServer() {
             });
         }
 
-        const fdCompId = Number(req.params.competitionId);
         const mappedLeagueId = COMPETITION_ID_MAP[fdCompId];
         if (!mappedLeagueId) {
           return res.json({ matches: [] });
@@ -372,10 +438,6 @@ async function startServer() {
 
       const apiKey = process.env.FOOTBALL_DATA_API_KEY;
       if (!apiKey) return res.status(401).json({ error: "Clé API manquante" });
-
-      if (Number(req.params.competitionId) === 679) {
-        return res.json({ matches: [] });
-      }
 
       const response = await fetch(
         `https://api.football-data.org/v4/competitions/${req.params.competitionId}/matches`,
@@ -421,8 +483,12 @@ async function startServer() {
       for (const challenge of challenges) {
         let matchData: any = null;
 
-        // Check match status via Active Provider first
-        if (activeProvider === "api-football" && apiKeyFootball) {
+        // Check match status via Active Provider or specifically api-football for friendly matches (competition 679)
+        if (
+          (challenge.competition_id === 679 ||
+            activeProvider === "api-football") &&
+          apiKeyFootball
+        ) {
           try {
             const matchRes = await fetch(
               `https://v3.football.api-sports.io/fixtures?id=${challenge.match_id}`,
