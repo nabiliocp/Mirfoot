@@ -395,14 +395,30 @@ export default function MatchesView({ onPronoClick, userProfile, onProfileUpdate
           </div>
         )}
 
-        <div className="flex justify-between items-center mb-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">
-          <span>{new Date(match.utcDate).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' })} • {new Date(match.utcDate).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</span>
+        <div className="flex justify-between items-center mb-4 text-xs font-semibold text-gray-400 uppercase tracking-widest gap-2">
+          <div className="flex items-center gap-1.5 min-w-0">
+            {match.competition?.emblem && (
+              <img 
+                src={match.competition.emblem} 
+                alt={match.competition.name} 
+                className="w-4 h-4 object-contain shrink-0" 
+                onError={(e) => { e.currentTarget.style.display = 'none'; }}
+              />
+            )}
+            <span className="text-emerald-700 font-extrabold truncate max-w-[120px] sm:max-w-[180px]" title={match.competition?.name}>
+              {match.competition?.name || "Compétition"}
+            </span>
+            <span className="text-slate-300">•</span>
+            <span className="truncate">
+              {new Date(match.utcDate).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' })} • {new Date(match.utcDate).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+            </span>
+          </div>
           {isLive ? (
-            <span className="bg-rose-100 text-rose-600 px-2 py-1 rounded animate-pulse border border-rose-200 font-black">EN DIRECT</span>
+            <span className="bg-rose-100 text-rose-600 px-2 py-1 rounded animate-pulse border border-rose-200 font-black text-[10px] shrink-0">EN DIRECT</span>
           ) : isFinished ? (
-            <span className="bg-gray-100 text-gray-500 px-2 py-1 rounded font-bold">TERMINÉ</span>
+            <span className="bg-gray-100 text-gray-500 px-2 py-1 rounded font-bold text-[10px] shrink-0">TERMINÉ</span>
           ) : (
-            <span className="bg-emerald-50 text-emerald-600 px-2 py-1 rounded font-bold">À VENIR</span>
+            <span className="bg-emerald-50 text-emerald-600 px-2 py-1 rounded font-bold text-[10px] shrink-0">À VENIR</span>
           )}
         </div>
         
