@@ -22,7 +22,6 @@ export default function MatchesView({ onPronoClick, userProfile, onProfileUpdate
   const [matches, setMatches] = useState<Match[]>([]);
   const [todayMatches, setTodayMatches] = useState<Match[]>([]);
   const [todayCompIdFilter, setTodayCompIdFilter] = useState<number | 'all'>('all');
-  const [targetDate, setTargetDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [retryTrigger, setRetryTrigger] = useState(0);
@@ -31,6 +30,7 @@ export default function MatchesView({ onPronoClick, userProfile, onProfileUpdate
   const [selectedCompObj, setSelectedCompObj] = useState<Competition | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
   const [todayFilter, setTodayFilter] = useState<'all' | 'live' | 'upcoming' | 'finished'>('all');
+  const [activeMode, setActiveMode] = useState<'today' | 'season'>('today');
 
   useEffect(() => {
     // Fetch competitions and Today's matches
@@ -39,7 +39,7 @@ export default function MatchesView({ onPronoClick, userProfile, onProfileUpdate
 
     Promise.all([
       fetch('/api/competitions').then(res => res.json()),
-      fetch(`/api/matches/today?date=${targetDate}`).then(res => res.json())
+      fetch(`/api/matches/today`).then(res => res.json())
     ])
     .then(([compData, todayData]) => {
       if (compData.error) {
@@ -60,7 +60,7 @@ export default function MatchesView({ onPronoClick, userProfile, onProfileUpdate
       setError("Chargement temporairement indisponible.");
       setLoading(false);
     });
-  }, [retryTrigger, targetDate]);
+  }, [retryTrigger]);
 
   useEffect(() => {
     if (selectedCompId === 'all') {
@@ -136,7 +136,7 @@ export default function MatchesView({ onPronoClick, userProfile, onProfileUpdate
   const finishedMatches = otherMatches.filter(m => ['FINISHED', 'AWARDED'].includes(m.status));
 
   // Compute displayed matches based on mode
-  const rawTargetMatches = selectedCompId === 'all' 
+  const rawTargetMatches = activeMode === 'today' 
     ? (todayCompIdFilter === 'all' ? todayMatches : todayMatches.filter((m: Match) => m.competition.id === todayCompIdFilter))
     : otherMatches;
 
@@ -838,49 +838,52 @@ export default function MatchesView({ onPronoClick, userProfile, onProfileUpdate
       <div className="space-y-4">
         <div className="flex flex-col gap-4 pl-1 border-l-4 border-emerald-600 pt-1 pb-1">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest flex items-center gap-2">
-              <span>{selectedCompId === 'all' ? '⚡ Matchs du Jour' : '⚽ Tous les Matchs'}</span>
-            </h3>
+            <div className="flex bg-gray-100 rounded-lg p-1 w-full sm:w-auto">
+              <button
+                onClick={() => setActiveMode('today')}
+                className={`flex-1 sm:flex-none text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-md transition-all ${activeMode === 'today' ? 'bg-white text-emerald-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+              >
+                ⚡ Aujourd'hui
+              </button>
+              <button
+                onClick={() => {
+                  setActiveMode('season');
+                  if (selectedCompId === 'all') {
+                     setSelectedCompId(competitions[0]?.id || 'all');
+                  }
+                }}
+                className={`flex-1 sm:flex-none text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-md transition-all ${activeMode === 'season' ? 'bg-white text-emerald-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+              >
+                🏆 Par Saison
+              </button>
+            </div>
             
             <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">
-              {selectedCompId === 'all' && (
-                <>
-                  <input
-                    type="date"
-                    value={targetDate}
-                    onChange={(e) => setTargetDate(e.target.value)}
-                    className="bg-white border border-gray-200 outline-none text-[10px] font-black uppercase tracking-tight text-slate-700 py-1.5 px-3 rounded-full shadow-sm cursor-pointer w-full sm:w-auto"
-                  />
-                  {todayMatches.length > 0 && (
-                    <select 
-                      className="bg-emerald-50 border border-emerald-200 outline-none text-[10px] font-black uppercase tracking-tight text-emerald-800 py-1.5 px-3 rounded-full shadow-sm cursor-pointer w-full sm:w-auto"
-                      value={todayCompIdFilter === 'all' ? 'all' : todayCompIdFilter}
-                      onChange={(e) => setTodayCompIdFilter(e.target.value === 'all' ? 'all' : Number(e.target.value))}
-                    >
-                      <option value="all">Filtre Compétition (Toutes)</option>
-                      {Array.from(new Set(todayMatches.map(m => JSON.stringify({id: m.competition.id, name: m.competition.name})))).map(s => {
-                        const comp = JSON.parse(s as string);
-                        return <option key={comp.id} value={comp.id}>{comp.name}</option>
-                      })}
-                    </select>
-                  )}
-                </>
+              {activeMode === 'today' && (
+                <select 
+                  className="bg-emerald-50 border border-emerald-200 outline-none text-[10px] font-black uppercase tracking-tight text-emerald-800 py-1.5 px-3 rounded-full shadow-sm cursor-pointer w-full sm:w-auto"
+                  value={todayCompIdFilter}
+                  onChange={(e) => setTodayCompIdFilter(e.target.value === 'all' ? 'all' : Number(e.target.value))}
+                >
+                  <option value="all">Toutes les compétitions</option>
+                  {Array.from(new Set(todayMatches.map(m => JSON.stringify({id: m.competition.id, name: m.competition.name})))).map(s => {
+                    const comp = JSON.parse(s as string);
+                    return <option key={comp.id} value={comp.id}>{comp.name}</option>
+                  })}
+                </select>
               )}
-              <select 
-                className="bg-white border border-gray-200 outline-none text-[10px] font-black uppercase tracking-tight text-slate-700 py-1.5 px-3 rounded-full shadow-sm cursor-pointer w-full sm:w-auto"
-                value={selectedCompId === 'all' ? 'all' : selectedCompId}
-                onChange={(e) => {
-                   setSelectedCompId(e.target.value === 'all' ? 'all' : Number(e.target.value));
-                   if (e.target.value !== 'all') {
-                     // Keep season picker selection handled by internal logic, no action needed here.
-                   }
-                }}
-              >
-                <option value="all">Saisons (Toutes)</option>
-                {competitions.map(comp => (
-                  <option key={comp.id} value={comp.id}>{comp.name}</option>
-                ))}
-              </select>
+              {activeMode === 'season' && (
+                <select 
+                  className="bg-white border border-gray-200 outline-none text-[10px] font-black uppercase tracking-tight text-slate-700 py-1.5 px-3 rounded-full shadow-sm cursor-pointer w-full sm:w-auto"
+                  value={selectedCompId}
+                  onChange={(e) => setSelectedCompId(e.target.value === 'all' ? 'all' : Number(e.target.value))}
+                >
+                  <option value="all" disabled>Sélectionner une compétition...</option>
+                  {competitions.map(comp => (
+                    <option key={comp.id} value={comp.id}>{comp.name}</option>
+                  ))}
+                </select>
+              )}
             </div>
           </div>
           
