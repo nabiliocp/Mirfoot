@@ -915,7 +915,11 @@ export default function ChallengesView({
               ["TIMED", "SCHEDULED"].includes(m.status),
             )
           : [];
-        setMatches(upcomingMatches);
+        if (upcomingMatches.length === 0) {
+          setMatches(matchesData);
+        } else {
+          setMatches(upcomingMatches);
+        }
       } else {
         const errorData = await res.json();
         setApiError(errorData.error || "Erreur lors de la récupération des matchs");

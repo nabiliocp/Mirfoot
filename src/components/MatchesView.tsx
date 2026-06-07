@@ -18,6 +18,7 @@ interface MatchesViewProps {
 export default function MatchesView({ onPronoClick, userProfile, onProfileUpdate }: MatchesViewProps) {
   const [competitions, setCompetitions] = useState<Competition[]>([]);
   const [selectedCompId, setSelectedCompId] = useState<number | null>(null);
+  const [selectedSeason, setSelectedSeason] = useState<number | null>(null);
   const [matches, setMatches] = useState<Match[]>([]);
   const [todayMatches, setTodayMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);
@@ -57,7 +58,10 @@ export default function MatchesView({ onPronoClick, userProfile, onProfileUpdate
   useEffect(() => {
     if (!selectedCompId) return;
     setLoading(true);
-    fetch(`/api/matches/${selectedCompId}`)
+    const url = selectedSeason 
+      ? `/api/matches/${selectedCompId}?season=${selectedSeason}` 
+      : `/api/matches/${selectedCompId}`;
+    fetch(url)
       .then(res => res.json())
       .then(data => {
         setMatches(data.matches || []);
@@ -67,7 +71,7 @@ export default function MatchesView({ onPronoClick, userProfile, onProfileUpdate
         console.error(err);
         setLoading(false);
       });
-  }, [selectedCompId]);
+  }, [selectedCompId, selectedSeason]);
 
   // Helper to get multiple favorite teams from string
   const getFavoriteClubs = () => userProfile?.favorite_club?.split(',').map(s => s.trim()).filter(Boolean) || [];
@@ -113,6 +117,7 @@ export default function MatchesView({ onPronoClick, userProfile, onProfileUpdate
   // Compute grouped matches
   const liveMatches = otherMatches.filter(m => ['LIVE', 'IN_PLAY', 'PAUSED'].includes(m.status));
   const upcomingMatches = otherMatches.filter(m => ['TIMED', 'SCHEDULED', 'POSTPONED'].includes(m.status));
+  const finishedMatches = otherMatches.filter(m => ['FINISHED', 'AWARDED'].includes(m.status));
 
   // Helper to get team crest (national or club) fallback
   const getTeamCrest = (name: string) => {
@@ -467,17 +472,68 @@ export default function MatchesView({ onPronoClick, userProfile, onProfileUpdate
   return (
     <div className="space-y-6 animate-in fade-in zoom-in-95 duration-300">
       {/* 1. Selector (Ligue) first */}
-      <div className="flex items-center space-x-2 bg-white rounded-xl shadow-sm px-4 py-2 border border-gray-100">
-        <Search className="w-5 h-5 text-gray-400" />
-        <select 
-          className="flex-1 bg-transparent py-2 text-sm font-medium outline-none text-gray-700 w-full"
-          value={selectedCompId || ''}
-          onChange={(e) => setSelectedCompId(Number(e.target.value))}
-        >
-          {competitions.map(comp => (
-            <option key={comp.id} value={comp.id}>{comp.name}</option>
-          ))}
-        </select>
+      <div className="space-y-4">
+        <div className="flex items-center space-x-2 bg-white rounded-xl shadow-sm px-4 py-2 border border-gray-100">
+          <Search className="w-5 h-5 text-gray-400" />
+          <select 
+            className="flex-1 bg-transparent py-2 text-sm font-medium outline-none text-gray-700 w-full cursor-pointer"
+            value={selectedCompId || ''}
+            onChange={(e) => {
+              setSelectedCompId(Number(e.target.value));
+              setSelectedSeason(null);
+            }}
+          >
+            {competitions.map(comp => (
+              <option key={comp.id} value={comp.id}>{comp.name}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Season Selector with customized pills */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 bg-slate-50 p-3 rounded-2xl border border-slate-100">
+          <div>
+            <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider block">Saison active</span>
+            <span className="text-xs font-bold text-slate-700">
+              {selectedSeason ? `Historique : ${selectedSeason}` : "Saison en cours (2025/2026)"}
+            </span>
+          </div>
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <button
+              onClick={() => setSelectedSeason(null)}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold cursor-pointer transition-all ${!selectedSeason ? 'bg-emerald-600 text-white shadow-xs' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'}`}
+            >
+              En cours
+            </button>
+            {[2024, 2023, 2022].map(yr => (
+              <button
+                key={yr}
+                onClick={() => setSelectedSeason(yr)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold cursor-pointer transition-all ${selectedSeason === yr ? 'bg-emerald-600 text-white shadow-xs' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'}`}
+              >
+                {yr}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Info Banner when selecting Friendly Matches */}
+        {selectedCompId === 679 && (
+          <div className="bg-emerald-50 border border-emerald-200/50 rounded-2xl p-4 text-xs font-medium text-emerald-900 leading-relaxed shadow-xs flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
+            <div className="space-y-1.5">
+              <p className="font-extrabold text-emerald-800">💡 Information : Matchs Amicaux de la Journée</p>
+              <p>
+                ⚽ Les matchs amicaux internationaux planifiés pour <strong>Aujourd'hui</strong> sont entièrement récupérés et affichés en temps réel.
+              </p>
+              <p>
+                👉 Pour l'historique complet des saisons passées, le Plan Gratuit de l'API restreint l'accès aux saisons antérieures. Nous affichons donc la <strong>Saison 2024</strong> par défaut de manière transparente.
+              </p>
+              <p>
+                💡 Essayez le bouton <strong className="bg-white/80 border border-emerald-200/60 font-black px-1.5 py-0.5 rounded-md text-emerald-800">2023</strong> pour voir le duel mythique <strong className="font-black text-emerald-950">Maroc vs Brésil (25 mars 2023)</strong> et soumettre vos pronostics rétro !
+              </p>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* 4. Zone Matchs du Jour - MOVED ABOVE FOR BETTER VISIBILITY */}
@@ -807,9 +863,9 @@ export default function MatchesView({ onPronoClick, userProfile, onProfileUpdate
       )}
 
       <div className="space-y-8 pb-8">
-        {!loading && matches.length === 0 && todayMatches.length === 0 && (
+        {!loading && liveMatches.length === 0 && upcomingMatches.length === 0 && finishedMatches.length === 0 && todayMatches.length === 0 && (
           <div className="text-center p-8 bg-white rounded-2xl shadow-sm text-gray-500 border border-gray-100">
-            Aucun match programmé trouvé pour le moment dans cette compétition.
+            Aucun match trouvé pour le moment dans cette compétition.
           </div>
         )}
 
@@ -835,6 +891,19 @@ export default function MatchesView({ onPronoClick, userProfile, onProfileUpdate
             </h3>
             <div className="grid grid-cols-1 gap-4">
               {upcomingMatches.map(match => renderMatchCard(match, false))}
+            </div>
+          </div>
+        )}
+
+        {/* Finished Matches */}
+        {!loading && finishedMatches.length > 0 && (
+          <div className="space-y-4 border-t border-slate-100 pt-6">
+            <h3 className="text-xs font-black text-slate-500 uppercase tracking-widest pl-1 border-l-4 border-slate-400 flex items-center gap-2">
+              <span>🏆 Matchs Récents / Terminés</span>
+              <div className="h-[1px] bg-slate-100 flex-1"></div>
+            </h3>
+            <div className="grid grid-cols-1 gap-4">
+              {finishedMatches.slice(0, 15).map(match => renderMatchCard(match, false))}
             </div>
           </div>
         )}

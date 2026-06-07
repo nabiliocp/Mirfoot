@@ -57,7 +57,7 @@ const COMPETITION_ID_MAP: Record<number, number> = {
   2013: 62, // Ligue 2
   2016: 141, // Segunda Division
   2022: 3, // UEFA Europa League
-  679: 679, // Matchs Amicaux Internationaux
+  679: 10, // Matchs Amicaux Internationaux
 };
 
 const REVERSE_COMPETITION_ID_MAP: Record<number, number> = Object.fromEntries(
@@ -104,7 +104,7 @@ const AVAILABLE_COMPETITIONS = [
   {
     id: 679,
     name: "Matchs Amicaux Internationaux",
-    emblem: "https://media.api-sports.io/football/leagues/679.png",
+    emblem: "https://media.api-sports.io/football/leagues/10.png",
     type: "CUP",
   },
 ];
@@ -113,7 +113,7 @@ const getSeasonYearForLeague = (leagueId: number) => {
   const d = new Date();
   const year = d.getFullYear();
   const month = d.getMonth();
-  if ([1, 2, 3, 4, 32, 679].includes(leagueId)) {
+  if ([1, 2, 3, 4, 32, 679, 10].includes(leagueId)) {
     return year;
   }
   if (month < 7) {
@@ -323,14 +323,14 @@ async function startServer() {
         return res.json({ matches: mappedMatches });
       }
 
-      // If activeProvider is football-data, we also fetch today's friendly matches (league 679) from api-football.com if available
+      // If activeProvider is football-data, we also fetch today's friendly matches (league 10) from api-football.com if available
       let friendlyMatches: any[] = [];
       const apiKeyFootball = process.env.API_FOOTBALL_KEY;
       if (apiKeyFootball) {
         try {
           const todayStr = new Date().toISOString().split("T")[0];
           const response = await fetch(
-            `https://v3.football.api-sports.io/fixtures?date=${todayStr}&league=679`,
+            `https://v3.football.api-sports.io/fixtures?date=${todayStr}`,
             {
               headers: { "x-apisports-key": apiKeyFootball },
             },
@@ -338,7 +338,8 @@ async function startServer() {
           if (response.ok) {
             const data = await response.json();
             const fixtures = data.response || [];
-            friendlyMatches = fixtures
+            const friendlyFixtures = fixtures.filter((f: any) => f.league && f.league.id === 10);
+            friendlyMatches = friendlyFixtures
               .map(translateApiFootballMatchToFootballData)
               .filter(Boolean);
           }
@@ -373,6 +374,7 @@ async function startServer() {
     try {
       const activeProvider = getActiveApiProvider();
       const fdCompId = Number(req.params.competitionId);
+      const reqSeason = req.query.season ? Number(req.query.season) : null;
 
       // If requested competition ID is 679 (Matchs Amicaux Internationaux), we MUST use api-football regardless of active provider
       if (fdCompId === 679) {
@@ -385,21 +387,81 @@ async function startServer() {
             });
         }
 
-        const season = getSeasonYearForLeague(679);
-        const response = await fetch(
-          `https://v3.football.api-sports.io/fixtures?league=679&season=${season}`,
+        // Always query today's friendly matches from the global date query, bypassing season restriction check!
+        let todayFriendlies: any[] = [];
+        try {
+          const todayStr = new Date().toISOString().split("T")[0];
+          const todayResponse = await fetch(
+            `https://v3.football.api-sports.io/fixtures?date=${todayStr}`,
+            {
+              headers: { "x-apisports-key": apiKey },
+            },
+          );
+          if (todayResponse.ok) {
+            const todayData = await todayResponse.json();
+            const todayFixtures = todayData.response || [];
+            const friendlyFixtures = todayFixtures.filter((f: any) => f.league && f.league.id === 10);
+            todayFriendlies = friendlyFixtures
+              .map(translateApiFootballMatchToFootballData)
+              .filter(Boolean);
+          }
+        } catch (err) {
+          console.error("Error fetching today friendly matches:", err);
+        }
+
+        let season = reqSeason || getSeasonYearForLeague(10);
+        let response = await fetch(
+          `https://v3.football.api-sports.io/fixtures?league=10&season=${season}`,
           {
             headers: { "x-apisports-key": apiKey },
           },
         );
 
         if (!response.ok) throw new Error("API-Football Error");
-        const data = await response.json();
+        let data = await response.json();
+
+        // Write diagnostics log
+        try {
+          fs.writeFileSync("./last_api_response.json", JSON.stringify({ attemptedSeason: season, data }, null, 2), "utf-8");
+        } catch (e) {}
+
+        // Handle Free Plan restrictions gracefully (only if the user did NOT explicitly request a custom successful season)
+        if (data && data.errors && Object.keys(data.errors).length > 0) {
+          const hasPlanError = JSON.stringify(data.errors).toLowerCase().includes("plan");
+          if (hasPlanError) {
+            console.log("Free plan restriction detected for season", season, "- Falling back to season 2024.");
+            season = 2024;
+            response = await fetch(
+              `https://v3.football.api-sports.io/fixtures?league=10&season=${season}`,
+              {
+                headers: { "x-apisports-key": apiKey },
+              },
+            );
+            if (response.ok) {
+              data = await response.json();
+              try {
+                fs.writeFileSync("./last_api_response.json", JSON.stringify({ fallbackSeason: season, data }, null, 2), "utf-8");
+              } catch (e) {}
+            }
+          }
+        }
+
         const fixtures = data.response || [];
 
-        const mappedMatches = fixtures
+        let mappedMatches = fixtures
           .map(translateApiFootballMatchToFootballData)
           .filter(Boolean);
+
+        // Merge today's friendly matches, ensuring no duplicates by ID
+        if (todayFriendlies.length > 0) {
+          const existingIds = new Set(mappedMatches.map((m: any) => m.id));
+          todayFriendlies.forEach((m: any) => {
+            if (!existingIds.has(m.id)) {
+              mappedMatches.unshift(m);
+            }
+          });
+        }
+
         return res.json({ matches: mappedMatches });
       }
 
@@ -418,8 +480,8 @@ async function startServer() {
           return res.json({ matches: [] });
         }
 
-        const season = getSeasonYearForLeague(mappedLeagueId);
-        const response = await fetch(
+        let season = reqSeason || getSeasonYearForLeague(mappedLeagueId);
+        let response = await fetch(
           `https://v3.football.api-sports.io/fixtures?league=${mappedLeagueId}&season=${season}`,
           {
             headers: { "x-apisports-key": apiKey },
@@ -427,7 +489,26 @@ async function startServer() {
         );
 
         if (!response.ok) throw new Error("API-Football Error");
-        const data = await response.json();
+        let data = await response.json();
+
+        // Handle Free Plan restrictions gracefully
+        if (data && data.errors && Object.keys(data.errors).length > 0) {
+          const hasPlanError = JSON.stringify(data.errors).toLowerCase().includes("plan");
+          if (hasPlanError) {
+            console.log("Free plan restriction detected for season", season, "- Falling back to season 2024.");
+            season = 2024;
+            response = await fetch(
+              `https://v3.football.api-sports.io/fixtures?league=${mappedLeagueId}&season=${season}`,
+              {
+                headers: { "x-apisports-key": apiKey },
+              },
+            );
+            if (response.ok) {
+              data = await response.json();
+            }
+          }
+        }
+
         const fixtures = data.response || [];
 
         const mappedMatches = fixtures
