@@ -1572,33 +1572,80 @@ export default function ChallengesView({
               />
             </div>
 
-            <div className="border-t border-gray-100 pt-4">
-              <h3 className="font-bold text-sm text-emerald-800 mb-3 border-b border-gray-100 pb-2 uppercase tracking-wide">
-                Règles Unifiées du Défi
+            <div className="border-t border-gray-100 pt-5">
+              <h3 className="font-extrabold text-sm text-emerald-800 mb-4 uppercase tracking-wider flex items-center gap-1.5 border-b border-gray-100 pb-2">
+                <span>⚙️ Barème des Règles du Défi</span>
+                <span className="text-[9px] bg-emerald-50 px-2 py-0.5 rounded text-emerald-700 normal-case font-bold">Activer / Désactiver</span>
               </h3>
-              <div className="text-sm space-y-2">
-                <div className="bg-gray-50 p-3 rounded-xl border border-gray-100 space-y-2">
-                  <div className="flex justify-between text-xs font-semibold text-gray-700">
-                    <span>Score Exact</span>
-                    <span className="text-emerald-600">+5 pts</span>
-                  </div>
-                  <div className="flex justify-between text-xs font-semibold text-gray-700">
-                    <span>Score Proche</span>
-                    <span className="text-emerald-600">+3 pts</span>
-                  </div>
-                  <div className="flex justify-between text-xs font-semibold text-gray-700">
-                    <span>Bon Vainqueur</span>
-                    <span className="text-emerald-600">+2 pts</span>
-                  </div>
-                  <div className="flex justify-between text-xs font-semibold text-gray-700">
-                    <span>Qualification</span>
-                    <span className="text-emerald-600">+2 pts</span>
-                  </div>
-                </div>
-                <p className="text-[10px] text-gray-500 italic px-1">
-                  Les règles sont identiques pour tous les matchs. 
-                </p>
+              
+              <div className="space-y-3">
+                {Object.entries(customRulesConfig).map(([key, rawConfig]) => {
+                  const config = rawConfig as { enabled: boolean; points: number; label: string };
+                  const isEnabled = config.enabled;
+                  return (
+                    <div 
+                      key={key} 
+                      className={`p-3.5 rounded-2xl border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+                        isEnabled 
+                          ? 'bg-slate-50 border-slate-250 hover:border-slate-300 shadow-3xs' 
+                          : 'bg-gray-50/50 border-gray-100 opacity-60'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        {/* Toggle switch Button */}
+                        <button
+                          type="button"
+                          onClick={() => toggleRule(key)}
+                          className={`w-11 h-6 flex items-center rounded-full p-1 cursor-pointer transition-all duration-300 focus:outline-hidden ${
+                            isEnabled ? 'bg-emerald-600 justify-end' : 'bg-gray-300 justify-start'
+                          }`}
+                        >
+                          <span className="bg-white w-4 h-4 rounded-full shadow-xs transition-all duration-300" />
+                        </button>
+                        <div>
+                          <span className={`text-xs font-black block ${isEnabled ? 'text-gray-800' : 'text-gray-400 line-through'}`}>
+                            {config.label}
+                          </span>
+                          <span className="text-[10px] text-gray-450 font-semibold block">
+                            {isEnabled ? "Règle active pour ce défi" : "Règle désactivée (0 pt)"}
+                          </span>
+                        </div>
+                      </div>
+
+                      {isEnabled && (
+                        <div className="flex items-center gap-1.5 self-end sm:self-auto shrink-0 bg-white p-1 rounded-xl border border-gray-250 shadow-3xs">
+                          <button
+                            type="button"
+                            onClick={() => updateRulePoints(key, Math.max(0, config.points - 1))}
+                            className="w-7 h-7 bg-gray-50 hover:bg-gray-100 active:scale-95 rounded-lg flex items-center justify-center font-bold text-gray-650 text-sm transition-all select-none cursor-pointer"
+                          >
+                            -
+                          </button>
+                          <input
+                            type="number"
+                            min="0"
+                            max="100"
+                            value={config.points}
+                            onChange={(e) => updateRulePoints(key, Math.max(0, parseInt(e.target.value) || 0))}
+                            className="w-9 text-center font-black text-xs text-slate-800 p-1 bg-transparent focus:outline-hidden [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => updateRulePoints(key, Math.min(100, config.points + 1))}
+                            className="w-7 h-7 bg-gray-50 hover:bg-gray-100 active:scale-95 rounded-lg flex items-center justify-center font-bold text-gray-650 text-sm transition-all select-none cursor-pointer"
+                          >
+                            +
+                          </button>
+                          <span className="text-[10px] font-black text-emerald-800 pr-2">pts</span>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
+              <p className="text-[10px] text-gray-400 italic mt-3 text-center">
+                👉 Les points peuvent être personnalisés ou la règle désactivée grâce aux interrupteurs ci-dessus.
+              </p>
             </div>
 
             <button
@@ -1863,10 +1910,15 @@ export default function ChallengesView({
     const isAuthorizedForSimulation = userEmail === "rouijel.nabil@gmail.com" || userEmail === "rouijel.nabil.cp@gmail.com";
     const simGroupMatches = modalMatches.filter(m => !translateStage(m.stage, m.group, m.matchday).isKnockout);
     const simKnockoutMatches = modalMatches.filter(m => translateStage(m.stage, m.group, m.matchday).isKnockout);
-    const limitSimMatches = [
+    const defaultSimMatches = [
       ...simGroupMatches.slice(0, 5),
       ...simKnockoutMatches.slice(0, 5)
     ];
+    if (defaultSimMatches.length === 0 && modalMatches.length > 0) {
+      defaultSimMatches.push(...modalMatches.slice(0, 10));
+    }
+
+    const limitSimMatches = modalMatches.filter(m => simulatedScores[m.id] !== undefined);
 
     // Prepare leaderboard data
     const activeMatches = modalMatches.map(m => {
@@ -2133,7 +2185,7 @@ export default function ChallengesView({
                     // Initialize simulated scores with the current match scores if they exist (limit to 5 groups and 5 knockouts)
                     if (Object.keys(simulatedScores).length === 0) {
                       const initialSim: Record<number, { home: number | string; away: number | string; status: string }> = {};
-                      limitSimMatches.forEach(m => {
+                      defaultSimMatches.forEach(m => {
                         initialSim[m.id] = {
                           home: m.score.fullTime.home !== null ? m.score.fullTime.home : "",
                           away: m.score.fullTime.away !== null ? m.score.fullTime.away : "",
@@ -2201,95 +2253,187 @@ export default function ChallengesView({
             {isSimulationMode && !isSimPanelCollapsed && (
               <div className="mt-4 pt-4 border-t border-slate-200/60 space-y-4 animate-in slide-in-from-top-2 duration-200">
                 <div className="bg-amber-50/60 border border-amber-200/50 p-3 rounded-2xl text-[11px] text-amber-800 font-semibold space-y-1">
-                  <p>💡 **Instructions de test :** Modifiez les scores fictifs des matchs ci-dessous (limités à un échantillon de 5 matchs de groupe et 5 matchs à élimination directe) et marquez-les comme <span className="bg-amber-100 text-amber-900 px-1 rounded font-bold">TERMINÉ</span> pour appliquer les points.</p>
+                  <p>💡 **Instructions de test :** Sélectionnez les matchs que vous souhaitez tester à l'aide du volet de configuration ci-dessous. Modifiez ensuite leurs scores fictifs et marquez-les comme <span className="bg-amber-100 text-amber-900 px-1 rounded font-bold">TERMINÉ</span> pour appliquer les points.</p>
                   <p>Le classement ci-dessus (onglet Classement) se recalculera instantanément selon le barème de ce défi, en appliquant les règles de bonus X2 de chaque joueur.</p>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {limitSimMatches.map(m => {
-                    const sim = simulatedScores[m.id] || { home: "", away: "", status: "FINISHED" };
-                    return (
-                      <div key={m.id} className="bg-white border border-slate-200/40 p-4 rounded-2xl shadow-xs space-y-3">
-                        <div className="flex justify-between items-center text-[10px] uppercase font-black tracking-wider text-slate-400">
-                          <span className="truncate max-w-[60%]">{m.stage ? translateStage(m.stage, m.group, m.matchday).name : "Match"}</span>
-                          <div className="flex items-center gap-1.5">
-                            <span>Statut :</span>
-                            <select 
-                              value={sim.status} 
-                              onChange={(e) => {
-                                setSimulatedScores(prev => ({
-                                  ...prev,
-                                  [m.id]: {
-                                    ...sim,
-                                    status: e.target.value
-                                  }
-                                }));
-                              }}
-                              className="bg-slate-100 text-slate-700 font-bold border border-slate-200/40 px-1.5 py-0.5 rounded text-[10px] focus:outline-hidden cursor-pointer"
-                            >
-                              <option value="FINISHED">TERMINÉ</option>
-                              <option value="SCHEDULED">PROGRAMMÉ</option>
-                            </select>
-                          </div>
-                        </div>
+                {/* MATCH SELECTOR ACCORDION FOR TEST MODE */}
+                <details className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-2xs group">
+                  <summary className="flex items-center justify-between p-3.5 px-4 font-black text-xs text-indigo-950 cursor-pointer hover:bg-slate-50 transition select-none">
+                    <div className="flex items-center gap-2">
+                      <span className="text-base">🛠️</span>
+                      <span>Configurer les matchs à inclure dans le test ({limitSimMatches.length} / {modalMatches.length})</span>
+                    </div>
+                    <span className="text-[10px] bg-slate-100 text-slate-500 font-bold px-2 py-0.5 rounded-md group-open:hidden">Cliquer pour déplier</span>
+                    <span className="text-[10px] bg-indigo-50 text-indigo-700 font-bold px-2 py-0.5 rounded-md hidden group-open:inline-block">Cliquer pour replier</span>
+                  </summary>
+                  <div className="p-4 border-t border-slate-150 max-h-72 overflow-y-auto space-y-3 bg-slate-50/50">
+                    <div className="flex justify-between items-center pb-2 border-b border-slate-100">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const allSims: Record<number, { home: number | string; away: number | string; status: string }> = {};
+                          modalMatches.forEach(m => {
+                            allSims[m.id] = {
+                              home: m.score.fullTime.home !== null ? m.score.fullTime.home : 0,
+                              away: m.score.fullTime.away !== null ? m.score.fullTime.away : 0,
+                              status: "FINISHED"
+                            };
+                          });
+                          setSimulatedScores(allSims);
+                        }}
+                        className="text-[10px] text-indigo-750 bg-white hover:bg-indigo-50 border border-indigo-200 px-2.5 py-1 rounded-lg font-black cursor-pointer shadow-3xs"
+                      >
+                        Sélectionner tous les matchs ({modalMatches.length})
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSimulatedScores({});
+                        }}
+                        className="text-[10px] text-rose-700 bg-white hover:bg-rose-50 border border-rose-200 px-2.5 py-1 rounded-lg font-black cursor-pointer shadow-3xs"
+                      >
+                        Vider la sélection
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {modalMatches.map(m => {
+                        const isSelected = simulatedScores[m.id] !== undefined;
+                        return (
+                          <label 
+                            key={m.id} 
+                            className={`flex items-center justify-between p-2.5 rounded-xl border text-[11px] font-bold cursor-pointer transition select-none ${
+                              isSelected 
+                                ? 'bg-indigo-50 border-indigo-200 text-indigo-950 shadow-3xs' 
+                                : 'bg-white border-slate-200/65 text-slate-600 hover:bg-slate-50'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2 truncate pr-2">
+                              <input 
+                                type="checkbox"
+                                checked={isSelected}
+                                onChange={() => {
+                                  setSimulatedScores(prev => {
+                                    const next = { ...prev };
+                                    if (isSelected) {
+                                      delete next[m.id];
+                                    } else {
+                                      next[m.id] = {
+                                        home: m.score.fullTime.home !== null ? m.score.fullTime.home : 0,
+                                        away: m.score.fullTime.away !== null ? m.score.fullTime.away : 0,
+                                        status: "FINISHED"
+                                      };
+                                    }
+                                    return next;
+                                  });
+                                }}
+                                className="rounded border-slate-300 text-indigo-650 focus:ring-indigo-500 w-3.5 h-3.5 cursor-pointer shrink-0"
+                              />
+                              <span className="truncate">{m.homeTeam.shortName || m.homeTeam.name} vs {m.awayTeam.shortName || m.awayTeam.name}</span>
+                            </div>
+                            <span className="text-[9px] uppercase font-bold text-slate-400 shrink-0 bg-slate-100 px-1 py-0.5 rounded">
+                              {m.stage ? translateStage(m.stage, m.group, m.matchday).name : ""}
+                            </span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </details>
 
-                        <div className="flex items-center justify-between gap-1">
-                          <div className="flex items-center gap-2 min-w-0 flex-1 justify-end">
-                            <span className="font-bold text-xs text-slate-700 truncate">{m.homeTeam.shortName || m.homeTeam.name}</span>
-                            <div className="w-5 h-5 flex items-center justify-center bg-white border border-slate-100 rounded-full p-0.5 shrink-0">
-                              <img src={getFlagUrl(m.homeTeam.name, m.homeTeam.crest)} alt="" className="max-w-full max-h-full object-contain" onError={(e) => { e.currentTarget.src = "https://flagcdn.com/w80/un.png"; }} />
+                {limitSimMatches.length === 0 ? (
+                  <div className="text-center p-8 bg-white border border-slate-200/55 rounded-2xl shadow-3xs flex flex-col items-center justify-center">
+                    <Trophy className="w-8 h-8 text-slate-350 mb-2" />
+                    <p className="text-xs font-bold text-slate-700">Aucun match sélectionné pour le test</p>
+                    <p className="text-[10px] text-slate-400 font-semibold mt-1">Dépliez la section de configuration ci-dessus pour cocher les matchs que vous souhaitez simuler.</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {limitSimMatches.map(m => {
+                      const sim = simulatedScores[m.id] || { home: "", away: "", status: "FINISHED" };
+                      return (
+                        <div key={m.id} className="bg-white border border-slate-200/40 p-4 rounded-2xl shadow-xs space-y-3">
+                          <div className="flex justify-between items-center text-[10px] uppercase font-black tracking-wider text-slate-400">
+                            <span className="truncate max-w-[60%]">{m.stage ? translateStage(m.stage, m.group, m.matchday).name : "Match"}</span>
+                            <div className="flex items-center gap-1.5">
+                              <span>Statut :</span>
+                              <select 
+                                value={sim.status} 
+                                onChange={(e) => {
+                                  setSimulatedScores(prev => ({
+                                    ...prev,
+                                    [m.id]: {
+                                      ...sim,
+                                      status: e.target.value
+                                    }
+                                  }));
+                                }}
+                                className="bg-slate-100 text-slate-700 font-bold border border-slate-200/40 px-1.5 py-0.5 rounded text-[10px] focus:outline-hidden cursor-pointer"
+                              >
+                                <option value="FINISHED">TERMINÉ</option>
+                                <option value="SCHEDULED">PROGRAMMÉ</option>
+                              </select>
                             </div>
                           </div>
 
-                          <div className="flex items-center gap-1 px-2.5 shrink-0">
-                            <input 
-                              type="number" 
-                              min="0"
-                              value={sim.home ?? ""}
-                              onChange={(e) => {
-                                const valStr = e.target.value;
-                                const val = valStr === "" ? "" : Math.max(0, parseInt(valStr) || 0);
-                                setSimulatedScores(prev => ({
-                                  ...prev,
-                                  [m.id]: {
-                                    ...sim,
-                                    home: val
-                                  }
-                                }));
-                              }}
-                              className="w-10 h-8 text-center bg-slate-50 border border-slate-200 rounded-lg text-xs font-black focus:outline-hidden focus:ring-1 focus:ring-indigo-500 font-mono"
-                            />
-                            <span className="text-slate-400 font-extrabold text-xs shrink-0 font-mono">-</span>
-                            <input 
-                              type="number" 
-                              min="0"
-                              value={sim.away ?? ""}
-                              onChange={(e) => {
-                                const valStr = e.target.value;
-                                const val = valStr === "" ? "" : Math.max(0, parseInt(valStr) || 0);
-                                setSimulatedScores(prev => ({
-                                  ...prev,
-                                  [m.id]: {
-                                    ...sim,
-                                    away: val
-                                  }
-                                }));
-                              }}
-                              className="w-10 h-8 text-center bg-slate-50 border border-slate-200 rounded-lg text-xs font-black focus:outline-hidden focus:ring-1 focus:ring-indigo-500 font-mono"
-                            />
-                          </div>
-
-                          <div className="flex items-center gap-2 min-w-0 flex-1">
-                            <div className="w-5 h-5 flex items-center justify-center bg-white border border-slate-100 rounded-full p-0.5 shrink-0">
-                              <img src={getFlagUrl(m.awayTeam.name, m.awayTeam.crest)} alt="" className="max-w-full max-h-full object-contain" onError={(e) => { e.currentTarget.src = "https://flagcdn.com/w80/un.png"; }} />
+                          <div className="flex items-center justify-between gap-1">
+                            <div className="flex items-center gap-2 min-w-0 flex-1 justify-end">
+                              <span className="font-bold text-xs text-slate-700 truncate">{m.homeTeam.shortName || m.homeTeam.name}</span>
+                              <div className="w-5 h-5 flex items-center justify-center bg-white border border-slate-100 rounded-full p-0.5 shrink-0">
+                                <img src={getFlagUrl(m.homeTeam.name, m.homeTeam.crest)} alt="" className="max-w-full max-h-full object-contain" onError={(e) => { e.currentTarget.src = "https://flagcdn.com/w80/un.png"; }} />
+                              </div>
                             </div>
-                            <span className="font-bold text-xs text-slate-700 truncate">{m.awayTeam.shortName || m.awayTeam.name}</span>
+
+                            <div className="flex items-center gap-1 px-2.5 shrink-0">
+                              <input 
+                                type="number" 
+                                min="0"
+                                value={sim.home ?? ""}
+                                onChange={(e) => {
+                                  const valStr = e.target.value;
+                                  const val = valStr === "" ? "" : Math.max(0, parseInt(valStr) || 0);
+                                  setSimulatedScores(prev => ({
+                                    ...prev,
+                                    [m.id]: {
+                                      ...sim,
+                                      home: val
+                                    }
+                                  }));
+                                }}
+                                className="w-10 h-8 text-center bg-slate-50 border border-slate-200 rounded-lg text-xs font-black focus:outline-hidden focus:ring-1 focus:ring-indigo-500 font-mono"
+                              />
+                              <span className="text-slate-400 font-extrabold text-xs shrink-0 font-mono">-</span>
+                              <input 
+                                type="number" 
+                                min="0"
+                                value={sim.away ?? ""}
+                                onChange={(e) => {
+                                  const valStr = e.target.value;
+                                  const val = valStr === "" ? "" : Math.max(0, parseInt(valStr) || 0);
+                                  setSimulatedScores(prev => ({
+                                    ...prev,
+                                    [m.id]: {
+                                      ...sim,
+                                      away: val
+                                    }
+                                  }));
+                                }}
+                                className="w-10 h-8 text-center bg-slate-50 border border-slate-200 rounded-lg text-xs font-black focus:outline-hidden focus:ring-1 focus:ring-indigo-500 font-mono"
+                              />
+                            </div>
+
+                            <div className="flex items-center gap-2 min-w-0 flex-1">
+                              <div className="w-5 h-5 flex items-center justify-center bg-white border border-slate-100 rounded-full p-0.5 shrink-0">
+                                <img src={getFlagUrl(m.awayTeam.name, m.awayTeam.crest)} alt="" className="max-w-full max-h-full object-contain" onError={(e) => { e.currentTarget.src = "https://flagcdn.com/w80/un.png"; }} />
+                              </div>
+                              <span className="font-bold text-xs text-slate-700 truncate">{m.awayTeam.shortName || m.awayTeam.name}</span>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    );
-                  })}
-                </div>
+                      );
+                    })}
+                  </div>
+                )}
 
                 <div className="flex flex-col sm:flex-row justify-end gap-2.5 pt-4 border-t border-slate-200/40">
                   <button
