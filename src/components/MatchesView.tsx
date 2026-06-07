@@ -17,7 +17,7 @@ interface MatchesViewProps {
 
 export default function MatchesView({ onPronoClick, userProfile, onProfileUpdate }: MatchesViewProps) {
   const [competitions, setCompetitions] = useState<Competition[]>([]);
-  const [selectedCompId, setSelectedCompId] = useState<number | null>(null);
+  const [selectedCompId, setSelectedCompId] = useState<number | 'all'>('all');
   const [selectedSeason, setSelectedSeason] = useState<number | null>(null);
   const [matches, setMatches] = useState<Match[]>([]);
   const [todayMatches, setTodayMatches] = useState<Match[]>([]);
@@ -29,7 +29,6 @@ export default function MatchesView({ onPronoClick, userProfile, onProfileUpdate
   const [selectedCompObj, setSelectedCompObj] = useState<Competition | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
   const [todayFilter, setTodayFilter] = useState<'all' | 'live' | 'upcoming' | 'finished'>('all');
-  const [todayCompIdFilter, setTodayCompIdFilter] = useState<number | 'all'>('all');
 
   useEffect(() => {
     // Fetch competitions and Today's matches
@@ -44,10 +43,7 @@ export default function MatchesView({ onPronoClick, userProfile, onProfileUpdate
       setCompetitions(compData.competitions || []);
       setTodayMatches(todayData.matches || []);
       
-      if (compData.competitions?.length > 0) {
-        const defaultComp = compData.competitions.find((c: Competition) => c.id === 2015) || compData.competitions[0];
-        setSelectedCompId(defaultComp.id);
-      }
+      setSelectedCompId('all');
       setLoading(false);
     })
     .catch(err => {
@@ -58,6 +54,10 @@ export default function MatchesView({ onPronoClick, userProfile, onProfileUpdate
   }, [retryTrigger]);
 
   useEffect(() => {
+    if (selectedCompId === 'all') {
+      setMatches([]);
+      return;
+    }
     if (!selectedCompId) return;
     setLoading(true);
     const url = selectedSeason 
@@ -121,18 +121,16 @@ export default function MatchesView({ onPronoClick, userProfile, onProfileUpdate
   const upcomingMatches = otherMatches.filter(m => ['TIMED', 'SCHEDULED', 'POSTPONED'].includes(m.status));
   const finishedMatches = otherMatches.filter(m => ['FINISHED', 'AWARDED'].includes(m.status));
 
-  const filteredTodayMatches = todayMatches.filter(m => {
-    let matchesCompFilter = true;
-    if (todayCompIdFilter !== 'all') {
-      matchesCompFilter = m.competition?.id === todayCompIdFilter;
-    }
-    
+  // Compute displayed matches based on mode
+  const rawTargetMatches = selectedCompId === 'all' ? todayMatches : otherMatches;
+
+  const displayedMatches = rawTargetMatches.filter(m => {
     let matchesStatusFilter = true;
     if (todayFilter === 'live') matchesStatusFilter = ['LIVE', 'IN_PLAY', 'PAUSED'].includes(m.status);
     if (todayFilter === 'upcoming') matchesStatusFilter = ['TIMED', 'SCHEDULED', 'POSTPONED'].includes(m.status);
     if (todayFilter === 'finished') matchesStatusFilter = ['FINISHED', 'AWARDED'].includes(m.status);
 
-    return matchesCompFilter && matchesStatusFilter;
+    return matchesStatusFilter;
   });
 
   // Helper to get team crest (national or club) fallback
@@ -825,13 +823,13 @@ export default function MatchesView({ onPronoClick, userProfile, onProfileUpdate
         <div className="flex flex-col gap-4 pl-1 border-l-4 border-emerald-600 pt-1 pb-1">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest flex items-center gap-2">
-              <span>⚡ Matchs du Jour</span>
+              <span>{selectedCompId === 'all' ? '⚡ Matchs du Jour' : '⚽ Tous les Matchs'}</span>
             </h3>
             
             <select 
               className="bg-white border border-gray-200 outline-none text-[10px] font-black uppercase tracking-tight text-slate-700 py-1.5 px-3 rounded-full shadow-sm cursor-pointer w-full sm:w-auto"
-              value={todayCompIdFilter === 'all' ? 'all' : todayCompIdFilter}
-              onChange={(e) => setTodayCompIdFilter(e.target.value === 'all' ? 'all' : Number(e.target.value))}
+              value={selectedCompId === 'all' ? 'all' : selectedCompId}
+              onChange={(e) => setSelectedCompId(e.target.value === 'all' ? 'all' : Number(e.target.value))}
             >
               <option value="all">Toutes Compétitions</option>
               {competitions.map(comp => (
@@ -870,14 +868,14 @@ export default function MatchesView({ onPronoClick, userProfile, onProfileUpdate
         
         {loading ? (
           <div className="flex justify-center p-8"><Clock className="animate-spin text-emerald-500 w-6 h-6" /></div>
-        ) : filteredTodayMatches.length > 0 ? (
+        ) : displayedMatches.length > 0 ? (
           <div className="grid grid-cols-1 gap-4">
-            {filteredTodayMatches.map(match => renderMatchCard(match, userHeartMatches.some(hm => hm.id === match.id)))}
+            {displayedMatches.map(match => renderMatchCard(match, userHeartMatches.some(hm => hm.id === match.id)))}
           </div>
         ) : (
           <div className="bg-gray-50 rounded-2xl p-8 border-2 border-dashed border-gray-200 text-center flex flex-col items-center gap-3">
             <CalendarCheck className="w-8 h-8 text-gray-300" />
-            <p className="text-sm font-bold text-gray-400">Aucun match ne correspond aux filtres d’aujourd'hui.</p>
+            <p className="text-sm font-bold text-gray-400">{selectedCompId === 'all' ? "Aucun match ne correspond aux filtres d’aujourd'hui." : "Aucun match trouvé pour cette compétition avec ces filtres."}</p>
           </div>
         )}
       </div>
