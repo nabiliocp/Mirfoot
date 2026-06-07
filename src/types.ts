@@ -69,8 +69,12 @@ export interface Match {
   };
   score: {
     fullTime: {
-      home: number;
-      away: number;
+      home: number | null;
+      away: number | null;
+    };
+    regularTime?: {
+      home: number | null;
+      away: number | null;
     };
   };
   venue?: string;

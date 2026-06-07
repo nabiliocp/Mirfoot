@@ -323,6 +323,45 @@ async function startServer() {
                    halfTime: { home: null, away: null },
                    regularTime: { home: 1, away: 0 }
                  },
+                 venue: "Grand Stade d'Agadir",
+                 competition: { id: 679, name: "Friendlies", code: "FR", type: "CUP", emblem: "https://media.api-sports.io/football/leagues/10.png" }
+               });
+               friendlyMatches.push({
+                 id: 1540951,
+                 utcDate: `${targetDate}T20:45:00Z`,
+                 status: "TIMED",
+                 matchday: 1,
+                 stage: "Friendlies",
+                 group: null,
+                 homeTeam: { id: 2, name: "France", shortName: "France", tla: "FRA", crest: "https://media.api-sports.io/football/teams/67.png" },
+                 awayTeam: { id: 9, name: "Germany", shortName: "Germany", tla: "GER", crest: "https://media.api-sports.io/football/teams/25.png" },
+                 score: {
+                   winner: null,
+                   duration: "REGULAR",
+                   fullTime: { home: null, away: null },
+                   halfTime: { home: null, away: null },
+                   regularTime: { home: null, away: null }
+                 },
+                 venue: "Stade de France",
+                 competition: { id: 679, name: "Friendlies", code: "FR", type: "CUP", emblem: "https://media.api-sports.io/football/leagues/10.png" }
+               });
+               friendlyMatches.push({
+                 id: 1540952,
+                 utcDate: `${targetDate}T18:00:00Z`,
+                 status: "FINISHED",
+                 matchday: 1,
+                 stage: "Friendlies",
+                 group: null,
+                 homeTeam: { id: 10, name: "Spain", shortName: "Spain", tla: "ESP", crest: "https://media.api-sports.io/football/teams/9.png" },
+                 awayTeam: { id: 15, name: "Brazil", shortName: "Brazil", tla: "BRA", crest: "https://media.api-sports.io/football/teams/6.png" },
+                 score: {
+                   winner: "AWAY_TEAM",
+                   duration: "REGULAR",
+                   fullTime: { home: 1, away: 3 },
+                   halfTime: { home: 0, away: 1 },
+                   regularTime: { home: 1, away: 3 }
+                 },
+                 venue: "Santiago Bernabéu",
                  competition: { id: 679, name: "Friendlies", code: "FR", type: "CUP", emblem: "https://media.api-sports.io/football/leagues/10.png" }
                });
               }
@@ -409,6 +448,45 @@ async function startServer() {
                    halfTime: { home: null, away: null },
                    regularTime: { home: 1, away: 0 }
                  },
+                 venue: "Grand Stade d'Agadir",
+                 competition: { id: 679, name: "Friendlies", code: "FR", type: "CUP", emblem: "https://media.api-sports.io/football/leagues/10.png" }
+               });
+               todayFriendlies.push({
+                 id: 1540951,
+                 utcDate: `${todayStr}T20:45:00Z`,
+                 status: "TIMED",
+                 matchday: 1,
+                 stage: "Friendlies",
+                 group: null,
+                 homeTeam: { id: 2, name: "France", shortName: "France", tla: "FRA", crest: "https://media.api-sports.io/football/teams/67.png" },
+                 awayTeam: { id: 9, name: "Germany", shortName: "Germany", tla: "GER", crest: "https://media.api-sports.io/football/teams/25.png" },
+                 score: {
+                   winner: null,
+                   duration: "REGULAR",
+                   fullTime: { home: null, away: null },
+                   halfTime: { home: null, away: null },
+                   regularTime: { home: null, away: null }
+                 },
+                 venue: "Stade de France",
+                 competition: { id: 679, name: "Friendlies", code: "FR", type: "CUP", emblem: "https://media.api-sports.io/football/leagues/10.png" }
+               });
+               todayFriendlies.push({
+                 id: 1540952,
+                 utcDate: `${todayStr}T18:00:00Z`,
+                 status: "FINISHED",
+                 matchday: 1,
+                 stage: "Friendlies",
+                 group: null,
+                 homeTeam: { id: 10, name: "Spain", shortName: "Spain", tla: "ESP", crest: "https://media.api-sports.io/football/teams/9.png" },
+                 awayTeam: { id: 15, name: "Brazil", shortName: "Brazil", tla: "BRA", crest: "https://media.api-sports.io/football/teams/6.png" },
+                 score: {
+                   winner: "AWAY_TEAM",
+                   duration: "REGULAR",
+                   fullTime: { home: 1, away: 3 },
+                   halfTime: { home: 0, away: 1 },
+                   regularTime: { home: 1, away: 3 }
+                 },
+                 venue: "Santiago Bernabéu",
                  competition: { id: 679, name: "Friendlies", code: "FR", type: "CUP", emblem: "https://media.api-sports.io/football/leagues/10.png" }
                });
               }

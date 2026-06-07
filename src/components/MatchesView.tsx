@@ -488,9 +488,9 @@ export default function MatchesView({ onPronoClick, userProfile, onProfileUpdate
             <div className="flex-1 flex flex-col justify-center items-center px-4">
               {(isLive || isFinished) ? (
                 <div className="font-black text-slate-900 text-2xl tracking-tighter flex items-center gap-1.5">
-                  <span>{match.score.fullTime.home}</span>
+                  <span>{match.score?.fullTime?.home ?? match.score?.regularTime?.home ?? 0}</span>
                   <span className="text-gray-300">-</span>
-                  <span>{match.score.fullTime.away}</span>
+                  <span>{match.score?.fullTime?.away ?? match.score?.regularTime?.away ?? 0}</span>
                 </div>
               ) : (
                 <div className="font-black text-gray-300 text-xl">VS</div>
