@@ -237,6 +237,27 @@ export default function ChallengesView({
   const [visibleMatchesCount, setVisibleMatchesCount] = useState<number>(4);
   const [activeTooltipId, setActiveTooltipId] = useState<number | null>(null);
   const [upcomingMatchesByComp, setUpcomingMatchesByComp] = useState<Record<string, Match>>({});
+  const [allMatchesByComp, setAllMatchesByComp] = useState<Record<string, Match[]>>({});
+
+  const isChallengeCompleted = (challenge: Challenge) => {
+    if (challenge.resolved) return true;
+    
+    // Check if we have the matches loaded for this competition
+    const compMatches = allMatchesByComp[String(challenge.competitionId)];
+    if (compMatches && compMatches.length > 0) {
+      if (challenge.matchId !== 0) {
+        // Single match challenge
+        const m = compMatches.find((x) => x.id === challenge.matchId);
+        if (m) {
+          return ["FINISHED", "AWARDED"].includes(m.status);
+        }
+      } else {
+        // Competition challenge - finished if all matches are finished
+        return compMatches.every((m) => ["FINISHED", "AWARDED"].includes(m.status));
+      }
+    }
+    return false;
+  };
 
   // Challenge details page state
   const [localSelectedChallenge, setLocalSelectedChallenge] = useState<Challenge | null>(null);
@@ -559,10 +580,9 @@ export default function ChallengesView({
       const compIdsToFetch = Array.from(
         new Set(
           challenges
-            .filter((c) => c.matchId === 0)
             .map((c) => c.competitionId)
         )
-      ).filter(compId => !upcomingMatchesByComp[compId]);
+      ).filter(compId => !allMatchesByComp[compId] || !upcomingMatchesByComp[compId]);
 
       compIdsToFetch.forEach((compId) => {
         fetch(`/api/matches/${compId}`)
@@ -572,6 +592,11 @@ export default function ChallengesView({
           })
           .then((data) => {
             const matchesData = data.matches || [];
+            setAllMatchesByComp((prev) => ({
+              ...prev,
+              [String(compId)]: matchesData,
+            }));
+
             const nowStr = new Date().toISOString();
             // Filter to get upcoming timed or scheduled matches
             const sortedUpcoming = matchesData
@@ -723,6 +748,10 @@ export default function ChallengesView({
         })
         .then((data) => {
           let fetchedMatches = data.matches || [];
+          setAllMatchesByComp((prev) => ({
+            ...prev,
+            [String(targetChallenge.competitionId)]: fetchedMatches,
+          }));
           if (targetChallenge.matchId && targetChallenge.matchId !== 0) {
             fetchedMatches = fetchedMatches.filter((m: Match) => m.id === targetChallenge.matchId);
           }
@@ -2005,6 +2034,65 @@ export default function ChallengesView({
             Pronostics fermés
           </div>
         )}
+
+        {/* Real match result displays below single match predictions/open states */}
+        {singleMatch && (() => {
+          const isFinished = singleMatch.status === "FINISHED" || singleMatch.status === "AWARDED";
+          const isInProgress = ["IN_PLAY", "LIVE", "PAUSED"].includes(singleMatch.status);
+          
+          if (isFinished || isInProgress) {
+            const realHome = singleMatch.score?.fullTime?.home ?? singleMatch.score?.regularTime?.home;
+            const realAway = singleMatch.score?.fullTime?.away ?? singleMatch.score?.regularTime?.away;
+            
+            return (
+              <div className="mt-4 pt-4 border-t border-gray-100 space-y-3">
+                {/* Status banner */}
+                <div className="flex items-center justify-between">
+                  {isFinished ? (
+                    <span className="text-[10px] font-black uppercase tracking-wider text-red-700 bg-red-50 border border-red-200 px-2.5 py-1 rounded-full flex items-center gap-1 animate-pulse">
+                      <span className="w-1.5 h-1.5 rounded-full bg-red-600 animate-ping"></span>
+                      🏆 Défi Terminé
+                    </span>
+                  ) : (
+                    <span className="text-[10px] font-black uppercase tracking-wider text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-full flex items-center gap-1 animate-pulse">
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping"></span>
+                      🔥 Match en cours
+                    </span>
+                  )}
+                  
+                  <span className="text-[11px] text-gray-500 font-extrabold flex items-center gap-1">
+                    {isFinished ? "⚽ Match Terminé" : "🔥 Match en cours"}
+                  </span>
+                </div>
+                
+                {/* Real Match Result Box */}
+                <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 flex flex-col items-center justify-center space-y-2 shadow-xs">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Résultat de Match Réel</span>
+                  <div className="flex items-center justify-center gap-6 w-full">
+                    <div className="flex items-center gap-2 flex-1 justify-end min-w-0">
+                      <span className="font-extrabold text-sm text-slate-800 truncate">{singleMatch.homeTeam?.shortName || singleMatch.homeTeam?.name}</span>
+                      <div className="w-6 h-6 flex items-center justify-center bg-white border border-slate-100 rounded-full p-0.5 shrink-0 shadow-3xs">
+                        <img src={getFlagUrl(singleMatch.homeTeam?.name, singleMatch.homeTeam?.crest)} alt="" className="max-w-full max-h-full object-contain" onError={(e) => { e.currentTarget.src = "https://flagcdn.com/w80/un.png"; }} />
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center justify-center bg-slate-800 text-white font-mono font-black text-lg px-3 py-1 rounded-lg shadow-sm border border-slate-900 shrink-0">
+                      {realHome !== null && realHome !== undefined ? realHome : "0"} : {realAway !== null && realAway !== undefined ? realAway : "0"}
+                    </div>
+                    
+                    <div className="flex items-center gap-2 flex-1 justify-start min-w-0">
+                      <div className="w-6 h-6 flex items-center justify-center bg-white border border-slate-100 rounded-full p-0.5 shrink-0 shadow-3xs">
+                        <img src={getFlagUrl(singleMatch.awayTeam?.name, singleMatch.awayTeam?.crest)} alt="" className="max-w-full max-h-full object-contain" onError={(e) => { e.currentTarget.src = "https://flagcdn.com/w80/un.png"; }} />
+                      </div>
+                      <span className="font-extrabold text-sm text-slate-800 truncate">{singleMatch.awayTeam?.shortName || singleMatch.awayTeam?.name}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          }
+          return null;
+        })()}
       </div>
     );
   };
@@ -2203,8 +2291,16 @@ export default function ChallengesView({
           
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div>
-              <div className="text-[10px] uppercase font-black text-emerald-200 tracking-wider flex items-center gap-1.5 mb-1 bg-white/10 px-2 py-0.5 rounded-full w-max">
-                {challenge.matchId !== 0 ? "🎯 Match Unique" : "🏆 Compétition"}
+              <div className="flex items-center gap-1.5 mb-1 flex-wrap">
+                <div className="text-[10px] uppercase font-black text-emerald-220 tracking-wider flex items-center gap-1.5 bg-white/10 px-2 py-0.5 rounded-full w-max">
+                  {challenge.matchId !== 0 ? "🎯 Match Unique" : "🏆 Compétition"}
+                </div>
+                {isChallengeCompleted(challenge) && (
+                  <div className="text-[10px] uppercase font-black bg-red-600 border border-red-500 text-white tracking-wider flex items-center gap-1 px-2.5 py-0.5 rounded-full w-max animate-pulse shadow-xs">
+                    <span className="w-1.5 h-1.5 rounded-full bg-white"></span>
+                    🏆 Défi Terminé
+                  </div>
+                )}
               </div>
               <div className="flex items-center gap-2 flex-wrap">
                 <h2 className="text-2xl font-black tracking-tight capitalize">{challenge.title}</h2>
@@ -2917,8 +3013,29 @@ export default function ChallengesView({
                               <span>Pronostic indisponible tant que les équipes qualifiées ne sont pas connues.</span>
                             </div>
                           ) : (
-                            <div className="text-[10px] text-gray-400 bg-gray-100 text-center font-bold p-1 rounded-lg">
-                              Pronostics fermés
+                            <div className="space-y-2">
+                              <div className="text-[10px] text-gray-400 bg-gray-100 text-center font-bold p-2.5 rounded-xl">
+                                Pronostics fermés
+                              </div>
+                              {(() => {
+                                const isFinished = m.status === "FINISHED" || m.status === "AWARDED";
+                                const isInProgress = ["IN_PLAY", "LIVE", "PAUSED"].includes(m.status);
+                                if (isFinished || isInProgress) {
+                                  const realHome = m.score?.fullTime?.home;
+                                  const realAway = m.score?.fullTime?.away;
+                                  if (realHome !== null && realAway !== null && realHome !== undefined && realAway !== undefined) {
+                                    return (
+                                      <div className="bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-center flex flex-col items-center gap-1">
+                                        <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">Résultat de Match Réel</span>
+                                        <span className="bg-slate-800 text-white font-mono font-black text-xs px-2.5 py-0.5 rounded shadow-sm">
+                                          {realHome} - {realAway}
+                                        </span>
+                                      </div>
+                                    );
+                                  }
+                                }
+                                return null;
+                              })()}
                             </div>
                           )}
                         </div>
@@ -3315,11 +3432,19 @@ export default function ChallengesView({
 
                 <div className="text-xs text-gray-400 mb-2 font-semibold flex items-center justify-between gap-1.5 flex-wrap">
                   <span className="bg-gray-100 px-2 py-0.5 rounded text-gray-600 font-bold">Créateur: {challenge.creatorUsername || "Inconnu"}</span>
-                  {challenge.matchId !== 0 ? (
-                    <span className="bg-indigo-50 border border-indigo-100/50 text-indigo-700 px-2.5 py-0.5 rounded-full font-bold text-[9px] uppercase tracking-wider">🎯 Match Unique</span>
-                  ) : (
-                    <span className="bg-emerald-50 border border-emerald-100/50 text-emerald-800 px-2.5 py-0.5 rounded-full font-bold text-[9px] uppercase tracking-wider">🏆 Compétition</span>
-                  )}
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    {isChallengeCompleted(challenge) && (
+                      <span className="bg-red-100 border border-red-200 text-red-700 px-2 py-0.5 rounded-full font-black text-[9px] uppercase tracking-wider flex items-center gap-1 animate-pulse">
+                        <span className="w-1.5 h-1.5 rounded-full bg-red-650"></span>
+                        Défi Terminé
+                      </span>
+                    )}
+                    {challenge.matchId !== 0 ? (
+                      <span className="bg-indigo-50 border border-indigo-100/50 text-indigo-700 px-2.5 py-0.5 rounded-full font-bold text-[9px] uppercase tracking-wider">🎯 Match Unique</span>
+                    ) : (
+                      <span className="bg-emerald-50 border border-emerald-100/50 text-emerald-800 px-2.5 py-0.5 rounded-full font-bold text-[9px] uppercase tracking-wider">🏆 Compétition</span>
+                    )}
+                  </div>
                 </div>
 
                 {/* Competition and Date Metadata (Single match or full competition) - Uniformed */}
