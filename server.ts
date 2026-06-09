@@ -144,11 +144,11 @@ const getMockFriendlyMatchesForDate = (targetDate: string): any[] => {
       homeTeam: { id: 31, name: "Morocco", shortName: "Morocco", tla: "MAR", crest: "https://media.api-sports.io/football/teams/31.png" },
       awayTeam: { id: 1090, name: "Norway", shortName: "Norway", tla: "NOR", crest: "https://media.api-sports.io/football/teams/1090.png" },
       score: {
-        winner: "HOME_TEAM",
+        winner: "DRAW",
         duration: "REGULAR",
-        fullTime: { home: 2, away: 1 },
-        halfTime: { home: 1, away: 0 },
-        regularTime: { home: 2, away: 1 }
+        fullTime: { home: 2, away: 2 },
+        halfTime: { home: 1, away: 1 },
+        regularTime: { home: 2, away: 2 }
       },
       venue: "Grand Stade d'Agadir",
       competition: { id: 679, name: "Friendlies", code: "FR", type: "CUP", emblem: "https://media.api-sports.io/football/leagues/10.png" }
@@ -428,9 +428,9 @@ async function startServer() {
             });
         }
 
-        // Always query today's friendly matches from the global date query, bypassing season restriction check!
+        // Initialize empty, populate with mocks only if API is rate-limited or fails
         const todayStr = new Date().toISOString().split("T")[0];
-        let todayFriendlies: any[] = getMockFriendlyMatchesForDate(todayStr);
+        let todayFriendlies: any[] = [];
         try {
           const todayResponse = await fetch(
             `https://v3.football.api-sports.io/fixtures?date=${todayStr}`,
@@ -442,82 +442,20 @@ async function startServer() {
             const todayData = await todayResponse.json();
             if (todayData.errors && todayData.errors.requests) {
               console.error("API-football ratelimit hit for friendly matches in :competitionId endpoint");
-              if (true) {
-               todayFriendlies.push({
-                 id: 1540950,
-                 utcDate: `${todayStr}T19:00:00Z`,
-                 status: "FINISHED",
-                 matchday: 1,
-                 stage: "Friendlies",
-                 group: null,
-                 homeTeam: { id: 31, name: "Morocco", shortName: "Morocco", tla: "MAR", crest: "https://media.api-sports.io/football/teams/31.png" },
-                 awayTeam: { id: 1090, name: "Norway", shortName: "Norway", tla: "NOR", crest: "https://media.api-sports.io/football/teams/1090.png" },
-                 score: {
-                   winner: null,
-                   duration: "REGULAR",
-                   fullTime: { home: null, away: null },
-                   halfTime: { home: null, away: null },
-                   regularTime: { home: 2, away: 1 }
-                 },
-                 venue: "Grand Stade d'Agadir",
-                 competition: { id: 679, name: "Friendlies", code: "FR", type: "CUP", emblem: "https://media.api-sports.io/football/leagues/10.png" }
-               });
-               todayFriendlies.push({
-                 id: 1540951,
-                 utcDate: `${todayStr}T20:45:00Z`,
-                 status: "TIMED",
-                 matchday: 1,
-                 stage: "Friendlies",
-                 group: null,
-                 homeTeam: { id: 2, name: "France", shortName: "France", tla: "FRA", crest: "https://media.api-sports.io/football/teams/67.png" },
-                 awayTeam: { id: 9, name: "Germany", shortName: "Germany", tla: "GER", crest: "https://media.api-sports.io/football/teams/25.png" },
-                 score: {
-                   winner: null,
-                   duration: "REGULAR",
-                   fullTime: { home: null, away: null },
-                   halfTime: { home: null, away: null },
-                   regularTime: { home: null, away: null }
-                 },
-                 venue: "Stade de France",
-                 competition: { id: 679, name: "Friendlies", code: "FR", type: "CUP", emblem: "https://media.api-sports.io/football/leagues/10.png" }
-               });
-               todayFriendlies.push({
-                 id: 1540952,
-                 utcDate: `${todayStr}T18:00:00Z`,
-                 status: "FINISHED",
-                 matchday: 1,
-                 stage: "Friendlies",
-                 group: null,
-                 homeTeam: { id: 10, name: "Spain", shortName: "Spain", tla: "ESP", crest: "https://media.api-sports.io/football/teams/9.png" },
-                 awayTeam: { id: 15, name: "Brazil", shortName: "Brazil", tla: "BRA", crest: "https://media.api-sports.io/football/teams/6.png" },
-                 score: {
-                   winner: "AWAY_TEAM",
-                   duration: "REGULAR",
-                   fullTime: { home: 1, away: 3 },
-                   halfTime: { home: 0, away: 1 },
-                   regularTime: { home: 1, away: 3 }
-                 },
-                 venue: "Santiago Bernabéu",
-                 competition: { id: 679, name: "Friendlies", code: "FR", type: "CUP", emblem: "https://media.api-sports.io/football/leagues/10.png" }
-               });
-              }
+              todayFriendlies = getMockFriendlyMatchesForDate(todayStr);
             } else {
               const todayFixtures = todayData.response || [];
               const friendlyFixtures = todayFixtures.filter((f: any) => f.league && f.league.id === 10);
-              const mapped = friendlyFixtures
+              todayFriendlies = friendlyFixtures
                 .map(translateApiFootballMatchToFootballData)
                 .filter(Boolean);
-              // Merge real friendly matches, ensuring no duplicates by ID
-              const existingIds = new Set(todayFriendlies.map(m => m.id));
-              mapped.forEach((m: any) => {
-                if (!existingIds.has(m.id)) {
-                  todayFriendlies.push(m);
-                }
-              });
             }
+          } else {
+            todayFriendlies = getMockFriendlyMatchesForDate(todayStr);
           }
         } catch (err) {
           console.error("Error fetching today friendly matches:", err);
+          todayFriendlies = getMockFriendlyMatchesForDate(todayStr);
         }
 
         let season = reqSeason || getSeasonYearForLeague(10);
