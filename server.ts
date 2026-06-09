@@ -45,6 +45,15 @@ function setActiveApiProvider(provider: string) {
   }
 }
 
+// In-memory API Cache Layer to protect free tier rate limits (100 requests / day)
+interface CacheEntry {
+  data: any;
+  timestamp: number;
+}
+const apiCache: Record<string, CacheEntry> = {};
+const TODAY_CACHE_TTL = 60 * 1000; // 60 seconds (1 minute cache for live scores & matches of today)
+const COMP_CACHE_TTL = 5 * 60 * 1000; // 300 seconds (5 minutes cache for overall tournament tables/fixtures)
+
 // Bidirectional Competition ID mapping (football-data.org ID : api-football.com ID)
 const COMPETITION_ID_MAP: Record<number, number> = {
   2015: 61, // Ligue 1
@@ -321,6 +330,12 @@ async function startServer() {
       const activeProvider = getActiveApiProvider();
       const targetDate = req.query.date ? String(req.query.date) : new Date().toISOString().split("T")[0];
 
+      const cacheKey = `today_${activeProvider}_${targetDate}`;
+      const now = Date.now();
+      if (apiCache[cacheKey] && (now - apiCache[cacheKey].timestamp < TODAY_CACHE_TTL)) {
+        return res.json(apiCache[cacheKey].data);
+      }
+
       if (activeProvider === "api-football") {
         const apiKey = process.env.API_FOOTBALL_KEY;
         if (!apiKey) {
@@ -350,7 +365,10 @@ async function startServer() {
         const mappedMatches = filteredFixtures
           .map(translateApiFootballMatchToFootballData)
           .filter(Boolean);
-        return res.json({ matches: mappedMatches });
+        
+        const cachedResult = { matches: mappedMatches };
+        apiCache[cacheKey] = { data: cachedResult, timestamp: now };
+        return res.json(cachedResult);
       }
 
       // If activeProvider is football-data, we also fetch today's friendly matches (league 10) from api-football.com if available
@@ -404,6 +422,8 @@ async function startServer() {
       if (friendlyMatches.length > 0 && data && Array.isArray(data.matches)) {
         data.matches = [...data.matches, ...friendlyMatches];
       }
+      
+      apiCache[cacheKey] = { data: data, timestamp: now };
       res.json(data);
     } catch (err) {
       console.error(err);
@@ -416,6 +436,12 @@ async function startServer() {
       const activeProvider = getActiveApiProvider();
       const fdCompId = Number(req.params.competitionId);
       const reqSeason = req.query.season ? Number(req.query.season) : null;
+
+      const cacheKey = `comp_${fdCompId}_${activeProvider}_${reqSeason || "current"}`;
+      const now = Date.now();
+      if (apiCache[cacheKey] && (now - apiCache[cacheKey].timestamp < COMP_CACHE_TTL)) {
+        return res.json(apiCache[cacheKey].data);
+      }
 
       // If requested competition ID is 679 (Matchs Amicaux Internationaux), we MUST use api-football regardless of active provider
       if (fdCompId === 679) {
@@ -477,7 +503,9 @@ async function startServer() {
         // Handle Free Plan restrictions gracefully (only if the user did NOT explicitly request a custom successful season)
         if (data && data.errors && Object.keys(data.errors).length > 0) {
           if (data.errors.requests) {
-             return res.json({ error: "Limite API-Football atteinte pour la journée.", matches: todayFriendlies.length > 0 ? todayFriendlies : [] });
+             const cachedErr = { error: "Limite API-Football atteinte pour la journée.", matches: todayFriendlies.length > 0 ? todayFriendlies : [] };
+             apiCache[cacheKey] = { data: cachedErr, timestamp: now - (COMP_CACHE_TTL - 30 * 1000) }; // Cache for 30s only on rate-limit so it's retryable
+             return res.json(cachedErr);
           }
           const hasPlanError = JSON.stringify(data.errors).toLowerCase().includes("plan");
           if (hasPlanError) {
@@ -514,7 +542,9 @@ async function startServer() {
           });
         }
 
-        return res.json({ matches: mappedMatches });
+        const cachedResult = { matches: mappedMatches };
+        apiCache[cacheKey] = { data: cachedResult, timestamp: now };
+        return res.json(cachedResult);
       }
 
       if (activeProvider === "api-football") {
@@ -566,7 +596,10 @@ async function startServer() {
         const mappedMatches = fixtures
           .map(translateApiFootballMatchToFootballData)
           .filter(Boolean);
-        return res.json({ matches: mappedMatches });
+
+        const cachedResult = { matches: mappedMatches };
+        apiCache[cacheKey] = { data: cachedResult, timestamp: now };
+        return res.json(cachedResult);
       }
 
       const apiKey = process.env.FOOTBALL_DATA_API_KEY;
@@ -581,6 +614,8 @@ async function startServer() {
 
       if (!response.ok) throw new Error("API Error");
       const data = await response.json();
+
+      apiCache[cacheKey] = { data, timestamp: now };
       res.json(data);
     } catch (err) {
       console.error(err);
