@@ -142,8 +142,8 @@ const getMatchPointsDetail = (
   pointRules?: PointRules
 ): { points: number | null; reason: string; label: string; basePoints: number; isBonus: boolean } | null => {
   if (pHome === undefined || pAway === undefined) return null;
-  const rHome = m.score?.fullTime?.home;
-  const rAway = m.score?.fullTime?.away;
+  const rHome = m.score?.fullTime?.home ?? m.score?.regularTime?.home;
+  const rAway = m.score?.fullTime?.away ?? m.score?.regularTime?.away;
   if (rHome === null || rAway === null || rHome === undefined || rAway === undefined) return null;
 
   const rules = pointRules || { exact_score: 3, close_score: 2, correct_winner: 1, qualification: 1 };
@@ -245,9 +245,9 @@ export default function ChallengesView({
     // Check if we have the matches loaded for this competition
     const compMatches = allMatchesByComp[String(challenge.competitionId)];
     if (compMatches && compMatches.length > 0) {
-      if (challenge.matchId !== 0) {
+      if (Number(challenge.matchId) !== 0) {
         // Single match challenge
-        const m = compMatches.find((x) => x.id === challenge.matchId);
+        const m = compMatches.find((x) => String(x.id) === String(challenge.matchId));
         if (m) {
           return ["FINISHED", "AWARDED"].includes(m.status);
         }
@@ -763,8 +763,8 @@ export default function ChallengesView({
             ...prev,
             [String(targetChallenge.competitionId)]: fetchedMatches,
           }));
-          if (targetChallenge.matchId && targetChallenge.matchId !== 0) {
-            fetchedMatches = fetchedMatches.filter((m: Match) => m.id === targetChallenge.matchId);
+          if (targetChallenge.matchId && Number(targetChallenge.matchId) !== 0) {
+            fetchedMatches = fetchedMatches.filter((m: Match) => String(m.id) === String(targetChallenge.matchId));
           }
           setModalMatches(fetchedMatches);
           setLoadingModalMatches(false);
@@ -1838,7 +1838,7 @@ export default function ChallengesView({
     const timeLeft = challenge.matchDate ? new Date(challenge.matchDate).getTime() - new Date().getTime() : Infinity;
     const isOpen = timeLeft > 0 && !isLocked && !isNotDefinedYet;
 
-    const singleMatchRaw = modalMatches.find(m => m.id === challenge.matchId);
+    const singleMatchRaw = modalMatches.find(m => String(m.id) === String(challenge.matchId));
     const singleMatch = singleMatchRaw ? (() => {
       if (isSimulationMode && simulatedScores[singleMatchRaw.id]) {
         const sim = simulatedScores[singleMatchRaw.id];
@@ -1983,8 +1983,8 @@ export default function ChallengesView({
           </div>
         ) : userPred ? (
           <div className="space-y-2 mt-4">
-            <div className="flex items-center justify-center gap-2 text-indigo-700 font-bold bg-indigo-50 p-3 rounded-xl border border-indigo-100">
-              <CheckCircle2 className="w-5 h-5 text-indigo-500" /> Ton prono est enregistré ! ({userPred.homeScore} - {userPred.awayScore})
+            <div className="flex items-center justify-center gap-1.5 text-indigo-700 font-extrabold bg-indigo-50 py-2 px-3 rounded-xl border border-indigo-100 text-xs xs:text-sm whitespace-nowrap overflow-hidden text-ellipsis">
+              <CheckCircle2 className="w-4 h-4 text-indigo-500 shrink-0" /> Prono validé : {userPred.homeScore} - {userPred.awayScore}
             </div>
             {hasFormChange && (
               <div className="text-xs font-bold text-amber-700 bg-amber-50 py-2 px-3 rounded-xl border border-amber-200 animate-pulse text-center">
@@ -1995,8 +1995,8 @@ export default function ChallengesView({
               const isFinished = singleMatch.status === "FINISHED" || singleMatch.status === "AWARDED";
               const isInProgress = ["IN_PLAY", "LIVE", "PAUSED"].includes(singleMatch.status);
               if (isFinished || isInProgress) {
-                const realHome = singleMatch.score?.fullTime?.home;
-                const realAway = singleMatch.score?.fullTime?.away;
+                const realHome = singleMatch.score?.fullTime?.home ?? singleMatch.score?.regularTime?.home;
+                const realAway = singleMatch.score?.fullTime?.away ?? singleMatch.score?.regularTime?.away;
                 if (realHome !== null && realAway !== null && realHome !== undefined && realAway !== undefined) {
                   const ptsDetail = getMatchPointsDetail(singleMatch, userPred.homeScore, userPred.awayScore, !!userPred.bonus, challenge.pointRules);
                   const matchPts = ptsDetail?.points;
@@ -2188,7 +2188,7 @@ export default function ChallengesView({
     let leaderboard: any[] = [];
     if (challenge.matchId !== 0) {
       // Single match challenge ranking calculation
-      const singleMatch = activeMatches.find(m => m.id === challenge.matchId);
+      const singleMatch = activeMatches.find(m => String(m.id) === String(challenge.matchId));
       leaderboard = challengeBets.map(bet => {
         const profile = allProfiles.find(p => p.id === bet.user_id) || { username: "Joueur", avatar_type: "emoji", avatar_value: "⚽" };
         let pts = 0;
@@ -2983,9 +2983,9 @@ export default function ChallengesView({
                         <div className="mt-3">
                           {hasSubmitted ? (
                             <div className="space-y-2">
-                              <div className="bg-indigo-50 border border-indigo-100/50 py-2 rounded-xl text-[11px] font-bold text-indigo-700 text-center flex items-center justify-center gap-1">
-                                <CheckCircle2 className="w-4 h-4 text-indigo-600" />
-                                Pronostic enregistré ! ({userPredMatch.homeScore} - {userPredMatch.awayScore})
+                              <div className="bg-indigo-50 border border-indigo-100/50 py-1.5 px-2 rounded-xl text-[11px] font-extrabold text-indigo-700 text-center flex items-center justify-center gap-1 whitespace-nowrap overflow-hidden text-ellipsis">
+                                <CheckCircle2 className="w-3.5 h-3.5 text-indigo-505 shrink-0" />
+                                Prono validé : {userPredMatch.homeScore} - {userPredMatch.awayScore}
                               </div>
                               {hasFormChange && (
                                 <div className="text-[10px] font-bold text-amber-700 bg-amber-50 py-2 px-3 rounded-xl border border-amber-200 animate-pulse text-center">
@@ -2996,8 +2996,8 @@ export default function ChallengesView({
                                 const isFinished = m.status === "FINISHED" || m.status === "AWARDED";
                                 const isInProgress = ["IN_PLAY", "LIVE", "PAUSED"].includes(m.status);
                                 if (isFinished || isInProgress) {
-                                  const realHome = m.score?.fullTime?.home;
-                                  const realAway = m.score?.fullTime?.away;
+                                  const realHome = m.score?.fullTime?.home ?? m.score?.regularTime?.home;
+                                  const realAway = m.score?.fullTime?.away ?? m.score?.regularTime?.away;
                                   if (realHome !== null && realAway !== null && realHome !== undefined && realAway !== undefined) {
                                     const ptsDetail = getMatchPointsDetail(m, userPredMatch.homeScore, userPredMatch.awayScore, !!userPredMatch.bonus, challenge.pointRules);
                                     const matchPts = ptsDetail?.points;
@@ -3769,8 +3769,8 @@ export default function ChallengesView({
                                   <div className="pt-2 border-t border-gray-50 text-center">
                                     {hasSubmitted ? (
                                       <div className="space-y-1.5">
-                                        <div className="text-[10px] font-bold text-indigo-700 bg-indigo-50 py-1 rounded-lg flex items-center justify-center gap-1 border border-indigo-100">
-                                          <CheckCircle2 className="w-3.5 h-3.5 text-indigo-500" /> Pronostic enregistré ! ({userPredMatch?.homeScore} - {userPredMatch?.awayScore})
+                                        <div className="text-[10px] font-extrabold text-indigo-700 bg-indigo-50 py-1 rounded-lg flex items-center justify-center gap-1 border border-indigo-100 whitespace-nowrap overflow-hidden text-ellipsis">
+                                          <CheckCircle2 className="w-3.5 h-3.5 text-indigo-500 shrink-0" /> Prono validé : {userPredMatch?.homeScore} - {userPredMatch?.awayScore}
                                         </div>
                                         {hasFormChange && (
                                           <div className="text-[9.5px] font-bold text-amber-700 bg-amber-50 py-1.5 px-2 rounded-lg border border-amber-200 animate-pulse text-center">
@@ -3781,8 +3781,8 @@ export default function ChallengesView({
                                           const isFinished = m.status === "FINISHED" || m.status === "AWARDED";
                                           const isInProgress = ["IN_PLAY", "LIVE", "PAUSED"].includes(m.status);
                                           if (isFinished || isInProgress) {
-                                            const realHome = m.score?.fullTime?.home;
-                                            const realAway = m.score?.fullTime?.away;
+                                            const realHome = m.score?.fullTime?.home ?? m.score?.regularTime?.home;
+                                            const realAway = m.score?.fullTime?.away ?? m.score?.regularTime?.away;
                                             if (realHome !== null && realAway !== null && realHome !== undefined && realAway !== undefined) {
                                               const ptsDetail = getMatchPointsDetail(m, userPredMatch.homeScore, userPredMatch.awayScore, !!userPredMatch.bonus, activeModal.challenge.pointRules);
                                               const matchPts = ptsDetail?.points;
