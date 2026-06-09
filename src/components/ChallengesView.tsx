@@ -1983,8 +1983,8 @@ export default function ChallengesView({
           </div>
         ) : userPred ? (
           <div className="space-y-2 mt-4">
-            <div className="flex items-center justify-center gap-1.5 text-indigo-700 font-extrabold bg-indigo-50 py-2 px-3 rounded-xl border border-indigo-100 text-xs xs:text-sm whitespace-nowrap overflow-hidden text-ellipsis">
-              <CheckCircle2 className="w-4 h-4 text-indigo-500 shrink-0" /> Prono validé : {userPred.homeScore} - {userPred.awayScore}
+            <div className="flex items-center justify-center gap-1.5 text-indigo-700 font-extrabold bg-indigo-50 py-1.5 px-2.5 rounded-xl border border-indigo-100 text-[11px] sm:text-xs whitespace-nowrap overflow-hidden text-ellipsis">
+              <CheckCircle2 className="w-3.5 h-3.5 text-indigo-505 shrink-0" /> Prono validé : {userPred.homeScore} - {userPred.awayScore}
             </div>
             {hasFormChange && (
               <div className="text-xs font-bold text-amber-700 bg-amber-50 py-2 px-3 rounded-xl border border-amber-200 animate-pulse text-center">
