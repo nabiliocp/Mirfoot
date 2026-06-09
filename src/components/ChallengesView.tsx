@@ -252,10 +252,21 @@ export default function ChallengesView({
           return ["FINISHED", "AWARDED"].includes(m.status);
         }
       } else {
-        // Competition challenge - finished if all matches are finished
-        return compMatches.every((m) => ["FINISHED", "AWARDED"].includes(m.status));
+        // Competition challenge - finished if all matches are finished, or no matches are left to play (non-finished)
+        const pendingMatches = compMatches.filter(m => !["FINISHED", "AWARDED", "CANCELLED", "POSTPONED"].includes(m.status));
+        return pendingMatches.length === 0;
       }
     }
+    
+    // Fallback: If matchDate is in the past by more than 1 day for a single match
+    if (challenge.matchId !== 0 && challenge.matchDate) {
+      const matchTime = new Date(challenge.matchDate).getTime();
+      const oneDay = 24 * 60 * 60 * 1000;
+      if (new Date().getTime() - matchTime > oneDay) {
+        return true;
+      }
+    }
+    
     return false;
   };
 
@@ -1848,6 +1859,40 @@ export default function ChallengesView({
 
     return (
       <div className="space-y-4 bg-white p-5 rounded-2xl border-2 border-slate-200/95 shadow-md mt-4">
+        {/* Bandeau de Statut du Match Réel de manière permanente */}
+        {singleMatch && (() => {
+          const isFinishedReal = ["FINISHED", "AWARDED"].includes(singleMatch.status);
+          const isInProgressReal = ["IN_PLAY", "LIVE", "PAUSED"].includes(singleMatch.status);
+          const realHome = singleMatch.score?.fullTime?.home ?? singleMatch.score?.regularTime?.home;
+          const realAway = singleMatch.score?.fullTime?.away ?? singleMatch.score?.regularTime?.away;
+          
+          return (
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 flex flex-col sm:flex-row items-center justify-between gap-2.5 shadow-3xs">
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">Match Réel :</span>
+                <span className={`px-2.5 py-0.5 rounded-full font-extrabold text-[9px] uppercase tracking-wider flex items-center gap-1 ${
+                  isFinishedReal 
+                    ? "bg-slate-100 text-slate-600 border border-slate-250 animate-pulse" 
+                    : isInProgressReal 
+                      ? "bg-red-50 text-red-700 border border-red-200 shadow-3xs" 
+                      : "bg-indigo-50 text-indigo-700 border border-indigo-150"
+                }`}>
+                  {isInProgressReal && <span className="w-1.5 h-1.5 rounded-full bg-red-650 animate-ping"></span>}
+                  {isFinishedReal ? "✓ Réel: Terminé" : isInProgressReal ? "🔥 Réel: En cours (Live)" : "📅 Réel: À venir"}
+                </span>
+              </div>
+              {(isFinishedReal || isInProgressReal) && realHome !== null && realHome !== undefined && realAway !== null && realAway !== undefined && (
+                <div className="flex items-center gap-1.5 bg-slate-800 text-white rounded-lg px-2.5 py-1 text-xs">
+                  <span className="text-[10px] text-slate-300 font-extrabold uppercase tracking-wide">Score Réel :</span>
+                  <span className="font-mono font-black text-xs">
+                    {realHome} - {realAway}
+                  </span>
+                </div>
+              )}
+            </div>
+          );
+        })()}
+
         <div className="grid grid-cols-2 gap-4">
           <div className="text-center flex flex-col items-center">
             <div className="w-10 h-10 flex items-center justify-center bg-white border border-gray-200 rounded-full overflow-hidden shrink-0 shadow-xs mb-1.5 p-1">
@@ -2817,6 +2862,37 @@ export default function ChallengesView({
                           );
                         })()}
 
+                        {/* Zone permanente pour le statut et score du match réel */}
+                        {(() => {
+                          const isFinishedReal = m.status === "FINISHED" || m.status === "AWARDED";
+                          const isInProgressReal = ["IN_PLAY", "LIVE", "PAUSED"].includes(m.status);
+                          const realHome = m.score?.fullTime?.home ?? m.score?.regularTime?.home;
+                          const realAway = m.score?.fullTime?.away ?? m.score?.regularTime?.away;
+                          
+                          return (
+                            <div className="bg-slate-50 border border-slate-200/60 rounded-xl p-2.5 flex items-center justify-between gap-2 shadow-3xs text-[11px] font-sans">
+                              <span className="text-[9px] font-black uppercase tracking-wider text-slate-400">Match réel :</span>
+                              <div className="flex items-center gap-2">
+                                <span className={`px-2 py-0.5 rounded-full font-extrabold text-[8.5px] uppercase tracking-wider flex items-center gap-1 ${
+                                  isFinishedReal 
+                                    ? "bg-slate-100 text-slate-600 border border-slate-200" 
+                                    : isInProgressReal 
+                                      ? "bg-red-50 text-red-700 border border-red-200 font-black" 
+                                      : "bg-indigo-50 text-indigo-700 border border-indigo-150"
+                                }`}>
+                                  {isInProgressReal && <span className="w-1.2 h-1.2 rounded-full bg-red-600 animate-pulse inline-block"></span>}
+                                  {isFinishedReal ? "✓ Terminé" : isInProgressReal ? "🔥 En cours (LIVE)" : "📅 À venir"}
+                                </span>
+                                {(isFinishedReal || isInProgressReal) && realHome !== null && realHome !== undefined && realAway !== null && realAway !== undefined && (
+                                  <span className="bg-slate-800 text-white font-mono font-black text-[10px] px-2 py-0.5 rounded shadow-3xs">
+                                    {realHome} - {realAway}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })()}
+
                         <div className="flex items-center justify-between">
                           <div className="flex flex-col items-center flex-1 min-w-0">
                             <div className="w-10 h-10 flex items-center justify-center bg-white border border-gray-200 rounded-full overflow-hidden shrink-0 shadow-xs mb-1.5 p-1">
@@ -3409,16 +3485,21 @@ export default function ChallengesView({
             ).map((challenge) => {
               const isCreator = challenge.creatorId === userId;
               const upcomingMatch = upcomingMatchesByComp[challenge.competitionId];
+              const isCompleted = isChallengeCompleted(challenge);
 
               return (
                 <div
                   id={`challenge-${challenge.id}`}
                   key={challenge.id}
-                  className="bg-white border-2 border-emerald-100 rounded-3xl p-5 shadow-sm hover:shadow-emerald-100 transition-all duration-300 cursor-pointer relative overflow-hidden flex flex-col justify-between h-full"
+                  className={`border-2 rounded-3xl p-5 shadow-sm transition-all duration-300 cursor-pointer relative overflow-hidden flex flex-col justify-between h-full ${
+                    isCompleted 
+                      ? "bg-slate-50/90 border-slate-300 opacity-90 hover:shadow-slate-250 hover:border-slate-400" 
+                      : "bg-white border-emerald-100 hover:shadow-emerald-100 hover:border-emerald-300"
+                  }`}
                   onClick={() => setSelectedChallenge(challenge)}
                 >
                 <div className="flex justify-between items-start mb-1 pl-2">
-                  <h3 className="font-black text-gray-950 text-xl tracking-tight flex-1 mr-2 capitalize">
+                  <h3 className={`font-black text-xl tracking-tight flex-1 mr-2 capitalize ${isCompleted ? 'text-slate-500' : 'text-gray-950'}`}>
                     {challenge.title}
                   </h3>
                   <button
@@ -3433,10 +3514,10 @@ export default function ChallengesView({
                 <div className="text-xs text-gray-400 mb-2 font-semibold flex items-center justify-between gap-1.5 flex-wrap">
                   <span className="bg-gray-100 px-2 py-0.5 rounded text-gray-600 font-bold">Créateur: {challenge.creatorUsername || "Inconnu"}</span>
                   <div className="flex items-center gap-1.5 flex-wrap">
-                    {isChallengeCompleted(challenge) && (
-                      <span className="bg-red-100 border border-red-200 text-red-700 px-2 py-0.5 rounded-full font-black text-[9px] uppercase tracking-wider flex items-center gap-1 animate-pulse">
-                        <span className="w-1.5 h-1.5 rounded-full bg-red-650"></span>
-                        Défi Terminé
+                    {isCompleted && (
+                      <span className="bg-red-600 border border-red-500 text-white px-2.5 py-0.5 rounded-full font-black text-[9px] uppercase tracking-wider flex items-center gap-1.5 shadow-xs animate-pulse">
+                        <span className="w-1.5 h-1.5 rounded-full bg-white select-none"></span>
+                        🔒 Clôturé / Terminé
                       </span>
                     )}
                     {challenge.matchId !== 0 ? (
