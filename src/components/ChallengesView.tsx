@@ -1859,39 +1859,6 @@ export default function ChallengesView({
 
     return (
       <div className="space-y-4 bg-white p-5 rounded-2xl border-2 border-slate-200/95 shadow-md mt-4">
-        {/* Bandeau de Statut du Match Réel de manière permanente */}
-        {singleMatch && (() => {
-          const isFinishedReal = ["FINISHED", "AWARDED"].includes(singleMatch.status);
-          const isInProgressReal = ["IN_PLAY", "LIVE", "PAUSED"].includes(singleMatch.status);
-          const realHome = singleMatch.score?.fullTime?.home ?? singleMatch.score?.regularTime?.home;
-          const realAway = singleMatch.score?.fullTime?.away ?? singleMatch.score?.regularTime?.away;
-          
-          return (
-            <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 flex flex-col sm:flex-row items-center justify-between gap-2.5 shadow-3xs">
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">Match Réel :</span>
-                <span className={`px-2.5 py-0.5 rounded-full font-extrabold text-[9px] uppercase tracking-wider flex items-center gap-1 ${
-                  isFinishedReal 
-                    ? "bg-slate-100 text-slate-600 border border-slate-250 animate-pulse" 
-                    : isInProgressReal 
-                      ? "bg-red-50 text-red-700 border border-red-200 shadow-3xs" 
-                      : "bg-indigo-50 text-indigo-700 border border-indigo-150"
-                }`}>
-                  {isInProgressReal && <span className="w-1.5 h-1.5 rounded-full bg-red-650 animate-ping"></span>}
-                  {isFinishedReal ? "✓ Réel: Terminé" : isInProgressReal ? "🔥 Réel: En cours (Live)" : "📅 Réel: À venir"}
-                </span>
-              </div>
-              {(isFinishedReal || isInProgressReal) && realHome !== null && realHome !== undefined && realAway !== null && realAway !== undefined && (
-                <div className="flex items-center gap-1.5 bg-slate-800 text-white rounded-lg px-2.5 py-1 text-xs">
-                  <span className="text-[10px] text-slate-300 font-extrabold uppercase tracking-wide">Score Réel :</span>
-                  <span className="font-mono font-black text-xs">
-                    {realHome} - {realAway}
-                  </span>
-                </div>
-              )}
-            </div>
-          );
-        })()}
 
         <div className="grid grid-cols-2 gap-4">
           <div className="text-center flex flex-col items-center">
