@@ -103,8 +103,8 @@ const calculateMatchPoints = (
   pointRules?: PointRules
 ) => {
   if (pHome === undefined || pAway === undefined) return null;
-  const rHome = m.score?.fullTime?.home;
-  const rAway = m.score?.fullTime?.away;
+  const rHome = m.score?.fullTime?.home ?? m.score?.regularTime?.home;
+  const rAway = m.score?.fullTime?.away ?? m.score?.regularTime?.away;
   if (rHome === null || rAway === null || rHome === undefined || rAway === undefined) return null;
 
   const rules = pointRules || { exact_score: 3, close_score: 2, correct_winner: 1, qualification: 1 };
@@ -2080,64 +2080,7 @@ export default function ChallengesView({
           </div>
         )}
 
-        {/* Real match result displays below single match predictions/open states */}
-        {singleMatch && (() => {
-          const isFinished = singleMatch.status === "FINISHED" || singleMatch.status === "AWARDED";
-          const isInProgress = ["IN_PLAY", "LIVE", "PAUSED"].includes(singleMatch.status);
-          
-          if (isFinished || isInProgress) {
-            const realHome = singleMatch.score?.fullTime?.home ?? singleMatch.score?.regularTime?.home;
-            const realAway = singleMatch.score?.fullTime?.away ?? singleMatch.score?.regularTime?.away;
-            
-            return (
-              <div className="mt-4 pt-4 border-t border-gray-100 space-y-3">
-                {/* Status banner */}
-                <div className="flex items-center justify-between">
-                  {isFinished ? (
-                    <span className="text-[10px] font-black uppercase tracking-wider text-red-700 bg-red-50 border border-red-200 px-2.5 py-1 rounded-full flex items-center gap-1 animate-pulse">
-                      <span className="w-1.5 h-1.5 rounded-full bg-red-600 animate-ping"></span>
-                      🏆 Défi Terminé
-                    </span>
-                  ) : (
-                    <span className="text-[10px] font-black uppercase tracking-wider text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-full flex items-center gap-1 animate-pulse">
-                      <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping"></span>
-                      🔥 Match en cours
-                    </span>
-                  )}
-                  
-                  <span className="text-[11px] text-gray-500 font-extrabold flex items-center gap-1">
-                    {isFinished ? "⚽ Match Terminé" : "🔥 Match en cours"}
-                  </span>
-                </div>
-                
-                {/* Real Match Result Box */}
-                <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 flex flex-col items-center justify-center space-y-2 shadow-xs">
-                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Résultat de Match Réel</span>
-                  <div className="flex items-center justify-center gap-6 w-full">
-                    <div className="flex items-center gap-2 flex-1 justify-end min-w-0">
-                      <span className="font-extrabold text-sm text-slate-800 truncate">{singleMatch.homeTeam?.shortName || singleMatch.homeTeam?.name}</span>
-                      <div className="w-6 h-6 flex items-center justify-center bg-white border border-slate-100 rounded-full p-0.5 shrink-0 shadow-3xs">
-                        <img src={getFlagUrl(singleMatch.homeTeam?.name, singleMatch.homeTeam?.crest)} alt="" className="max-w-full max-h-full object-contain" onError={(e) => { e.currentTarget.src = "https://flagcdn.com/w80/un.png"; }} />
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center justify-center bg-slate-800 text-white font-mono font-black text-lg px-3 py-1 rounded-lg shadow-sm border border-slate-900 shrink-0">
-                      {realHome !== null && realHome !== undefined ? realHome : "0"} : {realAway !== null && realAway !== undefined ? realAway : "0"}
-                    </div>
-                    
-                    <div className="flex items-center gap-2 flex-1 justify-start min-w-0">
-                      <div className="w-6 h-6 flex items-center justify-center bg-white border border-slate-100 rounded-full p-0.5 shrink-0 shadow-3xs">
-                        <img src={getFlagUrl(singleMatch.awayTeam?.name, singleMatch.awayTeam?.crest)} alt="" className="max-w-full max-h-full object-contain" onError={(e) => { e.currentTarget.src = "https://flagcdn.com/w80/un.png"; }} />
-                      </div>
-                      <span className="font-extrabold text-sm text-slate-800 truncate">{singleMatch.awayTeam?.shortName || singleMatch.awayTeam?.name}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            );
-          }
-          return null;
-        })()}
+        {/* Real match result displays below single match predictions/open states - REMOVED AS DUPLICATE */}
       </div>
     );
   };
@@ -3097,8 +3040,8 @@ export default function ChallengesView({
                                 const isFinished = m.status === "FINISHED" || m.status === "AWARDED";
                                 const isInProgress = ["IN_PLAY", "LIVE", "PAUSED"].includes(m.status);
                                 if (isFinished || isInProgress) {
-                                  const realHome = m.score?.fullTime?.home;
-                                  const realAway = m.score?.fullTime?.away;
+                                  const realHome = m.score?.fullTime?.home ?? m.score?.regularTime?.home;
+                                  const realAway = m.score?.fullTime?.away ?? m.score?.regularTime?.away;
                                   if (realHome !== null && realAway !== null && realHome !== undefined && realAway !== undefined) {
                                     return (
                                       <div className="bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-center flex flex-col items-center gap-1">

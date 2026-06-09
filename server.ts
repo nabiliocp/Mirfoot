@@ -137,18 +137,18 @@ const getMockFriendlyMatchesForDate = (targetDate: string): any[] => {
     {
       id: 1540950,
       utcDate: `${targetDate}T19:00:00Z`,
-      status: "IN_PLAY",
+      status: "FINISHED",
       matchday: 1,
       stage: "Friendlies",
       group: null,
       homeTeam: { id: 31, name: "Morocco", shortName: "Morocco", tla: "MAR", crest: "https://media.api-sports.io/football/teams/31.png" },
       awayTeam: { id: 1090, name: "Norway", shortName: "Norway", tla: "NOR", crest: "https://media.api-sports.io/football/teams/1090.png" },
       score: {
-        winner: null,
+        winner: "HOME_TEAM",
         duration: "REGULAR",
-        fullTime: { home: null, away: null },
-        halfTime: { home: null, away: null },
-        regularTime: { home: 1, away: 0 }
+        fullTime: { home: 2, away: 1 },
+        halfTime: { home: 1, away: 0 },
+        regularTime: { home: 2, away: 1 }
       },
       venue: "Grand Stade d'Agadir",
       competition: { id: 679, name: "Friendlies", code: "FR", type: "CUP", emblem: "https://media.api-sports.io/football/leagues/10.png" }
@@ -446,7 +446,7 @@ async function startServer() {
                todayFriendlies.push({
                  id: 1540950,
                  utcDate: `${todayStr}T19:00:00Z`,
-                 status: "IN_PLAY",
+                 status: "FINISHED",
                  matchday: 1,
                  stage: "Friendlies",
                  group: null,
@@ -457,7 +457,7 @@ async function startServer() {
                    duration: "REGULAR",
                    fullTime: { home: null, away: null },
                    halfTime: { home: null, away: null },
-                   regularTime: { home: 1, away: 0 }
+                   regularTime: { home: 2, away: 1 }
                  },
                  venue: "Grand Stade d'Agadir",
                  competition: { id: 679, name: "Friendlies", code: "FR", type: "CUP", emblem: "https://media.api-sports.io/football/leagues/10.png" }
