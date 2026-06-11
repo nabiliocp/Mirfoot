@@ -31,6 +31,7 @@ export default function MatchesView({ onPronoClick, userProfile, onProfileUpdate
   const [isUpdating, setIsUpdating] = useState(false);
   const [todayFilter, setTodayFilter] = useState<'all' | 'live' | 'upcoming' | 'finished'>('all');
   const [activeMode, setActiveMode] = useState<'today' | 'season'>('today');
+  const [viewingComp, setViewingComp] = useState<Competition | null>(null);
 
   useEffect(() => {
     // Fetch competitions and Today's matches
@@ -135,10 +136,10 @@ export default function MatchesView({ onPronoClick, userProfile, onProfileUpdate
   const upcomingMatches = otherMatches.filter(m => ['TIMED', 'SCHEDULED', 'POSTPONED'].includes(m.status));
   const finishedMatches = otherMatches.filter(m => ['FINISHED', 'AWARDED'].includes(m.status));
 
-  // Compute displayed matches based on mode
-  const rawTargetMatches = activeMode === 'today' 
-    ? (todayCompIdFilter === 'all' ? todayMatches : todayMatches.filter((m: Match) => m.competition.id === todayCompIdFilter))
-    : otherMatches;
+  // Compute displayed matches for Today's Matches Zone
+  const rawTargetMatches = todayCompIdFilter === 'all' 
+    ? todayMatches 
+    : todayMatches.filter((m: Match) => m.competition.id === todayCompIdFilter);
 
   const displayedMatches = rawTargetMatches.filter(m => {
     let matchesStatusFilter = true;
@@ -523,6 +524,16 @@ export default function MatchesView({ onPronoClick, userProfile, onProfileUpdate
           </div>
         </div>
 
+        {(!['FINISHED', 'AWARDED'].includes(match.status)) && onPronoClick && (
+          <div className="mt-4 pt-4 border-t border-dashed border-slate-100 flex justify-end">
+            <button
+               onClick={() => onPronoClick(match, match.competition?.id || 2015)}
+               className="bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[10px] md:text-xs uppercase tracking-wider py-1.5 px-4 rounded-xl cursor-pointer transition-all duration-150 flex items-center gap-1.5 shadow-xs hover:scale-105 active:scale-95"
+            >
+              ⚽ Pronostiquer / Créer Défi
+            </button>
+          </div>
+        )}
 
       </div>
     );
@@ -834,57 +845,27 @@ export default function MatchesView({ onPronoClick, userProfile, onProfileUpdate
         </div>
       )}
 
-      {/* 2. Mode Filtre Matchs de la Journée */}
+      {/* 2. Zone Matchs du Jour */}
       <div className="space-y-4">
         <div className="flex flex-col gap-4 pl-1 border-l-4 border-emerald-600 pt-1 pb-1">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div className="flex bg-gray-100 rounded-lg p-1 w-full sm:w-auto">
-              <button
-                onClick={() => setActiveMode('today')}
-                className={`flex-1 sm:flex-none text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-md transition-all ${activeMode === 'today' ? 'bg-white text-emerald-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-              >
-                ⚡ Aujourd'hui
-              </button>
-              <button
-                onClick={() => {
-                  setActiveMode('season');
-                  if (selectedCompId === 'all') {
-                     setSelectedCompId(competitions[0]?.id || 'all');
-                  }
-                }}
-                className={`flex-1 sm:flex-none text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-md transition-all ${activeMode === 'season' ? 'bg-white text-emerald-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-              >
-                🏆 Par Saison
-              </button>
-            </div>
+            <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest flex items-center gap-2">
+              ⚡ Matchs du Jour <span className="text-xs text-gray-400 font-bold lowercase tracking-normal">(Toutes compétitions confondues)</span>
+            </h3>
             
-            <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">
-              {activeMode === 'today' && (
-                <select 
-                  className="bg-emerald-50 border border-emerald-200 outline-none text-[10px] font-black uppercase tracking-tight text-emerald-800 py-1.5 px-3 rounded-full shadow-sm cursor-pointer w-full sm:w-auto"
-                  value={todayCompIdFilter}
-                  onChange={(e) => setTodayCompIdFilter(e.target.value === 'all' ? 'all' : Number(e.target.value))}
-                >
-                  <option value="all">Toutes les compétitions</option>
-                  {Array.from(new Set(todayMatches.map(m => JSON.stringify({id: m.competition.id, name: m.competition.name})))).map(s => {
-                    const comp = JSON.parse(s as string);
-                    return <option key={comp.id} value={comp.id}>{comp.name}</option>
-                  })}
-                </select>
-              )}
-              {activeMode === 'season' && (
-                <select 
-                  className="bg-white border border-gray-200 outline-none text-[10px] font-black uppercase tracking-tight text-slate-700 py-1.5 px-3 rounded-full shadow-sm cursor-pointer w-full sm:w-auto"
-                  value={selectedCompId}
-                  onChange={(e) => setSelectedCompId(e.target.value === 'all' ? 'all' : Number(e.target.value))}
-                >
-                  <option value="all" disabled>Sélectionner une compétition...</option>
-                  {competitions.map(comp => (
-                    <option key={comp.id} value={comp.id}>{comp.name}</option>
-                  ))}
-                </select>
-              )}
-            </div>
+            {todayMatches.length > 0 && (
+              <select 
+                className="bg-emerald-50 border border-emerald-200 outline-none text-[10px] font-black uppercase tracking-tight text-emerald-800 py-1.5 px-3 rounded-full shadow-sm cursor-pointer w-full sm:w-auto"
+                value={todayCompIdFilter}
+                onChange={(e) => setTodayCompIdFilter(e.target.value === 'all' ? 'all' : Number(e.target.value))}
+              >
+                <option value="all">Toutes les compétitions</option>
+                {Array.from(new Set(todayMatches.map(m => JSON.stringify({id: m.competition.id, name: m.competition.name})))).map(s => {
+                  const comp = JSON.parse(s as string);
+                  return <option key={comp.id} value={comp.id}>{comp.name}</option>
+                })}
+              </select>
+            )}
           </div>
           
           <div className="flex items-center gap-2 flex-wrap pt-2 border-t border-gray-100">
@@ -892,25 +873,25 @@ export default function MatchesView({ onPronoClick, userProfile, onProfileUpdate
               onClick={() => setTodayFilter('all')}
               className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-tight cursor-pointer transition-all ${todayFilter === 'all' ? 'bg-emerald-600 text-white shadow-sm shadow-emerald-200' : 'bg-gray-100 text-slate-600 hover:bg-gray-200'}`}
             >
-              Tous
+              Tous ({rawTargetMatches.length})
             </button>
             <button
               onClick={() => setTodayFilter('live')}
-              className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-tight cursor-pointer transition-all ${todayFilter === 'live' ? 'bg-rose-600 text-white shadow-sm shadow-rose-200' : 'bg-gray-100 text-slate-600 hover:bg-gray-200'}`}
+              className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-tight cursor-pointer transition-all ${todayFilter === 'live' ? 'bg-rose-600 text-white shadow-sm shadow-rose-200' : 'bg-gray-150 text-slate-700 hover:bg-gray-200'}`}
             >
-              🔴 En Direct
+              🔴 En cours ({rawTargetMatches.filter(m => ['LIVE', 'IN_PLAY', 'PAUSED'].includes(m.status)).length})
             </button>
             <button
               onClick={() => setTodayFilter('upcoming')}
-              className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-tight cursor-pointer transition-all ${todayFilter === 'upcoming' ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-200' : 'bg-gray-100 text-slate-600 hover:bg-gray-200'}`}
+              className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-tight cursor-pointer transition-all ${todayFilter === 'upcoming' ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-200' : 'bg-gray-150 text-slate-700 hover:bg-gray-200'}`}
             >
-              📅 À Venir
+              📅 À Venir ({rawTargetMatches.filter(m => ['TIMED', 'SCHEDULED', 'POSTPONED'].includes(m.status)).length})
             </button>
             <button
               onClick={() => setTodayFilter('finished')}
-              className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-tight cursor-pointer transition-all ${todayFilter === 'finished' ? 'bg-slate-500 text-white shadow-sm shadow-slate-200' : 'bg-gray-100 text-slate-600 hover:bg-gray-200'}`}
+              className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-tight cursor-pointer transition-all ${todayFilter === 'finished' ? 'bg-slate-500 text-white shadow-sm shadow-slate-200' : 'bg-gray-150 text-slate-700 hover:bg-gray-200'}`}
             >
-              🏁 Terminés
+              🏁 Terminés ({rawTargetMatches.filter(m => ['FINISHED', 'AWARDED'].includes(m.status)).length})
             </button>
           </div>
         </div>
@@ -924,7 +905,131 @@ export default function MatchesView({ onPronoClick, userProfile, onProfileUpdate
         ) : (
           <div className="bg-gray-50 rounded-2xl p-8 border-2 border-dashed border-gray-200 text-center flex flex-col items-center gap-3">
             <CalendarCheck className="w-8 h-8 text-gray-300" />
-            <p className="text-sm font-bold text-gray-400">{selectedCompId === 'all' ? "Aucun match ne correspond aux filtres d’aujourd'hui." : "Aucun match trouvé pour cette compétition avec ces filtres."}</p>
+            <p className="text-sm font-bold text-gray-400">Aucun match aujourd'hui correspondant à ces filtres.</p>
+          </div>
+        )}
+      </div>
+
+      {/* 3. Zone Compétitions (par statut) */}
+      <div className="pt-4 border-t border-slate-100">
+        {viewingComp ? (
+          <div className="space-y-4 animate-in fade-in duration-300">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between bg-slate-50 p-4 rounded-2xl border border-slate-150 gap-4">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center p-2 shadow-sm shrink-0 border border-slate-100">
+                  <img src={viewingComp.emblem} alt={viewingComp.name} className="w-full h-full object-contain" />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-slate-900 text-base md:text-lg">{viewingComp.name}</h3>
+                  <span className="text-indigo-700 font-bold text-[10px] uppercase tracking-wider bg-indigo-50 border border-indigo-100/50 px-2.5 py-0.5 rounded-full">
+                    🏆 Calendrier & Matchs Officiels
+                  </span>
+                </div>
+              </div>
+              <button
+                 type="button"
+                 onClick={() => {
+                   setViewingComp(null);
+                   setSelectedCompId('all');
+                   setMatches([]);
+                 }}
+                 className="bg-white hover:bg-slate-100 text-slate-700 text-xs font-bold py-2 px-4 rounded-xl border border-slate-200 transition cursor-pointer select-none shrink-0"
+              >
+                ← Retour aux Compétitions
+              </button>
+            </div>
+
+            {loading ? (
+              <div className="flex justify-center p-12 text-emerald-600"><Clock className="animate-spin w-8 h-8" /></div>
+            ) : matches.length > 0 ? (
+              <div className="space-y-3">
+                <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest pl-1">
+                  Matchs Récupérés de la Saison ({matches.length})
+                </h4>
+                <div className="grid grid-cols-1 gap-4">
+                  {matches.map(match => renderMatchCard(match, userHeartMatches.some(hm => hm.id === match.id)))}
+                </div>
+              </div>
+            ) : (
+              <div className="bg-gray-50 rounded-2xl p-8 border-2 border-dashed border-gray-200 text-center flex flex-col items-center gap-3">
+                <CalendarCheck className="w-8 h-8 text-gray-300" />
+                <p className="text-sm font-bold text-gray-400">Aucun match enregistré trouvé pour cette compétition.</p>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="space-y-6">
+            <h3 className="text-sm font-black text-indigo-700 uppercase tracking-widest pl-1 border-l-4 border-indigo-600">
+              🏆 Explorer les Compétitions par Statut
+            </h3>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Compétitions en Cours */}
+              <div className="bg-white rounded-2xl p-5 border border-slate-205 shadow-xs space-y-4">
+                <h4 className="text-xs font-black text-emerald-600 bg-emerald-50 border border-emerald-100 rounded-lg px-2.5 py-1 w-max uppercase tracking-wider flex items-center gap-1.5 shadow-xs">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
+                  🟢 En Cours (Saison Active)
+                </h4>
+                <p className="text-[11px] text-gray-400 font-semibold">Les grands championnats européens dont les journées s'enchaînent actuellement.</p>
+                <div className="grid grid-cols-1 gap-2.5">
+                  {competitions
+                    .filter(c => [2015, 2021, 2014, 2019, 2002].includes(c.id))
+                    .map(comp => (
+                      <div
+                        key={comp.id}
+                        onClick={() => {
+                          setViewingComp(comp);
+                          setSelectedCompId(comp.id);
+                        }}
+                        className="flex items-center justify-between p-3 bg-slate-50/50 hover:bg-emerald-50/20 border border-slate-100 hover:border-emerald-200 rounded-xl cursor-pointer transition-all duration-150 group"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center p-1.5 shadow-sm border border-slate-100 group-hover:border-emerald-200">
+                            <img src={comp.emblem} alt={comp.name} className="w-full h-full object-contain" />
+                          </div>
+                          <span className="font-extrabold text-xs sm:text-sm text-slate-800 group-hover:text-emerald-950">{comp.name}</span>
+                        </div>
+                        <span className="text-slate-400 group-hover:text-emerald-600 transition-colors">
+                          <ChevronRight className="w-5 h-5" />
+                        </span>
+                      </div>
+                    ))}
+                </div>
+              </div>
+
+              {/* Compétitions à Venir / Coupes */}
+              <div className="bg-white rounded-2xl p-5 border border-slate-205 shadow-xs space-y-4">
+                <h4 className="text-xs font-black text-indigo-600 bg-indigo-50 border border-indigo-100 rounded-lg px-2.5 py-1 w-max uppercase tracking-wider flex items-center gap-1.5 shadow-xs">
+                  <span className="w-2 h-2 rounded-full bg-indigo-500"></span>
+                  🔵 À Venir / Tournois De Coupe
+                </h4>
+                <p className="text-[11px] text-gray-400 font-semibold">Les coupes d'Europe interclubs majeures ou les périodes de trêves internationales.</p>
+                <div className="grid grid-cols-1 gap-2.5">
+                  {competitions
+                    .filter(c => [2001, 679].includes(c.id))
+                    .map(comp => (
+                      <div
+                        key={comp.id}
+                        onClick={() => {
+                          setViewingComp(comp);
+                          setSelectedCompId(comp.id);
+                        }}
+                        className="flex items-center justify-between p-3 bg-slate-50/50 hover:bg-indigo-50/20 border border-slate-100 hover:border-indigo-200 rounded-xl cursor-pointer transition-all duration-150 group"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center p-1.5 shadow-sm border border-slate-100 group-hover:border-indigo-200">
+                            <img src={comp.emblem} alt={comp.name} className="w-full h-full object-contain" />
+                          </div>
+                          <span className="font-extrabold text-xs sm:text-sm text-slate-800 group-hover:text-indigo-950">{comp.name}</span>
+                        </div>
+                        <span className="text-slate-400 group-hover:text-indigo-600 transition-colors">
+                          <ChevronRight className="w-5 h-5" />
+                        </span>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            </div>
           </div>
         )}
       </div>
