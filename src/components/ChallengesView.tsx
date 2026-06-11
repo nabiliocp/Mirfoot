@@ -2753,7 +2753,7 @@ export default function ChallengesView({
                             {new Date(m.utcDate).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' })} • {new Date(m.utcDate).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
                           </span>
                           <span className={isOpen ? "text-emerald-600 bg-emerald-50 px-2.5 py-0.5 rounded-full animate-pulse" : "bg-gray-100 text-gray-500 px-2.5 py-0.5 rounded-full"}>
-                            {timeLeft < 0 ? "Expiré" : isOpen ? "Ouvert" : "À venir"}
+                            {timeLeft < 0 ? "PRONOSTIC CLÔTURÉ" : isOpen ? "Ouvert" : "À venir"}
                           </span>
                         </div>
 
@@ -3567,7 +3567,7 @@ export default function ChallengesView({
                                       {new Date(m.utcDate).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' })} • {new Date(m.utcDate).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
                                     </span>
                                     <span className={isOpen ? "text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded animate-pulse" : "bg-gray-100 text-gray-500 px-2 py-0.5 rounded"}>
-                                      {timeLeft < 0 ? "Expiré" : isOpen ? "Ouvert" : "À venir"}
+                                      {timeLeft < 0 ? "PRONOSTIC CLÔTURÉ" : isOpen ? "Ouvert" : "À venir"}
                                     </span>
                                   </div>
 
