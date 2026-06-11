@@ -837,10 +837,38 @@ async function startServer() {
                 .from("bets")
                 .update({ points_awarded: points })
                 .eq("id", bet.id);
-              await supabase.rpc("increment_user_points", {
-                user_uuid: bet.user_id,
-                points_to_add: points,
-              });
+              try {
+                // First, try using the RPC function for atomicity
+                const { error: rpcError } = await supabase.rpc("increment_user_points", {
+                  user_uuid: bet.user_id,
+                  points_to_add: points,
+                });
+                
+                // Fallback: If RPC call fails or for safety, update directly by fetching then setting
+                if (rpcError) {
+                  console.error("RPC increment_user_points failed, attempting direct update.", rpcError);
+                  const { data: profileData, error: profileError } = await supabase
+                    .from("profiles")
+                    .select("points")
+                    .eq("id", bet.user_id)
+                    .single();
+                  
+                  if (!profileError && profileData) {
+                    const newPoints = (profileData.points || 0) + points;
+                    await supabase
+                      .from("profiles")
+                      .update({ points: newPoints })
+                      .eq("id", bet.user_id);
+                     console.log("Successfully updated points for", bet.user_id, "via direct update to", newPoints);
+                  } else {
+                      console.error("Failed to fetch/update profile directly", profileError);
+                  }
+                } else {
+                  console.log("Successfully incremented points for", bet.user_id, points);
+                }
+              } catch (e) {
+                console.error("Exception in increment_user_points", e);
+              }
             }
           }
 
