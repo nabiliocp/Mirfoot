@@ -2539,6 +2539,7 @@ export default function ChallengesView({
                                 className="bg-slate-100 text-slate-700 font-bold border border-slate-200/40 px-1.5 py-0.5 rounded text-[10px] focus:outline-hidden cursor-pointer"
                               >
                                 <option value="FINISHED">TERMINÉ</option>
+                                <option value="IN_PLAY">EN COURS</option>
                                 <option value="SCHEDULED">PROGRAMMÉ</option>
                               </select>
                             </div>
