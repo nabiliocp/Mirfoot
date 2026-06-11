@@ -3163,7 +3163,7 @@ export default function ChallengesView({
                               Points de ce Défi : {challengePts} {challengePts > 1 ? "pts" : "pt"}
                             </span>
                             <span className="block text-[8.5px] text-gray-400 font-semibold truncate">
-                              Score Général : {profile.points || 0} {profile.points > 1 ? "pts" : "pt"}
+                              Score Général : {(profile.points || 0) + ((!challenge.resolved || isSimulationMode) ? challengePts : 0)} {((profile.points || 0) + ((!challenge.resolved || isSimulationMode) ? challengePts : 0)) > 1 ? "pts" : "pt"}
                             </span>
                           </div>
                           <div className="flex items-center gap-1.5 mt-1">

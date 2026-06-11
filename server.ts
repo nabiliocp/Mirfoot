@@ -441,6 +441,8 @@ async function startServer() {
   });
 
   app.get("/api/matches/:competitionId", async (req, res) => {
+    // Non-blocking trigger to resolve challenges automatically when requests come in
+    runChallengeResolution().catch(err => console.error("Auto-resolve during match request error:", err));
     try {
       const activeProvider = getActiveApiProvider();
       const fdCompId = Number(req.params.competitionId);
@@ -632,27 +634,21 @@ async function startServer() {
     }
   });
 
-  // Admin endpoint to manually resolve challenges
-  app.post("/api/admin/resolve-challenges", async (req, res) => {
-    if (!supabase)
-      return res
-        .status(500)
-        .json({
-          error: "Configuration Supabase manquante (Service Role Key requise).",
-        });
+  // Helper to auto-resolve unresolved challenges
+  async function runChallengeResolution() {
+    if (!supabase) return 0;
     try {
       const activeProvider = getActiveApiProvider();
       const apiKeyFD = process.env.FOOTBALL_DATA_API_KEY;
       const apiKeyFootball = process.env.API_FOOTBALL_KEY;
 
-      // 1. Get unresolved challenges
       const { data: challenges } = await supabase
         .from("challenges")
         .select("*")
         .eq("resolved", false);
 
       if (!challenges || challenges.length === 0) {
-        return res.json({ message: "Aucun défi à résoudre" });
+        return 0;
       }
 
       let resolvedCount = 0;
@@ -660,7 +656,6 @@ async function startServer() {
       for (const challenge of challenges) {
         let matchData: any = null;
 
-        // Check match status via Active Provider or specifically api-football for friendly matches (competition 679)
         if (
           (challenge.competition_id === 679 ||
             activeProvider === "api-football") &&
@@ -709,7 +704,6 @@ async function startServer() {
           }
         }
 
-        // Fallback to football-data.org if match not found/not resolved
         if (!matchData && apiKeyFD) {
           try {
             const matchRes = await fetch(
@@ -879,7 +873,35 @@ async function startServer() {
           resolvedCount++;
         }
       }
+      return resolvedCount;
+    } catch (e) {
+      console.error("Exception during background runChallengeResolution:", e);
+      return 0;
+    }
+  }
 
+  // Auto-resolve cron/interval running every 60 seconds
+  setInterval(async () => {
+    try {
+      const resolved = await runChallengeResolution();
+      if (resolved > 0) {
+        console.log(`[Auto-Resolve] Automatically resolved ${resolved} unresolved challenges.`);
+      }
+    } catch (err) {
+      console.error("Auto-resolve setInterval error:", err);
+    }
+  }, 60000);
+
+  // Admin endpoint to manually resolve challenges
+  app.post("/api/admin/resolve-challenges", async (req, res) => {
+    if (!supabase)
+      return res
+        .status(500)
+        .json({
+          error: "Configuration Supabase manquante (Service Role Key requise).",
+        });
+    try {
+      const resolvedCount = await runChallengeResolution();
       res.json({
         message: `Résolution terminée. ${resolvedCount} défis résolus.`,
       });
