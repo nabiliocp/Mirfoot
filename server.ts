@@ -132,12 +132,15 @@ const getSeasonYearForLeague = (leagueId: number) => {
 };
 
 const mapStatusToFootballData = (apiStatus: string) => {
-  const live = ["1H", "2H", "HT", "ET", "P", "LIVE", "1P", "2P", "P1", "P2", "IN_PLAY", "MATCH_IN_PROGRESS"];
-  const finished = ["FT", "AET", "PEN"];
-  const paused = ["BT", "SUSP", "INT"];
+  const live = ["1H", "2H", "HT", "ET", "P", "LIVE", "1P", "2P", "P1", "P2", "IN_PLAY", "MATCH_IN_PROGRESS", "1st HALF", "2nd HALF", "IN PROGRESS", "IN-PROGRESS"];
+  const finished = ["FT", "AET", "PEN", "FINISHED"];
+  const paused = ["BT", "SUSP", "INT", "PAUSED"];
+  
   if (live.includes(apiStatus)) return "IN_PLAY";
   if (finished.includes(apiStatus)) return "FINISHED";
   if (paused.includes(apiStatus)) return "PAUSED";
+  
+  console.log(`DEBUG: Status not mapped to live: "${apiStatus}"`);
   return "TIMED";
 };
 
