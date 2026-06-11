@@ -748,16 +748,16 @@ export default function ChallengesView({
   useEffect(() => {
     setVisibleMatchesCount(4);
     setActiveTooltipId(null);
-    const targetChallenge = selectedChallenge || (activeModal && activeModal.type === "details" ? activeModal.challenge : null);
-    if (targetChallenge && targetChallenge.competitionId) {
-      setLoadingModalMatches(true);
-      setModalMatchesError(null);
-      fetch(`/api/matches/${targetChallenge.competitionId}`)
-        .then((res) => {
+    const fetchMatches = async () => {
+      const targetChallenge = selectedChallenge || (activeModal && activeModal.type === "details" ? activeModal.challenge : null);
+      if (targetChallenge && targetChallenge.competitionId) {
+        // Only show loading indicator on first fetch
+        // setLoadingModalMatches(true); // Commented to prevent UI flicker on polls
+        setModalMatchesError(null);
+        try {
+          const res = await fetch(`/api/matches/${targetChallenge.competitionId}`);
           if (!res.ok) throw new Error("Erreur api");
-          return res.json();
-        })
-        .then((data) => {
+          const data = await res.json();
           let fetchedMatches = data.matches || [];
           setAllMatchesByComp((prev) => ({
             ...prev,
@@ -767,17 +767,22 @@ export default function ChallengesView({
             fetchedMatches = fetchedMatches.filter((m: Match) => String(m.id) === String(targetChallenge.matchId));
           }
           setModalMatches(fetchedMatches);
-          setLoadingModalMatches(false);
-        })
-        .catch((err) => {
+        } catch (err) {
           console.error(err);
           setModalMatchesError("Données temporairement indisponibles.");
+        } finally {
           setLoadingModalMatches(false);
-        });
-    } else {
-      setModalMatches([]);
-      setModalMatchesError(null);
-    }
+        }
+      } else {
+        setModalMatches([]);
+        setModalMatchesError(null);
+      }
+    };
+
+    fetchMatches();
+    const interval = setInterval(fetchMatches, 10000); // Poll every 10 seconds
+
+    return () => clearInterval(interval);
   }, [activeModal, selectedChallenge]);
 
   async function loadData() {

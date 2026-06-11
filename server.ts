@@ -51,7 +51,7 @@ interface CacheEntry {
   timestamp: number;
 }
 const apiCache: Record<string, CacheEntry> = {};
-const TODAY_CACHE_TTL = 60 * 1000; // 60 seconds (1 minute cache for live scores & matches of today)
+const TODAY_CACHE_TTL = 10 * 1000; // 10 seconds (10 seconds cache for live scores & matches of today)
 const COMP_CACHE_TTL = 5 * 60 * 1000; // 300 seconds (5 minutes cache for overall tournament tables/fixtures)
 
 // Bidirectional Competition ID mapping (football-data.org ID : api-football.com ID)
