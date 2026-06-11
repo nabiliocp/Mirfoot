@@ -132,7 +132,7 @@ const getSeasonYearForLeague = (leagueId: number) => {
 };
 
 const mapStatusToFootballData = (apiStatus: string) => {
-  const live = ["1H", "2H", "HT", "ET", "P", "LIVE", "1P", "2P", "P1", "P2", "IN_PLAY"];
+  const live = ["1H", "2H", "HT", "ET", "P", "LIVE", "1P", "2P", "P1", "P2", "IN_PLAY", "MATCH_IN_PROGRESS"];
   const finished = ["FT", "AET", "PEN"];
   const paused = ["BT", "SUSP", "INT"];
   if (live.includes(apiStatus)) return "IN_PLAY";

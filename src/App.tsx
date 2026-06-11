@@ -264,7 +264,6 @@ export default function App() {
       
       if (session) {
         setSession(session);
-        setLoadingProfile(true);
         checkProfile(session.user.id);
       }
       setLoadingSession(false);
@@ -279,7 +278,6 @@ export default function App() {
       console.log("AuthStateChange event emitted:", _event, "Session exists:", !!session);
       setSession(session);
       if (session) {
-        setLoadingProfile(true);
         checkProfile(session.user.id);
       } else {
         setNeedsProfileSetup(false);
@@ -347,7 +345,7 @@ export default function App() {
     window.history.replaceState({}, document.title, window.location.pathname);
   };
 
-  if (loadingSession || loadingProfile) {
+  if (loadingSession) {
     return (
       <div className="min-h-screen bg-gray-50 flex flex-col justify-center items-center p-6">
         <div className="animate-pulse text-emerald-700 font-bold">Connexion en cours...</div>
