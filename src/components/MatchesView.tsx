@@ -973,7 +973,7 @@ export default function MatchesView({ onPronoClick, userProfile, onProfileUpdate
                 <p className="text-[11px] text-gray-400 font-semibold">Les grands championnats européens dont les journées s'enchaînent actuellement.</p>
                 <div className="grid grid-cols-1 gap-2.5">
                   {competitions
-                    .filter(c => [2015, 2021, 2014, 2019, 2002].includes(c.id))
+                    .filter(c => [2015, 2021, 2014, 2019, 2002, 2000].includes(c.id))
                     .map(comp => (
                       <div
                         key={comp.id}

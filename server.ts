@@ -67,6 +67,7 @@ const COMPETITION_ID_MAP: Record<number, number> = {
   2016: 141, // Segunda Division
   2022: 3, // UEFA Europa League
   679: 10, // Matchs Amicaux Internationaux
+  2000: 1, // Coupe du Monde FIFA
 };
 
 const REVERSE_COMPETITION_ID_MAP: Record<number, number> = Object.fromEntries(
@@ -116,6 +117,12 @@ const AVAILABLE_COMPETITIONS = [
     emblem: "https://media.api-sports.io/football/leagues/10.png",
     type: "CUP",
   },
+  {
+    id: 2000,
+    name: "Coupe du Monde FIFA",
+    emblem: "https://media.api-sports.io/football/leagues/1.png",
+    type: "CUP",
+  },
 ];
 
 const getSeasonYearForLeague = (leagueId: number) => {
@@ -145,65 +152,7 @@ const mapStatusToFootballData = (apiStatus: string) => {
 };
 
 const getMockFriendlyMatchesForDate = (targetDate: string): any[] => {
-  return [
-    {
-      id: 1540950,
-      utcDate: `${targetDate}T19:00:00Z`,
-      status: "FINISHED",
-      matchday: 1,
-      stage: "Friendlies",
-      group: null,
-      homeTeam: { id: 31, name: "Morocco", shortName: "Morocco", tla: "MAR", crest: "https://media.api-sports.io/football/teams/31.png" },
-      awayTeam: { id: 1090, name: "Norway", shortName: "Norway", tla: "NOR", crest: "https://media.api-sports.io/football/teams/1090.png" },
-      score: {
-        winner: "DRAW",
-        duration: "REGULAR",
-        fullTime: { home: 2, away: 2 },
-        halfTime: { home: 1, away: 1 },
-        regularTime: { home: 2, away: 2 }
-      },
-      venue: "Grand Stade d'Agadir",
-      competition: { id: 679, name: "Friendlies", code: "FR", type: "CUP", emblem: "https://media.api-sports.io/football/leagues/10.png" }
-    },
-    {
-      id: 1540951,
-      utcDate: `${targetDate}T20:45:00Z`,
-      status: "TIMED",
-      matchday: 1,
-      stage: "Friendlies",
-      group: null,
-      homeTeam: { id: 2, name: "France", shortName: "France", tla: "FRA", crest: "https://media.api-sports.io/football/teams/67.png" },
-      awayTeam: { id: 9, name: "Germany", shortName: "Germany", tla: "GER", crest: "https://media.api-sports.io/football/teams/25.png" },
-      score: {
-        winner: null,
-        duration: "REGULAR",
-        fullTime: { home: null, away: null },
-        halfTime: { home: null, away: null },
-        regularTime: { home: null, away: null }
-      },
-      venue: "Stade de France",
-      competition: { id: 679, name: "Friendlies", code: "FR", type: "CUP", emblem: "https://media.api-sports.io/football/leagues/10.png" }
-    },
-    {
-      id: 1540952,
-      utcDate: `${targetDate}T18:00:00Z`,
-      status: "FINISHED",
-      matchday: 1,
-      stage: "Friendlies",
-      group: null,
-      homeTeam: { id: 10, name: "Spain", shortName: "Spain", tla: "ESP", crest: "https://media.api-sports.io/football/teams/9.png" },
-      awayTeam: { id: 15, name: "Brazil", shortName: "Brazil", tla: "BRA", crest: "https://media.api-sports.io/football/teams/6.png" },
-      score: {
-        winner: "AWAY_TEAM",
-        duration: "REGULAR",
-        fullTime: { home: 1, away: 3 },
-        halfTime: { home: 0, away: 1 },
-        regularTime: { home: 1, away: 3 }
-      },
-      venue: "Santiago Bernabéu",
-      competition: { id: 679, name: "Friendlies", code: "FR", type: "CUP", emblem: "https://media.api-sports.io/football/leagues/10.png" }
-    }
-  ];
+  return [];
 };
 
 const translateApiFootballMatchToFootballData = (apiFMatch: any): any => {
