@@ -356,8 +356,14 @@ async function startServer() {
         if (!response.ok) throw new Error("API-Football Error");
         const data = await response.json();
 
-        const supportedLeagues = Object.values(COMPETITION_ID_MAP);
         const fixtures = data.response || [];
+        
+        // Debugging status:
+        fixtures.forEach((f: any) => {
+            console.log(`DEBUG Match ${f.fixture.id}: ${f.teams.home.name} vs ${f.teams.away.name}, status code: ${f.fixture.status.short}, status full: ${JSON.stringify(f.fixture.status)}`);
+        });
+
+        const supportedLeagues = Object.values(COMPETITION_ID_MAP);
         const filteredFixtures = fixtures.filter(
           (f: any) => f.league && supportedLeagues.includes(f.league.id),
         );
