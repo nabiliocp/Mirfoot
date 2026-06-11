@@ -226,9 +226,9 @@ export default function App() {
           setLoadingProfile(true);
         }
         // Only wait 1s if we haven't successfully loaded/checked a profile yet
-        if (!profileCheckedRef.current) {
-          await new Promise((resolve) => setTimeout(resolve, 1000));
-        }
+        // if (!profileCheckedRef.current) {
+        //   await new Promise((resolve) => setTimeout(resolve, 1000));
+        // }
         console.log("Forcing profile check for", userId);
         const { data, error } = await supabase
           .from("profiles")
