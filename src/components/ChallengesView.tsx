@@ -2110,6 +2110,8 @@ export default function ChallengesView({
         let pts = 0;
         let isExact = false;
         let isWinner = false;
+        let bonusCount = 0;
+        let malusCount = 0;
         
         if (singleMatch && ["FINISHED", "IN_PLAY", "LIVE", "PAUSED"].includes(singleMatch.status)) {
           const rHome = singleMatch.score.fullTime.home ?? singleMatch.score.regularTime?.home ?? 0;
@@ -2141,10 +2143,12 @@ export default function ChallengesView({
 
             // Bonus X2 logic
             if (isBonusActive) {
+              bonusCount = 1;
               if (pts > 0) {
                 pts = pts * 2;
               } else {
                 pts = -4;
+                malusCount = 1;
               }
             }
           }
@@ -2160,7 +2164,9 @@ export default function ChallengesView({
           points: pts,
           isExact,
           isWinner,
-          predictionsCount: 1
+          predictionsCount: 1,
+          bonusCount,
+          malusCount
         };
       });
     } else {
@@ -2171,6 +2177,8 @@ export default function ChallengesView({
         let exactCount = 0;
         let winnerCount = 0;
         let predictedCount = 0;
+        let bonusCount = 0;
+        let malusCount = 0;
         
         const predVal = typeof bet.predictions === 'string' ? JSON.parse(bet.predictions) : bet.predictions;
         const matchesPreds = predVal?.matches || {};
@@ -2207,10 +2215,12 @@ export default function ChallengesView({
 
                 // Bonus X2 logic per-match
                 if (isMatchBonusActive) {
+                  bonusCount++;
                   if (matchPts > 0) {
                     matchPts = matchPts * 2;
                   } else {
                     matchPts = -4;
+                    malusCount++;
                   }
                 }
                 pts += matchPts;
@@ -2229,7 +2239,9 @@ export default function ChallengesView({
           points: pts,
           exactCount,
           winnerCount,
-          predictionsCount: predictedCount
+          predictionsCount: predictedCount,
+          bonusCount,
+          malusCount
         };
       });
     }
@@ -3116,14 +3128,29 @@ export default function ChallengesView({
                         </div>
 
                         <div className="flex items-center gap-4">
-                          {challenge.matchId === 0 && (
-                            <div className="flex gap-2 text-[9px] font-bold text-gray-400">
-                              <span className="bg-emerald-50/30 text-emerald-800 px-1.5 py-0.5 rounded border border-emerald-100">{player.exactCount || 0} Exact</span>
-                              <span className="bg-indigo-50/30 text-indigo-800 px-1.5 py-0.5 rounded border border-indigo-100">{player.winnerCount || 0} Winner</span>
-                            </div>
-                          )}
-                          <div className="text-right">
-                            <span className="block text-sm font-black text-slate-800">{player.points} pts</span>
+                          <div className="flex flex-col items-end gap-1">
+                            {challenge.matchId === 0 ? (
+                              <div className="flex gap-2 text-[9px] font-bold text-gray-400">
+                                <span className="bg-emerald-50/30 text-emerald-800 px-1.5 py-0.5 rounded border border-emerald-100">{player.exactCount || 0} Exact</span>
+                                <span className="bg-indigo-50/30 text-indigo-800 px-1.5 py-0.5 rounded border border-indigo-100">{player.winnerCount || 0} Winner</span>
+                              </div>
+                            ) : (
+                              (player.bonusCount > 0 || player.malusCount > 0) && (
+                                <div className="flex gap-2 text-[9px] font-bold text-gray-400">
+                                  {player.bonusCount > 0 && <span className="text-amber-600">⭐ {player.bonusCount}</span>}
+                                  {player.malusCount > 0 && <span className="text-rose-600">🔥 {player.malusCount}</span>}
+                                </div>
+                              )
+                            )}
+                            
+                            {challenge.matchId === 0 && (player.bonusCount > 0 || player.malusCount > 0) && (
+                              <div className="flex gap-2 text-[9px] font-bold text-gray-400">
+                                {player.bonusCount > 0 && <span className="text-amber-600">⭐ {player.bonusCount}</span>}
+                                {player.malusCount > 0 && <span className="text-rose-600">🔥 {player.malusCount}</span>}
+                              </div>
+                            )}
+
+                             <span className="block text-sm font-black text-slate-800">{player.points} pts</span>
                           </div>
                         </div>
                       </div>
