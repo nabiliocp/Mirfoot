@@ -42,7 +42,12 @@ const POPULAR_CLUBS = [
   "Sporting CP",
   "Ajax Amsterdam",
   "Al-Nassr",
-  "Al-Hilal"
+  "Al-Hilal",
+  "Wydad Casablanca",
+  "Raja Casablanca",
+  "AS FAR",
+  "FUS Rabat",
+  "RS Berkane"
 ].sort();
 
 const POPULAR_NATIONALS = [
@@ -380,9 +385,12 @@ export default function ProfileSetupView({
                       key={color}
                       type="button"
                       onClick={() => setAvatarValue(color)}
-                      style={{ backgroundColor: color }}
-                      className={`aspect-square rounded-full transition border-2 border-white shadow-xs mx-auto w-6 h-6 ${avatarValue === color ? "ring-2 ring-emerald-500 scale-105" : "hover:scale-[1.03]"}`}
-                    />
+                      className={`flex items-center justify-center transition border-2 border-transparent w-8 h-8 ${avatarValue === color ? "ring-2 ring-emerald-500 scale-105" : "hover:scale-[1.03]"}`}
+                    >
+                      <svg viewBox="0 0 24 24" className="w-6 h-6" fill={color} stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M19 8l-3-3H8L5 8l1 1h2v8h8V9h2l1-1z" />
+                      </svg>
+                    </button>
                   ))}
             </div>
           </div>
