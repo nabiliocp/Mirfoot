@@ -2143,9 +2143,9 @@ export default function ChallengesView({
 
             // Bonus X2 logic
             if (isBonusActive) {
-              bonusCount = 1;
               if (pts > 0) {
                 pts = pts * 2;
+                bonusCount = 1;
               } else {
                 pts = -4;
                 malusCount = 1;
@@ -2215,9 +2215,9 @@ export default function ChallengesView({
 
                 // Bonus X2 logic per-match
                 if (isMatchBonusActive) {
-                  bonusCount++;
                   if (matchPts > 0) {
                     matchPts = matchPts * 2;
+                    bonusCount++;
                   } else {
                     matchPts = -4;
                     malusCount++;
@@ -3134,19 +3134,12 @@ export default function ChallengesView({
                                 <span className="bg-emerald-50/30 text-emerald-800 px-1.5 py-0.5 rounded border border-emerald-100">{player.exactCount || 0} Exact</span>
                                 <span className="bg-indigo-50/30 text-indigo-800 px-1.5 py-0.5 rounded border border-indigo-100">{player.winnerCount || 0} Winner</span>
                               </div>
-                            ) : (
-                              (player.bonusCount > 0 || player.malusCount > 0) && (
-                                <div className="flex gap-2 text-[9px] font-bold text-gray-400">
-                                  {player.bonusCount > 0 && <span className="text-amber-600">⭐ {player.bonusCount}</span>}
-                                  {player.malusCount > 0 && <span className="text-rose-600">🔥 {player.malusCount}</span>}
-                                </div>
-                              )
-                            )}
+                            ) : null}
                             
-                            {challenge.matchId === 0 && (player.bonusCount > 0 || player.malusCount > 0) && (
-                              <div className="flex gap-2 text-[9px] font-bold text-gray-400">
-                                {player.bonusCount > 0 && <span className="text-amber-600">⭐ {player.bonusCount}</span>}
-                                {player.malusCount > 0 && <span className="text-rose-600">🔥 {player.malusCount}</span>}
+                            {(player.bonusCount > 0 || player.malusCount > 0) && (
+                              <div className="flex gap-2 text-[9px] font-bold">
+                                {player.bonusCount > 0 && <span className="text-emerald-600">Bonus X {player.bonusCount}</span>}
+                                {player.malusCount > 0 && <span className="text-rose-600">Malus X {player.malusCount}</span>}
                               </div>
                             )}
 
