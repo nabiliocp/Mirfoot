@@ -89,25 +89,32 @@ export default function LeaderboardView() {
       const challengeIds = Array.from(new Set([...invitedChallengeIds, ...createdChallengeIds]));
 
       // 2. Fetch challenges for these competitions
-      const { data: challenges } = await supabase
+      const { data: challenges, error: challengesError } = await supabase
         .from('challenges')
         .select('id, competition_id')
         .in('id', challengeIds);
+      
+      console.log('Challenges fetched:', challenges, 'Error:', challengesError);
 
       const compIds = Array.from(new Set(challenges?.map(c => c.competition_id).filter(id => id != null) || []));
+      console.log('Unique Comp IDs:', compIds);
 
       // 3. Fetch all challenges and bets for these competitions
-      const { data: allChallenges } = await supabase
+      const { data: allChallenges, error: allChallengesError } = await supabase
         .from('challenges')
         .select('id, competition_id, title, resolved')
         .in('competition_id', compIds);
       
+      console.log('All Challenges fetched:', allChallenges, 'Error:', allChallengesError);
+
       const allChallengeIds = allChallenges?.map(c => c.id) || [];
 
-      const { data: allBets } = await supabase
+      const { data: allBets, error: allBetsError } = await supabase
         .from('bets')
         .select('user_id, challenge_id, points_awarded')
         .in('challenge_id', allChallengeIds);
+
+      console.log('All Bets fetched:', allBets, 'Error:', allBetsError);
 
       const { data: profiles } = await supabase
         .from('profiles')
