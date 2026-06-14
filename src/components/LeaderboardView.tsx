@@ -30,15 +30,22 @@ export default function LeaderboardView() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // 1. Fetch user competitions (those they are invited to)
+      // 1. Fetch user competitions (those they are invited to OR created)
       const { data: invs } = await supabase
         .from('challenge_invitations')
         .select('challenge_id')
         .eq('user_id', user.id)
         .eq('accepted', true);
       
-      const challengeIds = invs?.map(i => i.challenge_id) || [];
+      const { data: created } = await supabase
+        .from('challenges')
+        .select('id')
+        .eq('creator_id', user.id);
       
+      const invitedChallengeIds = invs?.map(i => i.challenge_id) || [];
+      const createdChallengeIds = created?.map(c => c.id) || [];
+      const challengeIds = Array.from(new Set([...invitedChallengeIds, ...createdChallengeIds]));
+
       // 2. Fetch challenges for these competitions
       const { data: challenges } = await supabase
         .from('challenges')
@@ -67,13 +74,13 @@ export default function LeaderboardView() {
       // 4. Aggregate by competition
       const aggregated: Record<number, Record<string, number>> = {};
       
-      allChallenges?.forEach(c => {
-        if (!aggregated[c.competition_id]) aggregated[c.competition_id] = {};
+      allChallenges?.filter(c => c.competition_id != null).forEach(c => {
+        if (!aggregated[c.competition_id!]) aggregated[c.competition_id!] = {};
       });
 
       allBets?.forEach(bet => {
         const challenge = allChallenges?.find(c => c.id === bet.challenge_id);
-        if (challenge) {
+        if (challenge && challenge.competition_id != null) {
           const compId = challenge.competition_id;
           if (!aggregated[compId][bet.user_id]) aggregated[compId][bet.user_id] = 0;
           aggregated[compId][bet.user_id] += (bet.points_awarded || 0);
