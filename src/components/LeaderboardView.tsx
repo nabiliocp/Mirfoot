@@ -99,7 +99,7 @@ export default function LeaderboardView() {
       // 3. Fetch all challenges and bets for these competitions
       const { data: allChallenges } = await supabase
         .from('challenges')
-        .select('id, competition_id')
+        .select('id, competition_id, title, resolved')
         .in('competition_id', compIds);
       
       const allChallengeIds = allChallenges?.map(c => c.id) || [];
@@ -116,16 +116,23 @@ export default function LeaderboardView() {
       // 4. Aggregate by competition
       const aggregated: Record<number, Record<string, number>> = {};
       
-      allChallenges?.filter(c => c.competition_id != null).forEach(c => {
-        if (!aggregated[c.competition_id!]) aggregated[c.competition_id!] = {};
+      // Initialize aggregation
+      compIds.forEach(compId => {
+        aggregated[compId] = {};
       });
 
+      // Populate aggregation
       allBets?.forEach(bet => {
         const challenge = allChallenges?.find(c => c.id === bet.challenge_id);
         if (challenge && challenge.competition_id != null) {
           const compId = challenge.competition_id;
-          if (!aggregated[compId][bet.user_id]) aggregated[compId][bet.user_id] = 0;
-          aggregated[compId][bet.user_id] += (bet.points_awarded || 0);
+          if (bet.user_id) {
+            if (!aggregated[compId][bet.user_id]) aggregated[compId][bet.user_id] = 0;
+            // Accumulate points regardless of whether resolved or not IF available,
+            // but the schema suggests points_awarded comes later.
+            // Using || 0 to default nulls to 0.
+            aggregated[compId][bet.user_id] += (bet.points_awarded || 0);
+          }
         }
       });
 
@@ -144,7 +151,8 @@ export default function LeaderboardView() {
       setData(leaderboardData);
 
       // Fetch competition names
-      const { data: comps } = await supabase.from('competitions').select('id, name');
+      const { data: comps, error: compsError } = await supabase.from('competitions').select('id, name');
+      console.log('Competitions fetched:', comps, 'Error:', compsError);
       const compMap: Record<number, string> = {};
       comps?.forEach(c => compMap[c.id] = c.name);
       setCompetitions(compMap);
