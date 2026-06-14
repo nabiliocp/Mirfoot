@@ -131,17 +131,16 @@ export default function LeaderboardView() {
 
       // Populate aggregation
       allBets?.forEach(bet => {
-        console.log('DEBUG: Processing bet object:', bet);
         const challenge = allChallenges?.find(c => c.id === bet.challenge_id);
         if (challenge && challenge.competition_id != null) {
           const compId = challenge.competition_id;
           if (bet.user_id) {
             if (!aggregated[compId][bet.user_id]) aggregated[compId][bet.user_id] = 0;
             
-            const points = (bet.points || bet.points_awarded || 0);
-            aggregated[compId][bet.user_id] += points;
+            const pointsValue = (bet.points !== undefined && bet.points !== null) ? bet.points : (bet.points_awarded || 0);
+            aggregated[compId][bet.user_id] += pointsValue;
             
-            console.log(`DEBUG: Bet user: ${bet.user_id}, comp: ${compId}, betPoints: ${points}, total: ${aggregated[compId][bet.user_id]}`);
+            console.log(`DEBUG: Bet: user=${bet.user_id}, comp=${compId}, points=${pointsValue}, total=${aggregated[compId][bet.user_id]}`);
           }
         }
       });
@@ -162,12 +161,15 @@ export default function LeaderboardView() {
 
       // Fetch competition names
       const { data: comps, error: compsError } = await supabase.from('competitions').select('id, name');
-      console.log('DEBUG COMP: Competitions fetched (ALL):', comps, 'Error:', compsError);
+      console.log('DEBUG COMP: Competitions fetched:', comps, 'Error:', compsError);
       
       const compMap: Record<number, string> = {};
-      comps?.forEach(c => compMap[c.id] = c.name);
+      comps?.forEach(c => {
+         compMap[c.id] = c.name;
+         console.log(`DEBUG COMP: Mapping ${c.id} -> ${c.name}`);
+      });
       setCompetitions(compMap);
-      console.log('DEBUG COMP: Competition map created:', compMap);
+      console.log('DEBUG COMP: Competition map finalized:', compMap);
       setLoading(false);
     }
     loadData();
