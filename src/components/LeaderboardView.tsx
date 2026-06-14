@@ -135,10 +135,11 @@ export default function LeaderboardView() {
           const compId = challenge.competition_id;
           if (bet.user_id) {
             if (!aggregated[compId][bet.user_id]) aggregated[compId][bet.user_id] = 0;
-            // Accumulate points regardless of whether resolved or not IF available,
-            // but the schema suggests points_awarded comes later.
-            // Using || 0 to default nulls to 0.
-            aggregated[compId][bet.user_id] += (bet.points_awarded || 0);
+            
+            const points = (bet.points_awarded || 0);
+            aggregated[compId][bet.user_id] += points;
+            
+            console.log(`DEBUG: Bet user: ${bet.user_id}, comp: ${compId}, betPoints: ${points}, total: ${aggregated[compId][bet.user_id]}`);
           }
         }
       });
@@ -159,7 +160,8 @@ export default function LeaderboardView() {
 
       // Fetch competition names
       const { data: comps, error: compsError } = await supabase.from('competitions').select('id, name');
-      console.log('Competitions fetched:', comps, 'Error:', compsError);
+      console.log('Competitions fetched (ALL):', comps, 'Error:', compsError);
+      
       const compMap: Record<number, string> = {};
       comps?.forEach(c => compMap[c.id] = c.name);
       setCompetitions(compMap);
