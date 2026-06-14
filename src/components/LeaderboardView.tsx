@@ -20,9 +20,15 @@ interface LeaderboardData {
   }[];
 }
 
+interface CompetitionInfo {
+  id: number;
+  name: string;
+}
+
 export default function LeaderboardView() {
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<LeaderboardData[]>([]);
+  const [competitions, setCompetitions] = useState<Record<number, string>>({});
 
   useEffect(() => {
     async function loadData() {
@@ -88,15 +94,24 @@ export default function LeaderboardView() {
       });
 
       // 5. Structure data
-      const leaderboardData: LeaderboardData[] = compIds.map(compId => ({
-        competitionId: compId,
-        participants: Object.entries(aggregated[compId] || {}).map(([userId, points]) => ({
-          profile: profiles?.find(p => p.id === userId) || { id: userId, username: 'Unknown', avatar_type: 'emoji', avatar_value: '👽', points: 0 },
-          points
-        })).sort((a, b) => b.points - a.points)
-      }));
+      const leaderboardData: LeaderboardData[] = compIds
+        .map(compId => ({
+          competitionId: compId,
+          participants: Object.entries(aggregated[compId] || {}).map(([userId, points]) => ({
+            profile: profiles?.find(p => p.id === userId) || { id: userId, username: 'Unknown', avatar_type: 'emoji', avatar_value: '👽', points: 0 },
+            points
+          })).sort((a, b) => b.points - a.points)
+        }))
+        // Only include competitions with multiple matches (multiple challenges in this competition)
+        .filter(c => allChallenges.filter(ch => ch.competition_id === c.competitionId).length > 1);
 
       setData(leaderboardData);
+
+      // Fetch competition names
+      const { data: comps } = await supabase.from('competitions').select('id, name');
+      const compMap: Record<number, string> = {};
+      comps?.forEach(c => compMap[c.id] = c.name);
+      setCompetitions(compMap);
       setLoading(false);
     }
     loadData();
@@ -127,7 +142,7 @@ export default function LeaderboardView() {
 
       {data.map((comp) => (
         <div key={comp.competitionId} className="space-y-2">
-          <h3 className="font-bold text-gray-700">Compétition {comp.competitionId}</h3>
+          <h3 className="font-bold text-gray-700">{competitions[comp.competitionId] || `Compétition ${comp.competitionId}`}</h3>
           <div className="space-y-3">
             {comp.participants.map((p, index) => {
               const profile = p.profile;
