@@ -112,7 +112,7 @@ export default function LeaderboardView() {
 
       const { data: allBets, error: allBetsError } = await supabase
         .from('bets')
-        .select('user_id, challenge_id, points')
+        .select('*')
         .in('challenge_id', allChallengeIds);
 
       console.log('All Bets fetched:', allBets, 'Error:', allBetsError);
@@ -137,7 +137,7 @@ export default function LeaderboardView() {
           if (bet.user_id) {
             if (!aggregated[compId][bet.user_id]) aggregated[compId][bet.user_id] = 0;
             
-            const points = (bet.points || 0);
+            const points = (bet.points || bet.points_awarded || 0);
             aggregated[compId][bet.user_id] += points;
             
             console.log(`DEBUG: Bet user: ${bet.user_id}, comp: ${compId}, betPoints: ${points}, total: ${aggregated[compId][bet.user_id]}`);
