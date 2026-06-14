@@ -20,10 +20,46 @@ interface LeaderboardData {
   }[];
 }
 
-interface CompetitionInfo {
-  id: number;
-  name: string;
-}
+const getTeamLogo = (teamName: string) => {
+  const nameLower = (teamName || "").toLowerCase().trim();
+  
+  // Clubs
+  const clubMapping: Record<string, string> = {
+    "real madrid": "https://crests.football-data.org/86.svg",
+    "barcelona": "https://crests.football-data.org/81.svg",
+    "barcelone": "https://crests.football-data.org/81.svg",
+    "manchester city": "https://crests.football-data.org/65.svg",
+    "manchester united": "https://crests.football-data.org/66.svg",
+    "liverpool": "https://crests.football-data.org/64.svg",
+    "arsenal": "https://crests.football-data.org/57.svg",
+    "bayern": "https://crests.football-data.org/5.svg",
+    "psg": "https://crests.football-data.org/524.svg",
+    "paris saint-germain": "https://crests.football-data.org/524.svg",
+    "milan": "https://crests.football-data.org/98.svg",
+    "inter": "https://crests.football-data.org/108.svg",
+    "juventus": "https://crests.football-data.org/109.svg",
+    "dortmund": "https://crests.football-data.org/4.svg",
+    "marseille": "https://crests.football-data.org/516.svg",
+    "monaco": "https://crests.football-data.org/548.svg",
+  };
+  
+  for (const [key, url] of Object.entries(clubMapping)) {
+    if (nameLower.includes(key)) return url;
+  }
+  
+  // Nation Flags
+  const nationMapping: Record<string, string> = {
+    "maroc": "ma", "morocco": "ma",
+    "france": "fr",
+    "brésil": "br", "brazil": "br",
+  };
+  
+  for (const [key, code] of Object.entries(nationMapping)) {
+    if (nameLower.includes(key)) return `https://flagcdn.com/w80/${code}.png`;
+  }
+  
+  return "https://flagcdn.com/w80/un.png";
+};
 
 export default function LeaderboardView() {
   const [loading, setLoading] = useState(true);
@@ -98,7 +134,7 @@ export default function LeaderboardView() {
         .map(compId => ({
           competitionId: compId,
           participants: Object.entries(aggregated[compId] || {}).map(([userId, points]) => ({
-            profile: profiles?.find(p => p.id === userId) || { id: userId, username: 'Unknown', avatar_type: 'emoji', avatar_value: '👽', points: 0 },
+            profile: profiles?.find(p => p.id === userId) || { id: userId, username: 'Unknown', avatar_type: 'emoji', avatar_value: '👽', first_name: '', last_name: '', points: 0 },
             points
           })).sort((a, b) => b.points - a.points)
         }))
@@ -120,7 +156,7 @@ export default function LeaderboardView() {
   if (loading) return null;
 
   return (
-    <div className="space-y-6 animate-in fade-in zoom-in-95 duration-300">
+    <div className="space-y-6 animate-in fade-in zoom-in-95 duration-300 min-h-screen pb-10">
       <div className="bg-emerald-600 text-white rounded-2xl p-6 shadow-lg flex justify-between items-center bg-gradient-to-br from-emerald-600 to-emerald-800">
         <div>
           <h2 className="text-xl font-bold flex items-center gap-2">
@@ -135,14 +171,14 @@ export default function LeaderboardView() {
       </div>
 
       {data.length === 0 && (
-        <div className="text-center p-8 text-gray-500 bg-white rounded-xl shadow-sm">
+        <div className="text-center p-8 text-gray-500 bg-white rounded-xl shadow-sm border border-gray-100">
           Aucun classement disponible pour vos compétitions !
         </div>
       )}
 
       {data.map((comp) => (
-        <div key={comp.competitionId} className="space-y-2">
-          <h3 className="font-bold text-gray-700">{competitions[comp.competitionId] || `Compétition ${comp.competitionId}`}</h3>
+        <div key={comp.competitionId} className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 overflow-hidden">
+          <h3 className="font-extrabold text-lg text-emerald-900 mb-4 border-b border-gray-50 pb-3">{competitions[comp.competitionId] || `Compétition ${comp.competitionId}`}</h3>
           <div className="space-y-3">
             {comp.participants.map((p, index) => {
               const profile = p.profile;
@@ -152,17 +188,17 @@ export default function LeaderboardView() {
               return (
                 <div 
                   key={profile.id} 
-                  className={`flex items-center p-4 rounded-xl shadow-sm border ${index === 0 ? 'bg-yellow-50/50 border-yellow-200' : 'bg-white border-gray-100'}`}
+                  className={`flex items-center p-3 rounded-xl border ${index === 0 ? 'bg-yellow-50/50 border-yellow-100' : 'bg-gray-50/50 border-gray-100'}`}
                 >
-                  <div className="w-10 flex justify-center items-center font-bold text-gray-500">
+                  <div className="w-8 flex justify-center items-center font-bold text-sm text-gray-500">
                     {isTop3 ? (
-                      <Medal className={`w-6 h-6 ${medals[index]}`} />
+                      <Medal className={`w-5 h-5 ${medals[index]}`} />
                     ) : (
                       <span>{index + 1}</span>
                     )}
                   </div>
                   
-                  <div className="ml-2 w-10 flex justify-center">
+                  <div className="w-10 flex justify-center mr-3">
                     {profile.avatar_type === 'emoji' ? (
                       <span className="text-2xl">{profile.avatar_value === '🐷' ? '👽' : profile.avatar_value}</span>
                     ) : (
@@ -172,21 +208,16 @@ export default function LeaderboardView() {
                     )}
                   </div>
                   
-                  <div className="ml-3 flex-1 flex flex-col font-sans">
-                    <span className="font-semibold text-gray-800 flex items-center gap-1.5 flex-wrap">
-                      {profile.username}
-                    </span>
-                    {(profile.first_name || profile.last_name) && (
-                      <div className="text-[11px] text-gray-400 flex items-center gap-1.5 mt-0.5">
-                        {profile.first_name && <span className="inline-flex items-center gap-0.5">⚽️ {profile.first_name}</span>}
-                        {profile.first_name && profile.last_name && <span className="text-gray-300">|</span>}
-                        {profile.last_name && <span className="inline-flex items-center gap-0.5">🏆 {profile.last_name}</span>}
-                      </div>
-                    )}
+                  <div className="flex-1 flex flex-col font-sans">
+                    <span className="font-semibold text-sm text-gray-800">{profile.username}</span>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      {profile.first_name && <img src={getTeamLogo(profile.first_name)} alt="Club" className="w-4 h-4 object-contain" title={profile.first_name} />}
+                      {profile.last_name && <img src={getTeamLogo(profile.last_name)} alt="Nation" className="w-4 h-4 object-contain" title={profile.last_name} />}
+                    </div>
                   </div>
                   
-                  <div className="font-black text-xl text-gray-800 mr-2">
-                    {p.points} <span className="text-xs text-gray-400 font-medium ml-1">PTS</span>
+                  <div className="font-black text-lg text-emerald-700">
+                    {p.points} <span className="text-xs text-emerald-500 font-medium">PTS</span>
                   </div>
                 </div>
               );
@@ -197,3 +228,4 @@ export default function LeaderboardView() {
     </div>
   );
 }
+
