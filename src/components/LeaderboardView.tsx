@@ -87,14 +87,15 @@ export default function LeaderboardView() {
       const invitedChallengeIds = invs?.map(i => i.challenge_id) || [];
       const createdChallengeIds = created?.map(c => c.id) || [];
       const challengeIds = Array.from(new Set([...invitedChallengeIds, ...createdChallengeIds]));
+      console.log('DEBUG: Challenge IDs for user:', challengeIds);
 
       // 2. Fetch challenges for these competitions
       const { data: challenges, error: challengesError } = await supabase
         .from('challenges')
         .select('id, competition_id')
         .in('id', challengeIds);
-      
-      console.log('Challenges fetched:', challenges, 'Error:', challengesError);
+        
+      console.log('DEBUG: Challenges fetched:', challenges);
 
       const compIds = Array.from(new Set(challenges?.map(c => c.competition_id).filter(id => id != null) || []));
       console.log('Unique Comp IDs:', compIds);
@@ -111,7 +112,7 @@ export default function LeaderboardView() {
 
       const { data: allBets, error: allBetsError } = await supabase
         .from('bets')
-        .select('user_id, challenge_id, points_awarded')
+        .select('user_id, challenge_id, points')
         .in('challenge_id', allChallengeIds);
 
       console.log('All Bets fetched:', allBets, 'Error:', allBetsError);
@@ -136,7 +137,7 @@ export default function LeaderboardView() {
           if (bet.user_id) {
             if (!aggregated[compId][bet.user_id]) aggregated[compId][bet.user_id] = 0;
             
-            const points = (bet.points_awarded || 0);
+            const points = (bet.points || 0);
             aggregated[compId][bet.user_id] += points;
             
             console.log(`DEBUG: Bet user: ${bet.user_id}, comp: ${compId}, betPoints: ${points}, total: ${aggregated[compId][bet.user_id]}`);
@@ -160,11 +161,12 @@ export default function LeaderboardView() {
 
       // Fetch competition names
       const { data: comps, error: compsError } = await supabase.from('competitions').select('id, name');
-      console.log('Competitions fetched (ALL):', comps, 'Error:', compsError);
+      console.log('DEBUG COMP: Competitions fetched (ALL):', comps, 'Error:', compsError);
       
       const compMap: Record<number, string> = {};
       comps?.forEach(c => compMap[c.id] = c.name);
       setCompetitions(compMap);
+      console.log('DEBUG COMP: Competition map created:', compMap);
       setLoading(false);
     }
     loadData();
