@@ -131,6 +131,7 @@ export default function LeaderboardView() {
 
       // Populate aggregation
       allBets?.forEach(bet => {
+        console.log('DEBUG: Processing bet object:', bet);
         const challenge = allChallenges?.find(c => c.id === bet.challenge_id);
         if (challenge && challenge.competition_id != null) {
           const compId = challenge.competition_id;
