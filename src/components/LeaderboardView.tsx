@@ -160,14 +160,19 @@ export default function LeaderboardView() {
       setData(leaderboardData);
 
       // Fetch competition names
-      const { data: comps, error: compsError } = await supabase.from('competitions').select('id, name');
-      console.log('DEBUG COMP: Competitions fetched:', comps, 'Error:', compsError);
-      
       const compMap: Record<number, string> = {};
-      comps?.forEach(c => {
-         compMap[c.id] = c.name;
-         console.log(`DEBUG COMP: Mapping ${c.id} -> ${c.name}`);
-      });
+      try {
+        const res = await fetch('/api/competitions');
+        if (res.ok) {
+          const data = await res.json();
+          console.log('DEBUG COMP: Competitions fetched from API:', data.competitions);
+          data.competitions?.forEach((c: any) => {
+            compMap[c.id] = c.name;
+          });
+        }
+      } catch (err) {
+        console.error('DEBUG COMP: Error fetching competitions from API:', err);
+      }
       setCompetitions(compMap);
       console.log('DEBUG COMP: Competition map finalized:', compMap);
       setLoading(false);
