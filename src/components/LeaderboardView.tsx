@@ -1,8 +1,6 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState } from 'react';
 import { Trophy, Medal, Flame } from 'lucide-react';
 import { supabase } from '../lib/supabase';
-import { calculateMatchPoints } from '../lib/pointCalculation';
-import { Match, Prediction } from '../types';
 
 interface Profile {
   id: string;
@@ -110,20 +108,6 @@ export default function LeaderboardView() {
       
       console.log('All Challenges fetched:', allChallenges, 'Error:', allChallengesError);
 
-      // 3.5 Fetch matches for competitions
-      const matchesByComp: Record<number, Match[]> = {};
-      for (const compId of compIds) {
-        try {
-          const res = await fetch(`/api/matches/${compId}`);
-          if (res.ok) {
-            const data = await res.json();
-            matchesByComp[compId] = data.matches || [];
-          }
-        } catch (e) {
-          console.error(`Error fetching matches for comp ${compId}:`, e);
-        }
-      }
-
       const allChallengeIds = allChallenges?.map(c => c.id) || [];
 
       const { data: allBets, error: allBetsError } = await supabase
@@ -155,29 +139,7 @@ export default function LeaderboardView() {
             
             let pointsValue = (bet.points !== undefined && bet.points !== null) ? bet.points : (bet.points_awarded || 0);
             
-            console.log(`DEBUG: Bet: user=${bet.user_id}, challenge=${bet.challenge_id}, initialPoints=${bet.points}, awarded=${bet.points_awarded}, resolved=${challenge.resolved}, pointsValue=${pointsValue}`);
-
-            // Calculation on the fly
-            if (pointsValue === 0 && !challenge.resolved) {
-              const matches = matchesByComp[compId] || [];
-              console.log(`DEBUG: compId=${compId}, challengeMatchId=${challenge.match_id}, matchesAvailable=${matches.length}`);
-              const match = matches.find(m => String(m.id) === String(challenge.match_id));
-              console.log(`DEBUG: Bet point calculation for user ${bet.user_id} challenge ${challenge.id}. Found match:`, !!match);
-              if (match) {
-                console.log(`DEBUG: Match data found: home=${match.score?.fullTime?.home}, away=${match.score?.fullTime?.away}`);
-                const pred = (typeof bet.predictions === 'string' ? JSON.parse(bet.predictions) : bet.predictions) as Prediction;
-                const pointRules = (typeof challenge.point_rules === 'string' ? JSON.parse(challenge.point_rules) : challenge.point_rules);
-                console.log(`DEBUG: Using pointRules:`, pointRules);
-                
-                const calcPoints = calculateMatchPoints(match, pred.homeScore, pred.awayScore, !!pred.bonus, pointRules);
-                console.log(`DEBUG: Calculated points: ${calcPoints}`);
-                if (calcPoints !== null) pointsValue = calcPoints;
-              }
-            }
-            
             aggregated[compId][bet.user_id] += pointsValue;
-            
-            console.log(`DEBUG: Bet FINAL POINTS for user=${bet.user_id}, comp=${compId}, pointsValue=${pointsValue}, total=${aggregated[compId][bet.user_id]}`);
           }
         }
       });
