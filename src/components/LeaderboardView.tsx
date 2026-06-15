@@ -156,7 +156,8 @@ export default function LeaderboardView() {
       const calculateLivePointsAndBadges = (bet: any, challenge: any, matches: any[]) => {
         const stats = { points: bet.points_awarded || 0, exact: 0, close: 0, winner: 0, zero: 0, bonus: 0, malus: 0, qualif: 0, predictions: 0 };
         if (!challenge || !challenge.point_rules) return stats;
-        const ptRules = typeof challenge.point_rules === 'string' ? JSON.parse(challenge.point_rules) : challenge.point_rules;
+        const rawPtRules = typeof challenge.point_rules === 'string' ? JSON.parse(challenge.point_rules) : challenge.point_rules;
+        const ptRules = Object.assign({ exact_score: 3, close_score: 2, correct_winner: 1, qualification: 1 }, rawPtRules || {});
         const predVal = typeof bet.predictions === 'string' ? JSON.parse(bet.predictions) : bet.predictions;
         let totalPts = 0;
 
@@ -224,7 +225,7 @@ export default function LeaderboardView() {
         } else {
           // multi match
           const matchIds = (ptRules.matches || []).map(String);
-          const activeMatches = matches.filter(m => matchIds.includes(String(m.id)));
+          const activeMatches = matchIds.length > 0 ? matches.filter(m => matchIds.includes(String(m.id))) : matches;
           const matchesPreds = predVal?.matches || {};
           
           activeMatches.forEach(m => {
@@ -304,7 +305,7 @@ export default function LeaderboardView() {
             }
             
             const stats = calculateLivePointsAndBadges(bet, challenge, allMatches);
-            if (!isNaN(stats.points)) aggregated[compId][bet.user_id].points += stats.points;
+            if (!isNaN(Number(stats.points))) aggregated[compId][bet.user_id].points += Number(stats.points);
             aggregated[compId][bet.user_id].exact += stats.exact;
             aggregated[compId][bet.user_id].close += stats.close;
             aggregated[compId][bet.user_id].winner += stats.winner;
