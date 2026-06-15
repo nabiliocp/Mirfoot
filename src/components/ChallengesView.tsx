@@ -111,9 +111,9 @@ const getMatchPointsDetail = (
   if (rHome === null || rAway === null || rHome === undefined || rAway === undefined) return null;
 
   const rules = pointRules || { exact_score: 3, close_score: 2, correct_winner: 1, qualification: 1 };
-  const isExact = pHome === rHome && pAway === rAway;
-  const actualWinner = rHome > rAway ? 'home' : rHome < rAway ? 'away' : 'draw';
-  const predWinner = pHome > pAway ? 'home' : pHome < pAway ? 'away' : 'draw';
+  const isExact = Number(pHome) === Number(rHome) && Number(pAway) === Number(rAway);
+  const actualWinner = Number(rHome) > Number(rAway) ? 'home' : Number(rHome) < Number(rAway) ? 'away' : 'draw';
+  const predWinner = Number(pHome) > Number(pAway) ? 'home' : Number(pHome) < Number(pAway) ? 'away' : 'draw';
 
   let basePoints = 0;
   let reason = "Aucun point";
@@ -122,7 +122,7 @@ const getMatchPointsDetail = (
     basePoints = rules.exact_score;
     reason = "Score Exact";
   } else if (actualWinner === predWinner) {
-    const diff = Math.abs(pHome - rHome) + Math.abs(pAway - rAway);
+    const diff = Math.abs(Number(pHome) - Number(rHome)) + Math.abs(Number(pAway) - Number(rAway));
     if (rules?.close_score && diff <= 2) {
       basePoints = rules.close_score;
       reason = "Score Proche";
@@ -2111,16 +2111,16 @@ export default function ChallengesView({
           if (singleMatch.score.winner === 'HOME_TEAM') actualQualifier = 'home';
           else if (singleMatch.score.winner === 'AWAY_TEAM') actualQualifier = 'away';
           
-          if (pHome !== undefined && pAway !== undefined && rHome !== null && rAway !== null) {
-            isExact = pHome === rHome && pAway === rAway;
-            const actualWinner = rHome > rAway ? 'home' : rHome < rAway ? 'away' : 'draw';
-            const predWinner = pHome > pAway ? 'home' : pHome < pAway ? 'away' : 'draw';
+          if (pHome !== undefined && pAway !== undefined) {
+            isExact = Number(pHome) === Number(rHome) && Number(pAway) === Number(rAway);
+            const actualWinner = Number(rHome) > Number(rAway) ? 'home' : Number(rHome) < Number(rAway) ? 'away' : 'draw';
+            const predWinner = Number(pHome) > Number(pAway) ? 'home' : Number(pHome) < Number(pAway) ? 'away' : 'draw';
             
             if (isExact) {
               pts = Number(rules.exact_score);
               exactCount++;
             } else if (actualWinner === predWinner) {
-              const diff = Math.abs(pHome - rHome) + Math.abs(pAway - rAway);
+              const diff = Math.abs(Number(pHome) - Number(rHome)) + Math.abs(Number(pAway) - Number(rAway));
               if (rules?.close_score && diff <= 2) {
                 pts = Number(rules.close_score);
                 closeCount++;
@@ -2211,16 +2211,16 @@ export default function ChallengesView({
               else if (m.score.winner === 'AWAY_TEAM') actualQualifier = 'away';
               
               if (rHome !== null && rAway !== null) {
-                const isExact = pMatch.homeScore === rHome && pMatch.awayScore === rAway;
-                const actualWinner = rHome > rAway ? 'home' : rHome < rAway ? 'away' : 'draw';
-                const predWinner = pMatch.homeScore > pMatch.awayScore ? 'home' : pMatch.homeScore < pMatch.awayScore ? 'away' : 'draw';
+                const isExact = Number(pMatch.homeScore) === Number(rHome) && Number(pMatch.awayScore) === Number(rAway);
+                const actualWinner = Number(rHome) > Number(rAway) ? 'home' : Number(rHome) < Number(rAway) ? 'away' : 'draw';
+                const predWinner = Number(pMatch.homeScore) > Number(pMatch.awayScore) ? 'home' : Number(pMatch.homeScore) < Number(pMatch.awayScore) ? 'away' : 'draw';
                 
                 let matchPts = 0;
                 if (isExact) {
                   matchPts = Number(rules.exact_score);
                   exactCount++;
                 } else if (actualWinner === predWinner) {
-                  const diff = Math.abs(pMatch.homeScore - rHome) + Math.abs(pMatch.awayScore - rAway);
+                  const diff = Math.abs(Number(pMatch.homeScore) - Number(rHome)) + Math.abs(Number(pMatch.awayScore) - Number(rAway));
                   if (rules?.close_score && diff <= 2) {
                     matchPts = Number(rules.close_score);
                     closeCount++;

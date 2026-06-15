@@ -160,9 +160,9 @@ export default function LeaderboardView() {
         const predVal = typeof bet.predictions === 'string' ? JSON.parse(bet.predictions) : bet.predictions;
         let totalPts = 0;
 
-        if (challenge.match_id !== 0) {
+        if (challenge.match_id && Number(challenge.match_id) !== 0) {
           // single match
-          const m = matches.find(x => x.id === challenge.match_id);
+          const m = matches.find(x => String(x.id) === String(challenge.match_id));
           if (m && ["FINISHED", "IN_PLAY", "LIVE", "PAUSED", "1H", "2H", "HT"].includes(m.status)) {
              let pts = 0;
              const rHome = m.score.fullTime.home ?? m.score.regularTime?.home ?? 0;
@@ -178,15 +178,15 @@ export default function LeaderboardView() {
 
              if (pHome !== undefined && pAway !== undefined && rHome !== null && rAway !== null) {
                 stats.predictions = 1;
-                const isExact = pHome === rHome && pAway === rAway;
-                const actualWinner = rHome > rAway ? 'home' : rHome < rAway ? 'away' : 'draw';
-                const predWinner = pHome > pAway ? 'home' : pHome < pAway ? 'away' : 'draw';
+                const isExact = Number(pHome) === Number(rHome) && Number(pAway) === Number(rAway);
+                const actualWinner = Number(rHome) > Number(rAway) ? 'home' : Number(rHome) < Number(rAway) ? 'away' : 'draw';
+                const predWinner = Number(pHome) > Number(pAway) ? 'home' : Number(pHome) < Number(pAway) ? 'away' : 'draw';
 
                 if (isExact) {
                   pts = Number(ptRules.exact_score);
                   stats.exact++;
                 } else if (actualWinner === predWinner) {
-                  const diff = Math.abs(pHome - rHome) + Math.abs(pAway - rAway);
+                  const diff = Math.abs(Number(pHome) - Number(rHome)) + Math.abs(Number(pAway) - Number(rAway));
                   if (ptRules?.close_score && diff <= 2) {
                     pts = Number(ptRules.close_score);
                     stats.close++;
@@ -223,8 +223,8 @@ export default function LeaderboardView() {
           }
         } else {
           // multi match
-          const matchIds = ptRules.matches || [];
-          const activeMatches = matches.filter(m => matchIds.includes(m.id));
+          const matchIds = (ptRules.matches || []).map(String);
+          const activeMatches = matches.filter(m => matchIds.includes(String(m.id)));
           const matchesPreds = predVal?.matches || {};
           
           activeMatches.forEach(m => {
@@ -243,15 +243,15 @@ export default function LeaderboardView() {
                  
                  let matchPts = 0;
                  if (rHome !== null && rAway !== null) {
-                    const isExact = pMatch.homeScore === rHome && pMatch.awayScore === rAway;
-                    const actualWinner = rHome > rAway ? 'home' : rHome < rAway ? 'away' : 'draw';
-                    const predWinner = pMatch.homeScore > pMatch.awayScore ? 'home' : pMatch.homeScore < pMatch.awayScore ? 'away' : 'draw';
+                    const isExact = Number(pMatch.homeScore) === Number(rHome) && Number(pMatch.awayScore) === Number(rAway);
+                    const actualWinner = Number(rHome) > Number(rAway) ? 'home' : Number(rHome) < Number(rAway) ? 'away' : 'draw';
+                    const predWinner = Number(pMatch.homeScore) > Number(pMatch.awayScore) ? 'home' : Number(pMatch.homeScore) < Number(pMatch.awayScore) ? 'away' : 'draw';
                     
                     if (isExact) {
                       matchPts = Number(ptRules.exact_score);
                       stats.exact++;
                     } else if (actualWinner === predWinner) {
-                      const diff = Math.abs(pMatch.homeScore - rHome) + Math.abs(pMatch.awayScore - rAway);
+                      const diff = Math.abs(Number(pMatch.homeScore) - Number(rHome)) + Math.abs(Number(pMatch.awayScore) - Number(rAway));
                       if (ptRules?.close_score && diff <= 2) {
                         matchPts = Number(ptRules.close_score);
                         stats.close++;

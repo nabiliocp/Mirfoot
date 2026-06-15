@@ -711,16 +711,16 @@ async function startServer() {
                   ? JSON.parse(bet.predictions)
                   : bet.predictions;
               const isExact =
-                pred.homeScore === homeScore && pred.awayScore === awayScore;
+                Number(pred.homeScore) === Number(homeScore) && Number(pred.awayScore) === Number(awayScore);
 
               let predWinner = "draw";
-              if (pred.homeScore > pred.awayScore) predWinner = "home";
-              else if (pred.homeScore < pred.awayScore) predWinner = "away";
+              if (Number(pred.homeScore) > Number(pred.awayScore)) predWinner = "home";
+              else if (Number(pred.homeScore) < Number(pred.awayScore)) predWinner = "away";
 
               if (!isExact && predWinner === actualWinner) {
                 const distance =
-                  Math.abs(pred.homeScore - homeScore) +
-                  Math.abs(pred.awayScore - awayScore);
+                  Math.abs(Number(pred.homeScore) - Number(homeScore)) +
+                  Math.abs(Number(pred.awayScore) - Number(awayScore));
                 if (distance < minDistance) {
                   minDistance = distance;
                 }
@@ -739,15 +739,15 @@ async function startServer() {
 
               let points = 0;
               const isExact =
-                pred.homeScore === homeScore && pred.awayScore === awayScore;
+                Number(pred.homeScore) === Number(homeScore) && Number(pred.awayScore) === Number(awayScore);
 
               let predWinner = "draw";
-              if (pred.homeScore > pred.awayScore) predWinner = "home";
-              else if (pred.homeScore < pred.awayScore) predWinner = "away";
+              if (Number(pred.homeScore) > Number(pred.awayScore)) predWinner = "home";
+              else if (Number(pred.homeScore) < Number(pred.awayScore)) predWinner = "away";
 
               const distance =
-                Math.abs(pred.homeScore - homeScore) +
-                Math.abs(pred.awayScore - awayScore);
+                Math.abs(Number(pred.homeScore) - Number(homeScore)) +
+                Math.abs(Number(pred.awayScore) - Number(awayScore));
 
               if (isExact) {
                 points += rules.exact_score || 0;
