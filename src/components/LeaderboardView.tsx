@@ -300,29 +300,58 @@ export default function LeaderboardView() {
         return stats;
       };
 
-      // Populate aggregation
+      // Populate aggregation with maximum score selection per user per competition
+      const userCompChallengeStats: Record<number, Record<string, Record<string, { points: number; exact: number; close: number; winner: number; zero: number; bonus: number; malus: number; qualif: number; predictions: number }>>> = {};
+      
+      compIds.forEach(compId => {
+        userCompChallengeStats[compId] = {};
+      });
+
       allBets?.forEach(bet => {
         const challenge = allChallenges?.find(c => c.id === bet.challenge_id);
         if (challenge && challenge.competition_id != null) {
           const compId = challenge.competition_id;
           if (bet.user_id) {
-            if (!aggregated[compId][bet.user_id]) {
-              aggregated[compId][bet.user_id] = { points: 0, exact: 0, close: 0, winner: 0, zero: 0, bonus: 0, malus: 0, qualif: 0, predictions: 0 };
+            if (!userCompChallengeStats[compId]) {
+              userCompChallengeStats[compId] = {};
+            }
+            if (!userCompChallengeStats[compId][bet.user_id]) {
+              userCompChallengeStats[compId][bet.user_id] = {};
             }
             
             const stats = calculateLivePointsAndBadges(bet, challenge, allMatches);
-            console.log(`DEBUG STATS for bet in comp ${compId}:`, stats, challenge.title);
-            if (!isNaN(Number(stats.points))) aggregated[compId][bet.user_id].points += Number(stats.points);
-            aggregated[compId][bet.user_id].exact += stats.exact;
-            aggregated[compId][bet.user_id].close += stats.close;
-            aggregated[compId][bet.user_id].winner += stats.winner;
-            aggregated[compId][bet.user_id].zero += stats.zero;
-            aggregated[compId][bet.user_id].bonus += stats.bonus;
-            aggregated[compId][bet.user_id].malus += stats.malus;
-            aggregated[compId][bet.user_id].qualif += stats.qualif;
-            aggregated[compId][bet.user_id].predictions += stats.predictions;
+            userCompChallengeStats[compId][bet.user_id][challenge.id] = stats;
           }
         }
+      });
+
+      // Select the challenge with the highest score for each user
+      compIds.forEach(compId => {
+        const usersInComp = userCompChallengeStats[compId] || {};
+        Object.entries(usersInComp).forEach(([userId, challengesMap]) => {
+          let maxScore = -999999;
+          let bestStatsRef: any = null;
+          
+          Object.entries(challengesMap).forEach(([challengeId, stats]) => {
+            const guaranteedPoints = 
+              (stats.exact * 3) + 
+              (stats.close * 2) + 
+              (stats.winner * 1) + 
+              (stats.qualif * 1) + 
+              (stats.bonus * 3) -
+              (stats.malus * 4);
+              
+            const score = Math.max(Number(stats.points), guaranteedPoints, 0);
+            if (score > maxScore) {
+              maxScore = score;
+              bestStatsRef = { ...stats, points: score };
+            }
+          });
+          
+          if (bestStatsRef) {
+            aggregated[compId][userId] = bestStatsRef;
+          }
+        });
       });
 
       // 5. Structure data
@@ -330,21 +359,9 @@ export default function LeaderboardView() {
         .map(compId => ({
           competitionId: compId,
           participants: Object.entries(aggregated[compId] || {}).map(([userId, stats]) => {
-            // Apply wildcard calculation using badges if points is somehow 0
-            // Challenge scale logic uses default values if not explicitly overridden
-            let guaranteedPoints = 
-              (stats.exact * 3) + 
-              (stats.close * 2) + 
-              (stats.winner * 1) + 
-              (stats.qualif * 1) + 
-              (stats.bonus * 3) - // Approximation since bonus doubles base points
-              (stats.malus * 4);
-              
-             const finalPoints = Math.max(stats.points, guaranteedPoints, 0);
-
              return {
               profile: profiles?.find(p => p.id === userId) || { id: userId, username: 'Unknown', avatar_type: 'emoji', avatar_value: '👽', first_name: '', last_name: '', points: 0 },
-              points: finalPoints,
+              points: stats.points,
               exactCount: stats.exact,
               closeCount: stats.close,
               winnerCount: stats.winner,
