@@ -163,6 +163,7 @@ export default function LeaderboardView() {
               if (match) {
                 const pred = (typeof bet.predictions === 'string' ? JSON.parse(bet.predictions) : bet.predictions) as Prediction;
                 const pointRules = (typeof challenge.point_rules === 'string' ? JSON.parse(challenge.point_rules) : challenge.point_rules);
+                console.log(`DEBUG: Using pointRules:`, pointRules);
                 
                 const calcPoints = calculateMatchPoints(match, pred.homeScore, pred.awayScore, !!pred.bonus, pointRules);
                 console.log(`DEBUG: Calculated points: ${calcPoints}`);

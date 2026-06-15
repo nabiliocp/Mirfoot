@@ -12,7 +12,9 @@ export const calculateMatchPoints = (
   const rAway = m.score?.fullTime?.away ?? m.score?.regularTime?.away;
   if (rHome === null || rAway === null || rHome === undefined || rAway === undefined) return null;
 
-  const rules = pointRules || { exact_score: 3, close_score: 2, correct_winner: 1, qualification: 1 };
+  const rules = (pointRules && (pointRules.exact_score !== undefined || pointRules.close_score !== undefined)) 
+    ? pointRules 
+    : { exact_score: 3, close_score: 2, correct_winner: 1, qualification: 1 };
   const isExact = pHome === rHome && pAway === rAway;
   const actualWinner = rHome > rAway ? 'home' : rHome < rAway ? 'away' : 'draw';
   const predWinner = pHome > pAway ? 'home' : pHome < pAway ? 'away' : 'draw';
