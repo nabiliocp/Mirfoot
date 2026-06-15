@@ -115,7 +115,13 @@ export default function LeaderboardView() {
         .select('*')
         .in('challenge_id', allChallengeIds);
 
+      const { data: challengePlayers, error: cpError } = await supabase
+        .from('challenge_players')
+        .select('*')
+        .in('challenge_id', allChallengeIds);
+
       console.log('All Bets fetched:', allBets, 'Error:', allBetsError);
+      console.log('All ChallengePlayers fetched:', challengePlayers, 'Error:', cpError);
 
       const { data: profiles } = await supabase
         .from('profiles')
@@ -130,16 +136,16 @@ export default function LeaderboardView() {
       });
 
       // Populate aggregation
-      allBets?.forEach(bet => {
-        const challenge = allChallenges?.find(c => c.id === bet.challenge_id);
+      challengePlayers?.forEach(cp => {
+        const challenge = allChallenges?.find(c => c.id === cp.challenge_id);
         if (challenge && challenge.competition_id != null) {
           const compId = challenge.competition_id;
-          if (bet.user_id) {
-            if (!aggregated[compId][bet.user_id]) aggregated[compId][bet.user_id] = 0;
+          if (cp.user_id) {
+            if (!aggregated[compId][cp.user_id]) aggregated[compId][cp.user_id] = 0;
             
-            let pointsValue = bet.points_awarded || 0;
+            let pointsValue = cp.points || 0;
             
-            aggregated[compId][bet.user_id] += pointsValue;
+            aggregated[compId][cp.user_id] += pointsValue;
           }
         }
       });
@@ -153,9 +159,10 @@ export default function LeaderboardView() {
             points
           })).sort((a, b) => b.points - a.points)
         }))
-        // Only include competitions with multiple matches (multiple challenges in this competition)
-        .filter(c => allChallenges.filter(ch => ch.competition_id === c.competitionId).length > 1);
+        // No restriction on competition match count
+        .filter(c => true);
 
+      console.log('DEBUG: Final Aggregated Data:', aggregated);
       setData(leaderboardData);
 
       // Fetch competition names
