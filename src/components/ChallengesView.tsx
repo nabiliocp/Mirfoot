@@ -2090,6 +2090,10 @@ export default function ChallengesView({
         let isWinner = false;
         let bonusCount = 0;
         let malusCount = 0;
+        let exactCount = 0;
+        let winnerCount = 0;
+        let closeCount = 0;
+        let qualificationCount = 0;
         
         if (singleMatch && ["FINISHED", "IN_PLAY", "LIVE", "PAUSED"].includes(singleMatch.status)) {
           const rHome = singleMatch.score.fullTime.home ?? singleMatch.score.regularTime?.home ?? 0;
@@ -2100,6 +2104,11 @@ export default function ChallengesView({
           const pHome = predVal?.homeScore;
           const pAway = predVal?.awayScore;
           const isBonusActive = !!predVal?.bonus;
+          const pQualifies = predVal?.qualifies;
+
+          let actualQualifier = null;
+          if (singleMatch.score.winner === 'HOME_TEAM') actualQualifier = 'home';
+          else if (singleMatch.score.winner === 'AWAY_TEAM') actualQualifier = 'away';
           
           if (pHome !== undefined && pAway !== undefined && rHome !== null && rAway !== null) {
             isExact = pHome === rHome && pAway === rAway;
@@ -2108,15 +2117,22 @@ export default function ChallengesView({
             
             if (isExact) {
               pts = rules.exact_score;
+              exactCount++;
             } else if (actualWinner === predWinner) {
-              // Note: client side "isWinner / close score" simulation won't account for minimum distance accurately
               const diff = Math.abs(pHome - rHome) + Math.abs(pAway - rAway);
-              if (rules?.close_score && diff <= 2) { // rough simulation
+              if (rules?.close_score && diff <= 2) {
                 pts = rules.close_score;
+                closeCount++;
               } else {
                 pts = rules.correct_winner;
+                winnerCount++;
               }
               isWinner = true;
+            }
+
+            if (pQualifies && actualQualifier && pQualifies === actualQualifier) {
+              pts += rules.qualification || 0;
+              qualificationCount++;
             }
 
             // Bonus X2 logic
@@ -2143,6 +2159,10 @@ export default function ChallengesView({
           isExact,
           isWinner,
           predictionsCount: 1,
+          exactCount,
+          winnerCount,
+          closeCount,
+          qualificationCount,
           bonusCount,
           malusCount
         };
@@ -2154,6 +2174,8 @@ export default function ChallengesView({
         let pts = 0;
         let exactCount = 0;
         let winnerCount = 0;
+        let closeCount = 0;
+        let qualificationCount = 0;
         let predictedCount = 0;
         let bonusCount = 0;
         let malusCount = 0;
@@ -2171,6 +2193,11 @@ export default function ChallengesView({
               const rAway = m.score.fullTime.away ?? m.score.regularTime?.away ?? 0;
               const rules = challenge.pointRules;
               const isMatchBonusActive = !!pMatch.bonus;
+              const pQualifies = pMatch.qualifies;
+
+              let actualQualifier = null;
+              if (m.score.winner === 'HOME_TEAM') actualQualifier = 'home';
+              else if (m.score.winner === 'AWAY_TEAM') actualQualifier = 'away';
               
               if (rHome !== null && rAway !== null) {
                 const isExact = pMatch.homeScore === rHome && pMatch.awayScore === rAway;
@@ -2185,10 +2212,16 @@ export default function ChallengesView({
                   const diff = Math.abs(pMatch.homeScore - rHome) + Math.abs(pMatch.awayScore - rAway);
                   if (rules?.close_score && diff <= 2) {
                     matchPts = rules.close_score;
+                    closeCount++;
                   } else {
                     matchPts = rules.correct_winner;
+                    winnerCount++;
                   }
-                  winnerCount++;
+                }
+
+                if (pQualifies && actualQualifier && pQualifies === actualQualifier) {
+                  matchPts += rules.qualification || 0;
+                  qualificationCount++;
                 }
 
                 // Bonus X2 logic per-match
@@ -2217,6 +2250,8 @@ export default function ChallengesView({
           points: pts,
           exactCount,
           winnerCount,
+          closeCount,
+          qualificationCount,
           predictionsCount: predictedCount,
           bonusCount,
           malusCount
@@ -3108,11 +3143,20 @@ export default function ChallengesView({
                         <div className="flex items-center gap-4">
                           <div className="flex flex-col items-end gap-1">
                             {challenge.matchId === 0 ? (
-                              <div className="flex gap-2 text-[9px] font-bold text-gray-400">
-                                <span className="bg-emerald-50/30 text-emerald-800 px-1.5 py-0.5 rounded border border-emerald-100">{player.exactCount || 0} Exact</span>
-                                <span className="bg-indigo-50/30 text-indigo-800 px-1.5 py-0.5 rounded border border-indigo-100">{player.winnerCount || 0} Winner</span>
+                              <div className="flex flex-wrap justify-end gap-1.5 text-[9px] font-bold text-gray-400 max-w-[120px]">
+                                <span className={player.exactCount > 0 ? "bg-emerald-50/70 text-emerald-800 px-1.5 py-0.5 rounded border border-emerald-200" : "bg-gray-50/50 text-gray-400 px-1.5 py-0.5 rounded border border-gray-100"}>{player.exactCount || 0} Exact</span>
+                                <span className={player.closeCount > 0 ? "bg-amber-50/70 text-amber-800 px-1.5 py-0.5 rounded border border-amber-200" : "bg-gray-50/50 text-gray-400 px-1.5 py-0.5 rounded border border-gray-100"}>{player.closeCount || 0} Proche</span>
+                                <span className={player.winnerCount > 0 ? "bg-indigo-50/70 text-indigo-800 px-1.5 py-0.5 rounded border border-indigo-200" : "bg-gray-50/50 text-gray-400 px-1.5 py-0.5 rounded border border-gray-100"}>{player.winnerCount || 0} Winner</span>
+                                {player.qualificationCount > 0 && <span className="bg-blue-50/70 text-blue-800 px-1.5 py-0.5 rounded border border-blue-200">{player.qualificationCount} Qualif</span>}
                               </div>
-                            ) : null}
+                            ) : (
+                               <div className="flex flex-wrap justify-end gap-1.5 text-[9px] font-bold text-gray-400 max-w-[120px]">
+                                {player.isExact && <span className="bg-emerald-50/70 text-emerald-800 px-1.5 py-0.5 rounded border border-emerald-200">Exact</span>}
+                                {player.closeCount > 0 && <span className="bg-amber-50/70 text-amber-800 px-1.5 py-0.5 rounded border border-amber-200">Proche</span>}
+                                {player.isWinner && !player.isExact && player.closeCount === 0 && <span className="bg-indigo-50/70 text-indigo-800 px-1.5 py-0.5 rounded border border-indigo-200">Winner</span>}
+                                {player.qualificationCount > 0 && <span className="bg-blue-50/70 text-blue-800 px-1.5 py-0.5 rounded border border-blue-200">Qualif</span>}
+                              </div>
+                            )}
                             
                             {(player.bonusCount > 0 || player.malusCount > 0) && (
                               <div className="flex gap-2 text-[9px] font-bold">

@@ -674,8 +674,10 @@ async function startServer() {
         }
 
         if (!matchData) continue;
+        if (challenge.match_id === 0) continue; // Multi-match resolution requires competition fetch
 
-        if (matchData.status === "FINISHED") {
+        const activeStatuses = ["FINISHED", "IN_PLAY", "LIVE", "PAUSED", "1H", "2H", "HT"];
+        if (activeStatuses.includes(matchData.status)) {
           const homeScore =
             matchData.score.regularTime?.home ??
             matchData.score.fullTime?.home ??
@@ -780,46 +782,51 @@ async function startServer() {
                 .from("bets")
                 .update({ points_awarded: points })
                 .eq("id", bet.id);
-              try {
-                // First, try using the RPC function for atomicity
-                const { error: rpcError } = await supabase.rpc("increment_user_points", {
-                  user_uuid: bet.user_id,
-                  points_to_add: points,
-                });
                 
-                // Fallback: If RPC call fails or for safety, update directly by fetching then setting
-                if (rpcError) {
-                  console.error("RPC increment_user_points failed, attempting direct update.", rpcError);
-                  const { data: profileData, error: profileError } = await supabase
-                    .from("profiles")
-                    .select("points")
-                    .eq("id", bet.user_id)
-                    .single();
+              if (matchData.status === "FINISHED") {
+                try {
+                  // First, try using the RPC function for atomicity
+                  const { error: rpcError } = await supabase.rpc("increment_user_points", {
+                    user_uuid: bet.user_id,
+                    points_to_add: points,
+                  });
                   
-                  if (!profileError && profileData) {
-                    const newPoints = (profileData.points || 0) + points;
-                    await supabase
+                  // Fallback: If RPC call fails or for safety, update directly by fetching then setting
+                  if (rpcError) {
+                    console.error("RPC increment_user_points failed, attempting direct update.", rpcError);
+                    const { data: profileData, error: profileError } = await supabase
                       .from("profiles")
-                      .update({ points: newPoints })
-                      .eq("id", bet.user_id);
-                     console.log("Successfully updated points for", bet.user_id, "via direct update to", newPoints);
+                      .select("points")
+                      .eq("id", bet.user_id)
+                      .single();
+                    
+                    if (!profileError && profileData) {
+                      const newPoints = (profileData.points || 0) + points;
+                      await supabase
+                        .from("profiles")
+                        .update({ points: newPoints })
+                        .eq("id", bet.user_id);
+                       console.log("Successfully updated points for", bet.user_id, "via direct update to", newPoints);
+                    } else {
+                        console.error("Failed to fetch/update profile directly", profileError);
+                    }
                   } else {
-                      console.error("Failed to fetch/update profile directly", profileError);
+                    console.log("Successfully incremented points for", bet.user_id, points);
                   }
-                } else {
-                  console.log("Successfully incremented points for", bet.user_id, points);
+                } catch (e) {
+                  console.error("Exception in increment_user_points", e);
                 }
-              } catch (e) {
-                console.error("Exception in increment_user_points", e);
               }
             }
           }
 
-          await supabase
-            .from("challenges")
-            .update({ resolved: true })
-            .eq("id", challenge.id);
-          resolvedCount++;
+          if (matchData.status === "FINISHED") {
+            await supabase
+              .from("challenges")
+              .update({ resolved: true })
+              .eq("id", challenge.id);
+            resolvedCount++;
+          }
         }
       }
       return resolvedCount;
