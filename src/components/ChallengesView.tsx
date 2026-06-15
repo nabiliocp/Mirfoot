@@ -214,6 +214,7 @@ export default function ChallengesView({
 
   const [challenges, setChallenges] = useState<Challenge[]>([]);
   const [showFinishedChallenges, setShowFinishedChallenges] = useState(false);
+  const [showPastMatches, setShowPastMatches] = useState(false); // Added this
   const [loading, setLoading] = useState(true);
   const [userPredictions, setUserPredictions] = useState<
     Record<string, Prediction>
@@ -1655,7 +1656,20 @@ export default function ChallengesView({
                     Continuer
                   </button>
                 )}
-                {Array.isArray(matches) && matches.map((m) => (
+                 
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-bold text-gray-500">Sélectionnez un match</span>
+                    <button 
+                      onClick={() => setShowPastMatches(!showPastMatches)}
+                      className="text-xs text-emerald-600 font-bold cursor-pointer hover:underline"
+                    >
+                      {showPastMatches ? "Masquer les passés" : "Afficher les passés"}
+                    </button>
+                  </div>
+                  {Array.isArray(matches) && matches
+                    .filter(m => showPastMatches || !['FINISHED', 'AWARDED', 'CANCELLED', 'POSTPONED'].includes(m.status))
+                    .map((m) => (
+
                   <button
                     key={m.id}
                     type="button"
