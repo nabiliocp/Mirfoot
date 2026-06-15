@@ -115,13 +115,7 @@ export default function LeaderboardView() {
         .select('*')
         .in('challenge_id', allChallengeIds);
 
-      const { data: challengePlayers, error: cpError } = await supabase
-        .from('challenge_players')
-        .select('*')
-        .in('challenge_id', allChallengeIds);
-
       console.log('All Bets fetched:', allBets, 'Error:', allBetsError);
-      console.log('All ChallengePlayers fetched:', challengePlayers, 'Error:', cpError);
 
       const { data: profiles } = await supabase
         .from('profiles')
@@ -136,16 +130,16 @@ export default function LeaderboardView() {
       });
 
       // Populate aggregation
-      challengePlayers?.forEach(cp => {
-        const challenge = allChallenges?.find(c => c.id === cp.challenge_id);
+      allBets?.forEach(bet => {
+        const challenge = allChallenges?.find(c => c.id === bet.challenge_id);
         if (challenge && challenge.competition_id != null) {
           const compId = challenge.competition_id;
-          if (cp.user_id) {
-            if (!aggregated[compId][cp.user_id]) aggregated[compId][cp.user_id] = 0;
+          if (bet.user_id) {
+            if (!aggregated[compId][bet.user_id]) aggregated[compId][bet.user_id] = 0;
             
-            let pointsValue = cp.points || 0;
+            let pointsValue = bet.points_awarded || 0;
             
-            aggregated[compId][cp.user_id] += pointsValue;
+            aggregated[compId][bet.user_id] += pointsValue;
           }
         }
       });
