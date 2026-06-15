@@ -154,13 +154,17 @@ export default function LeaderboardView() {
             if (!aggregated[compId][bet.user_id]) aggregated[compId][bet.user_id] = 0;
             
             let pointsValue = (bet.points !== undefined && bet.points !== null) ? bet.points : (bet.points_awarded || 0);
+            
+            console.log(`DEBUG: Bet: user=${bet.user_id}, challenge=${bet.challenge_id}, initialPoints=${bet.points}, awarded=${bet.points_awarded}, resolved=${challenge.resolved}, pointsValue=${pointsValue}`);
 
             // Calculation on the fly
             if (pointsValue === 0 && !challenge.resolved) {
               const matches = matchesByComp[compId] || [];
+              console.log(`DEBUG: compId=${compId}, challengeMatchId=${challenge.match_id}, matchesAvailable=${matches.length}`);
               const match = matches.find(m => String(m.id) === String(challenge.match_id));
               console.log(`DEBUG: Bet point calculation for user ${bet.user_id} challenge ${challenge.id}. Found match:`, !!match);
               if (match) {
+                console.log(`DEBUG: Match data found: home=${match.score?.fullTime?.home}, away=${match.score?.fullTime?.away}`);
                 const pred = (typeof bet.predictions === 'string' ? JSON.parse(bet.predictions) : bet.predictions) as Prediction;
                 const pointRules = (typeof challenge.point_rules === 'string' ? JSON.parse(challenge.point_rules) : challenge.point_rules);
                 console.log(`DEBUG: Using pointRules:`, pointRules);
@@ -173,7 +177,7 @@ export default function LeaderboardView() {
             
             aggregated[compId][bet.user_id] += pointsValue;
             
-            console.log(`DEBUG: Bet: user=${bet.user_id}, comp=${compId}, points=${pointsValue}, total=${aggregated[compId][bet.user_id]}`);
+            console.log(`DEBUG: Bet FINAL POINTS for user=${bet.user_id}, comp=${compId}, pointsValue=${pointsValue}, total=${aggregated[compId][bet.user_id]}`);
           }
         }
       });
