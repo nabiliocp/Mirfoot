@@ -147,7 +147,7 @@ export default function LeaderboardView() {
 
       const calculateLivePoints = (bet: any, challenge: any, matches: any[]) => {
         if (!challenge || !challenge.point_rules) return bet.points_awarded || 0;
-        const ptRules = challenge.point_rules;
+        const ptRules = typeof challenge.point_rules === 'string' ? JSON.parse(challenge.point_rules) : challenge.point_rules;
         const predVal = typeof bet.predictions === 'string' ? JSON.parse(bet.predictions) : bet.predictions;
         let totalPts = 0;
 
@@ -193,7 +193,7 @@ export default function LeaderboardView() {
           }
         } else {
           // multi match
-          const matchIds = challenge.point_rules?.matches || [];
+          const matchIds = ptRules.matches || [];
           const activeMatches = matches.filter(m => matchIds.includes(m.id));
           const matchesPreds = predVal?.matches || {};
           
@@ -251,6 +251,7 @@ export default function LeaderboardView() {
             if (!aggregated[compId][bet.user_id]) aggregated[compId][bet.user_id] = 0;
             
             let pointsValue = calculateLivePoints(bet, challenge, allMatches);
+            if (isNaN(pointsValue)) pointsValue = 0;
             
             aggregated[compId][bet.user_id] += pointsValue;
           }

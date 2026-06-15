@@ -2094,6 +2094,7 @@ export default function ChallengesView({
         let winnerCount = 0;
         let closeCount = 0;
         let qualificationCount = 0;
+        let zeroCount = 0;
         
         if (singleMatch && ["FINISHED", "IN_PLAY", "LIVE", "PAUSED"].includes(singleMatch.status)) {
           const rHome = singleMatch.score.fullTime.home ?? singleMatch.score.regularTime?.home ?? 0;
@@ -2135,6 +2136,12 @@ export default function ChallengesView({
               qualificationCount++;
             }
 
+            // check 0 pts case before bonus apply
+            let isZero = false;
+            if (pts === 0) {
+              isZero = true;
+            }
+
             // Bonus X2 logic
             if (isBonusActive) {
               if (pts > 0) {
@@ -2144,6 +2151,8 @@ export default function ChallengesView({
                 pts = -4;
                 malusCount = 1;
               }
+            } else if (isZero) {
+              zeroCount++;
             }
           }
         }
@@ -2163,6 +2172,7 @@ export default function ChallengesView({
           winnerCount,
           closeCount,
           qualificationCount,
+          zeroCount,
           bonusCount,
           malusCount
         };
@@ -2176,6 +2186,7 @@ export default function ChallengesView({
         let winnerCount = 0;
         let closeCount = 0;
         let qualificationCount = 0;
+        let zeroCount = 0;
         let predictedCount = 0;
         let bonusCount = 0;
         let malusCount = 0;
@@ -2224,6 +2235,11 @@ export default function ChallengesView({
                   qualificationCount++;
                 }
 
+                let isZero = false;
+                if (matchPts === 0) {
+                  isZero = true;
+                }
+
                 // Bonus X2 logic per-match
                 if (isMatchBonusActive) {
                   if (matchPts > 0) {
@@ -2233,6 +2249,8 @@ export default function ChallengesView({
                     matchPts = -4;
                     malusCount++;
                   }
+                } else if (isZero) {
+                  zeroCount++;
                 }
                 pts += matchPts;
               }
@@ -2252,6 +2270,7 @@ export default function ChallengesView({
           winnerCount,
           closeCount,
           qualificationCount,
+          zeroCount,
           predictionsCount: predictedCount,
           bonusCount,
           malusCount
@@ -3148,6 +3167,7 @@ export default function ChallengesView({
                                 <span className={player.closeCount > 0 ? "bg-amber-50/70 text-amber-800 px-1.5 py-0.5 rounded border border-amber-200" : "bg-gray-50/50 text-gray-400 px-1.5 py-0.5 rounded border border-gray-100"}>{player.closeCount || 0} Proche</span>
                                 <span className={player.winnerCount > 0 ? "bg-indigo-50/70 text-indigo-800 px-1.5 py-0.5 rounded border border-indigo-200" : "bg-gray-50/50 text-gray-400 px-1.5 py-0.5 rounded border border-gray-100"}>{player.winnerCount || 0} Winner</span>
                                 {player.qualificationCount > 0 && <span className="bg-blue-50/70 text-blue-800 px-1.5 py-0.5 rounded border border-blue-200">{player.qualificationCount} Qualif</span>}
+                                {player.zeroCount > 0 && <span className="bg-rose-50/70 text-rose-800 px-1.5 py-0.5 rounded border border-rose-200">{player.zeroCount} 0 pts</span>}
                               </div>
                             ) : (
                                <div className="flex flex-wrap justify-end gap-1.5 text-[9px] font-bold text-gray-400 max-w-[120px]">
@@ -3155,6 +3175,7 @@ export default function ChallengesView({
                                 {player.closeCount > 0 && <span className="bg-amber-50/70 text-amber-800 px-1.5 py-0.5 rounded border border-amber-200">Proche</span>}
                                 {player.isWinner && !player.isExact && player.closeCount === 0 && <span className="bg-indigo-50/70 text-indigo-800 px-1.5 py-0.5 rounded border border-indigo-200">Winner</span>}
                                 {player.qualificationCount > 0 && <span className="bg-blue-50/70 text-blue-800 px-1.5 py-0.5 rounded border border-blue-200">Qualif</span>}
+                                {player.zeroCount > 0 && <span className="bg-rose-50/70 text-rose-800 px-1.5 py-0.5 rounded border border-rose-200">0 pts</span>}
                               </div>
                             )}
                             
