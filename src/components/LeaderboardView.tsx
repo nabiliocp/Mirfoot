@@ -137,7 +137,7 @@ export default function LeaderboardView() {
           if (bet.user_id) {
             if (!aggregated[compId][bet.user_id]) aggregated[compId][bet.user_id] = 0;
             
-            let pointsValue = (bet.points !== undefined && bet.points !== null) ? bet.points : (bet.points_awarded || 0);
+            let pointsValue = bet.points_awarded || 0;
             
             aggregated[compId][bet.user_id] += pointsValue;
           }
