@@ -2117,22 +2117,22 @@ export default function ChallengesView({
             const predWinner = pHome > pAway ? 'home' : pHome < pAway ? 'away' : 'draw';
             
             if (isExact) {
-              pts = rules.exact_score;
+              pts = Number(rules.exact_score);
               exactCount++;
             } else if (actualWinner === predWinner) {
               const diff = Math.abs(pHome - rHome) + Math.abs(pAway - rAway);
               if (rules?.close_score && diff <= 2) {
-                pts = rules.close_score;
+                pts = Number(rules.close_score);
                 closeCount++;
               } else {
-                pts = rules.correct_winner;
+                pts = Number(rules.correct_winner);
                 winnerCount++;
               }
               isWinner = true;
             }
 
             if (pQualifies && actualQualifier && pQualifies === actualQualifier) {
-              pts += rules.qualification || 0;
+              pts += Number(rules.qualification || 0);
               qualificationCount++;
             }
 
@@ -2217,21 +2217,21 @@ export default function ChallengesView({
                 
                 let matchPts = 0;
                 if (isExact) {
-                  matchPts = rules.exact_score;
+                  matchPts = Number(rules.exact_score);
                   exactCount++;
                 } else if (actualWinner === predWinner) {
                   const diff = Math.abs(pMatch.homeScore - rHome) + Math.abs(pMatch.awayScore - rAway);
                   if (rules?.close_score && diff <= 2) {
-                    matchPts = rules.close_score;
+                    matchPts = Number(rules.close_score);
                     closeCount++;
                   } else {
-                    matchPts = rules.correct_winner;
+                    matchPts = Number(rules.correct_winner);
                     winnerCount++;
                   }
                 }
 
                 if (pQualifies && actualQualifier && pQualifies === actualQualifier) {
-                  matchPts += rules.qualification || 0;
+                  matchPts += Number(rules.qualification || 0);
                   qualificationCount++;
                 }
 

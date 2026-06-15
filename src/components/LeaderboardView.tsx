@@ -17,6 +17,14 @@ interface LeaderboardData {
   participants: {
     profile: Profile;
     points: number;
+    exactCount: number;
+    closeCount: number;
+    winnerCount: number;
+    zeroCount: number;
+    bonusCount: number;
+    malusCount: number;
+    qualificationCount: number;
+    predictionsCount: number;
   }[];
 }
 
@@ -138,15 +146,16 @@ export default function LeaderboardView() {
       }
 
       // 4. Aggregate by competition
-      const aggregated: Record<number, Record<string, number>> = {};
+      const aggregated: Record<number, Record<string, { points: number; exact: number; close: number; winner: number; zero: number; bonus: number; malus: number; qualif: number; predictions: number }>> = {};
       
       // Initialize aggregation
       compIds.forEach(compId => {
         aggregated[compId] = {};
       });
 
-      const calculateLivePoints = (bet: any, challenge: any, matches: any[]) => {
-        if (!challenge || !challenge.point_rules) return bet.points_awarded || 0;
+      const calculateLivePointsAndBadges = (bet: any, challenge: any, matches: any[]) => {
+        const stats = { points: bet.points_awarded || 0, exact: 0, close: 0, winner: 0, zero: 0, bonus: 0, malus: 0, qualif: 0, predictions: 0 };
+        if (!challenge || !challenge.point_rules) return stats;
         const ptRules = typeof challenge.point_rules === 'string' ? JSON.parse(challenge.point_rules) : challenge.point_rules;
         const predVal = typeof bet.predictions === 'string' ? JSON.parse(bet.predictions) : bet.predictions;
         let totalPts = 0;
@@ -168,28 +177,49 @@ export default function LeaderboardView() {
              else if (m.score.winner === 'AWAY_TEAM') actualQualifier = 'away';
 
              if (pHome !== undefined && pAway !== undefined && rHome !== null && rAway !== null) {
+                stats.predictions = 1;
                 const isExact = pHome === rHome && pAway === rAway;
                 const actualWinner = rHome > rAway ? 'home' : rHome < rAway ? 'away' : 'draw';
                 const predWinner = pHome > pAway ? 'home' : pHome < pAway ? 'away' : 'draw';
 
                 if (isExact) {
-                  pts = ptRules.exact_score;
+                  pts = Number(ptRules.exact_score);
+                  stats.exact++;
                 } else if (actualWinner === predWinner) {
                   const diff = Math.abs(pHome - rHome) + Math.abs(pAway - rAway);
-                  if (ptRules?.close_score && diff <= 2) pts = ptRules.close_score;
-                  else pts = ptRules.correct_winner;
+                  if (ptRules?.close_score && diff <= 2) {
+                    pts = Number(ptRules.close_score);
+                    stats.close++;
+                  } else {
+                    pts = Number(ptRules.correct_winner);
+                    stats.winner++;
+                  }
                 }
 
                 if (pQualifies && actualQualifier && pQualifies === actualQualifier) {
-                  pts += ptRules.qualification || 0;
+                  pts += Number(ptRules.qualification || 0);
+                  stats.qualif++;
                 }
 
-                if (isBonusActive) pts = pts > 0 ? pts * 2 : -4;
+                let isZero = pts === 0;
+
+                if (isBonusActive) {
+                  if (pts > 0) {
+                    pts = pts * 2;
+                    stats.bonus++;
+                  } else {
+                    pts = -4;
+                    stats.malus++;
+                  }
+                } else if (isZero) {
+                  stats.zero++;
+                }
              }
              totalPts = pts;
+             stats.points = totalPts;
           } else {
              // Return awarded points or 0 if unresolved/not started
-             totalPts = bet.points_awarded || 0;
+             stats.points = bet.points_awarded || 0;
           }
         } else {
           // multi match
@@ -200,6 +230,7 @@ export default function LeaderboardView() {
           activeMatches.forEach(m => {
             const pMatch = matchesPreds[m.id];
             if (pMatch && pMatch.homeScore !== undefined && pMatch.awayScore !== undefined) {
+               stats.predictions++;
                if (["FINISHED", "IN_PLAY", "LIVE", "PAUSED", "1H", "2H", "HT"].includes(m.status)) {
                  const rHome = m.score.fullTime.home ?? m.score.regularTime?.home ?? 0;
                  const rAway = m.score.fullTime.away ?? m.score.regularTime?.away ?? 0;
@@ -217,18 +248,37 @@ export default function LeaderboardView() {
                     const predWinner = pMatch.homeScore > pMatch.awayScore ? 'home' : pMatch.homeScore < pMatch.awayScore ? 'away' : 'draw';
                     
                     if (isExact) {
-                      matchPts = ptRules.exact_score;
+                      matchPts = Number(ptRules.exact_score);
+                      stats.exact++;
                     } else if (actualWinner === predWinner) {
                       const diff = Math.abs(pMatch.homeScore - rHome) + Math.abs(pMatch.awayScore - rAway);
-                      if (ptRules?.close_score && diff <= 2) matchPts = ptRules.close_score;
-                      else matchPts = ptRules.correct_winner;
+                      if (ptRules?.close_score && diff <= 2) {
+                        matchPts = Number(ptRules.close_score);
+                        stats.close++;
+                      } else {
+                        matchPts = Number(ptRules.correct_winner);
+                        stats.winner++;
+                      }
                     }
 
                     if (pQualifies && actualQualifier && pQualifies === actualQualifier) {
-                      matchPts += ptRules.qualification || 0;
+                      matchPts += Number(ptRules.qualification || 0);
+                      stats.qualif++;
                     }
 
-                    if (isMatchBonusActive) matchPts = matchPts > 0 ? matchPts * 2 : -4;
+                    let isZero = matchPts === 0;
+
+                    if (isMatchBonusActive) {
+                      if (matchPts > 0) {
+                        matchPts = matchPts * 2;
+                        stats.bonus++;
+                      } else {
+                        matchPts = -4;
+                        stats.malus++;
+                      }
+                    } else if (isZero) {
+                      stats.zero++;
+                    }
                  }
                  totalPts += matchPts;
                }
@@ -238,8 +288,9 @@ export default function LeaderboardView() {
           if (!activeMatches.some(m => ["FINISHED", "IN_PLAY", "LIVE", "PAUSED", "1H", "2H", "HT"].includes(m.status))) {
              totalPts = bet.points_awarded || 0;
           }
+          stats.points = totalPts;
         }
-        return totalPts;
+        return stats;
       };
 
       // Populate aggregation
@@ -248,12 +299,20 @@ export default function LeaderboardView() {
         if (challenge && challenge.competition_id != null) {
           const compId = challenge.competition_id;
           if (bet.user_id) {
-            if (!aggregated[compId][bet.user_id]) aggregated[compId][bet.user_id] = 0;
+            if (!aggregated[compId][bet.user_id]) {
+              aggregated[compId][bet.user_id] = { points: 0, exact: 0, close: 0, winner: 0, zero: 0, bonus: 0, malus: 0, qualif: 0, predictions: 0 };
+            }
             
-            let pointsValue = calculateLivePoints(bet, challenge, allMatches);
-            if (isNaN(pointsValue)) pointsValue = 0;
-            
-            aggregated[compId][bet.user_id] += pointsValue;
+            const stats = calculateLivePointsAndBadges(bet, challenge, allMatches);
+            if (!isNaN(stats.points)) aggregated[compId][bet.user_id].points += stats.points;
+            aggregated[compId][bet.user_id].exact += stats.exact;
+            aggregated[compId][bet.user_id].close += stats.close;
+            aggregated[compId][bet.user_id].winner += stats.winner;
+            aggregated[compId][bet.user_id].zero += stats.zero;
+            aggregated[compId][bet.user_id].bonus += stats.bonus;
+            aggregated[compId][bet.user_id].malus += stats.malus;
+            aggregated[compId][bet.user_id].qualif += stats.qualif;
+            aggregated[compId][bet.user_id].predictions += stats.predictions;
           }
         }
       });
@@ -262,9 +321,17 @@ export default function LeaderboardView() {
       const leaderboardData: LeaderboardData[] = compIds
         .map(compId => ({
           competitionId: compId,
-          participants: Object.entries(aggregated[compId] || {}).map(([userId, points]) => ({
+          participants: Object.entries(aggregated[compId] || {}).map(([userId, stats]) => ({
             profile: profiles?.find(p => p.id === userId) || { id: userId, username: 'Unknown', avatar_type: 'emoji', avatar_value: '👽', first_name: '', last_name: '', points: 0 },
-            points
+            points: stats.points,
+            exactCount: stats.exact,
+            closeCount: stats.close,
+            winnerCount: stats.winner,
+            zeroCount: stats.zero,
+            bonusCount: stats.bonus,
+            malusCount: stats.malus,
+            qualificationCount: stats.qualif,
+            predictionsCount: stats.predictions
           })).sort((a, b) => b.points - a.points)
         }))
         // No restriction on competition match count
@@ -355,10 +422,26 @@ export default function LeaderboardView() {
                       {profile.first_name && <img src={getTeamLogo(profile.first_name)} alt="Club" className="w-4 h-4 object-contain" title={profile.first_name} />}
                       {profile.last_name && <img src={getTeamLogo(profile.last_name)} alt="Nation" className="w-4 h-4 object-contain" title={profile.last_name} />}
                     </div>
+                    {p.predictionsCount > 0 && <span className="text-[10px] text-gray-400 mt-0.5">{p.predictionsCount} pronostic(s)</span>}
                   </div>
                   
-                  <div className="font-black text-lg text-emerald-700">
-                    {p.points} <span className="text-xs text-emerald-500 font-medium">PTS</span>
+                  <div className="flex flex-col items-end gap-1.5">
+                    <div className="flex flex-wrap justify-end gap-1.5 text-[9px] font-bold text-gray-400 max-w-[140px]">
+                      {p.exactCount > 0 && <span className="bg-emerald-50/70 text-emerald-800 px-1.5 py-0.5 rounded border border-emerald-200">{p.exactCount} Exact</span>}
+                      {p.closeCount > 0 && <span className="bg-amber-50/70 text-amber-800 px-1.5 py-0.5 rounded border border-amber-200">{p.closeCount} Proche</span>}
+                      {p.winnerCount > 0 && <span className="bg-indigo-50/70 text-indigo-800 px-1.5 py-0.5 rounded border border-indigo-200">{p.winnerCount} Winner</span>}
+                      {p.qualificationCount > 0 && <span className="bg-blue-50/70 text-blue-800 px-1.5 py-0.5 rounded border border-blue-200">{p.qualificationCount} Qualif</span>}
+                      {p.zeroCount > 0 && <span className="bg-rose-50/70 text-rose-800 px-1.5 py-0.5 rounded border border-rose-200">{p.zeroCount} x 0 pt</span>}
+                    </div>
+                    {(p.bonusCount > 0 || p.malusCount > 0) && (
+                      <div className="flex gap-2 text-[9px] font-bold">
+                        {p.bonusCount > 0 && <span className="text-emerald-600">Bonus X {p.bonusCount}</span>}
+                        {p.malusCount > 0 && <span className="text-rose-600">Malus X {p.malusCount}</span>}
+                      </div>
+                    )}
+                    <div className="font-black text-lg text-emerald-700">
+                      {p.points} <span className="text-xs text-emerald-500 font-medium">pts</span>
+                    </div>
                   </div>
                 </div>
               );
