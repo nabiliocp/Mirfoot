@@ -121,6 +121,22 @@ export default function LeaderboardView() {
         .from('profiles')
         .select('*');
 
+      // Fetch matches for these competitions to compute live points
+      let allMatches: any[] = [];
+      for (const compId of compIds) {
+        try {
+          const res = await fetch(`/api/matches/${compId}`);
+          if (res.ok) {
+            const data = await res.json();
+            if (data.matches) {
+              allMatches = allMatches.concat(data.matches);
+            }
+          }
+        } catch (e) {
+          console.error('Error fetching matches for comp', compId, e);
+        }
+      }
+
       // 4. Aggregate by competition
       const aggregated: Record<number, Record<string, number>> = {};
       
@@ -128,6 +144,103 @@ export default function LeaderboardView() {
       compIds.forEach(compId => {
         aggregated[compId] = {};
       });
+
+      const calculateLivePoints = (bet: any, challenge: any, matches: any[]) => {
+        if (!challenge || !challenge.point_rules) return bet.points_awarded || 0;
+        const ptRules = challenge.point_rules;
+        const predVal = typeof bet.predictions === 'string' ? JSON.parse(bet.predictions) : bet.predictions;
+        let totalPts = 0;
+
+        if (challenge.match_id !== 0) {
+          // single match
+          const m = matches.find(x => x.id === challenge.match_id);
+          if (m && ["FINISHED", "IN_PLAY", "LIVE", "PAUSED", "1H", "2H", "HT"].includes(m.status)) {
+             let pts = 0;
+             const rHome = m.score.fullTime.home ?? m.score.regularTime?.home ?? 0;
+             const rAway = m.score.fullTime.away ?? m.score.regularTime?.away ?? 0;
+             const pHome = predVal?.homeScore;
+             const pAway = predVal?.awayScore;
+             const isBonusActive = !!predVal?.bonus;
+             const pQualifies = predVal?.qualifies;
+
+             let actualQualifier = null;
+             if (m.score.winner === 'HOME_TEAM') actualQualifier = 'home';
+             else if (m.score.winner === 'AWAY_TEAM') actualQualifier = 'away';
+
+             if (pHome !== undefined && pAway !== undefined && rHome !== null && rAway !== null) {
+                const isExact = pHome === rHome && pAway === rAway;
+                const actualWinner = rHome > rAway ? 'home' : rHome < rAway ? 'away' : 'draw';
+                const predWinner = pHome > pAway ? 'home' : pHome < pAway ? 'away' : 'draw';
+
+                if (isExact) {
+                  pts = ptRules.exact_score;
+                } else if (actualWinner === predWinner) {
+                  const diff = Math.abs(pHome - rHome) + Math.abs(pAway - rAway);
+                  if (ptRules?.close_score && diff <= 2) pts = ptRules.close_score;
+                  else pts = ptRules.correct_winner;
+                }
+
+                if (pQualifies && actualQualifier && pQualifies === actualQualifier) {
+                  pts += ptRules.qualification || 0;
+                }
+
+                if (isBonusActive) pts = pts > 0 ? pts * 2 : -4;
+             }
+             totalPts = pts;
+          } else {
+             // Return awarded points or 0 if unresolved/not started
+             totalPts = bet.points_awarded || 0;
+          }
+        } else {
+          // multi match
+          const matchIds = challenge.point_rules?.matches || [];
+          const activeMatches = matches.filter(m => matchIds.includes(m.id));
+          const matchesPreds = predVal?.matches || {};
+          
+          activeMatches.forEach(m => {
+            const pMatch = matchesPreds[m.id];
+            if (pMatch && pMatch.homeScore !== undefined && pMatch.awayScore !== undefined) {
+               if (["FINISHED", "IN_PLAY", "LIVE", "PAUSED", "1H", "2H", "HT"].includes(m.status)) {
+                 const rHome = m.score.fullTime.home ?? m.score.regularTime?.home ?? 0;
+                 const rAway = m.score.fullTime.away ?? m.score.regularTime?.away ?? 0;
+                 const isMatchBonusActive = !!pMatch.bonus;
+                 const pQualifies = pMatch.qualifies;
+
+                 let actualQualifier = null;
+                 if (m.score.winner === 'HOME_TEAM') actualQualifier = 'home';
+                 else if (m.score.winner === 'AWAY_TEAM') actualQualifier = 'away';
+                 
+                 let matchPts = 0;
+                 if (rHome !== null && rAway !== null) {
+                    const isExact = pMatch.homeScore === rHome && pMatch.awayScore === rAway;
+                    const actualWinner = rHome > rAway ? 'home' : rHome < rAway ? 'away' : 'draw';
+                    const predWinner = pMatch.homeScore > pMatch.awayScore ? 'home' : pMatch.homeScore < pMatch.awayScore ? 'away' : 'draw';
+                    
+                    if (isExact) {
+                      matchPts = ptRules.exact_score;
+                    } else if (actualWinner === predWinner) {
+                      const diff = Math.abs(pMatch.homeScore - rHome) + Math.abs(pMatch.awayScore - rAway);
+                      if (ptRules?.close_score && diff <= 2) matchPts = ptRules.close_score;
+                      else matchPts = ptRules.correct_winner;
+                    }
+
+                    if (pQualifies && actualQualifier && pQualifies === actualQualifier) {
+                      matchPts += ptRules.qualification || 0;
+                    }
+
+                    if (isMatchBonusActive) matchPts = matchPts > 0 ? matchPts * 2 : -4;
+                 }
+                 totalPts += matchPts;
+               }
+            }
+          });
+          
+          if (!activeMatches.some(m => ["FINISHED", "IN_PLAY", "LIVE", "PAUSED", "1H", "2H", "HT"].includes(m.status))) {
+             totalPts = bet.points_awarded || 0;
+          }
+        }
+        return totalPts;
+      };
 
       // Populate aggregation
       allBets?.forEach(bet => {
@@ -137,7 +250,7 @@ export default function LeaderboardView() {
           if (bet.user_id) {
             if (!aggregated[compId][bet.user_id]) aggregated[compId][bet.user_id] = 0;
             
-            let pointsValue = bet.points_awarded || 0;
+            let pointsValue = calculateLivePoints(bet, challenge, allMatches);
             
             aggregated[compId][bet.user_id] += pointsValue;
           }
