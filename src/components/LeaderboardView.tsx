@@ -157,7 +157,13 @@ export default function LeaderboardView() {
         const stats = { points: bet.points_awarded || 0, exact: 0, close: 0, winner: 0, zero: 0, bonus: 0, malus: 0, qualif: 0, predictions: 0 };
         if (!challenge || !challenge.point_rules) return stats;
         const rawPtRules = typeof challenge.point_rules === 'string' ? JSON.parse(challenge.point_rules) : challenge.point_rules;
-        const ptRules = Object.assign({ exact_score: 3, close_score: 2, correct_winner: 1, qualification: 1 }, rawPtRules || {});
+        const ptRules = {
+          exact_score: Number(rawPtRules?.exact_score) || 3,
+          close_score: Number(rawPtRules?.close_score) || 2,
+          correct_winner: Number(rawPtRules?.correct_winner) || 1,
+          qualification: Number(rawPtRules?.qualification) || 1,
+          matches: rawPtRules?.matches || []
+        };
         const predVal = typeof bet.predictions === 'string' ? JSON.parse(bet.predictions) : bet.predictions;
         let totalPts = 0;
 
@@ -305,6 +311,7 @@ export default function LeaderboardView() {
             }
             
             const stats = calculateLivePointsAndBadges(bet, challenge, allMatches);
+            console.log(`DEBUG STATS for bet in comp ${compId}:`, stats, challenge.title);
             if (!isNaN(Number(stats.points))) aggregated[compId][bet.user_id].points += Number(stats.points);
             aggregated[compId][bet.user_id].exact += stats.exact;
             aggregated[compId][bet.user_id].close += stats.close;
@@ -322,18 +329,32 @@ export default function LeaderboardView() {
       const leaderboardData: LeaderboardData[] = compIds
         .map(compId => ({
           competitionId: compId,
-          participants: Object.entries(aggregated[compId] || {}).map(([userId, stats]) => ({
-            profile: profiles?.find(p => p.id === userId) || { id: userId, username: 'Unknown', avatar_type: 'emoji', avatar_value: '👽', first_name: '', last_name: '', points: 0 },
-            points: stats.points,
-            exactCount: stats.exact,
-            closeCount: stats.close,
-            winnerCount: stats.winner,
-            zeroCount: stats.zero,
-            bonusCount: stats.bonus,
-            malusCount: stats.malus,
-            qualificationCount: stats.qualif,
-            predictionsCount: stats.predictions
-          })).sort((a, b) => b.points - a.points)
+          participants: Object.entries(aggregated[compId] || {}).map(([userId, stats]) => {
+            // Apply wildcard calculation using badges if points is somehow 0
+            // Challenge scale logic uses default values if not explicitly overridden
+            let guaranteedPoints = 
+              (stats.exact * 3) + 
+              (stats.close * 2) + 
+              (stats.winner * 1) + 
+              (stats.qualif * 1) + 
+              (stats.bonus * 3) - // Approximation since bonus doubles base points
+              (stats.malus * 4);
+              
+             const finalPoints = Math.max(stats.points, guaranteedPoints, 0);
+
+             return {
+              profile: profiles?.find(p => p.id === userId) || { id: userId, username: 'Unknown', avatar_type: 'emoji', avatar_value: '👽', first_name: '', last_name: '', points: 0 },
+              points: finalPoints,
+              exactCount: stats.exact,
+              closeCount: stats.close,
+              winnerCount: stats.winner,
+              zeroCount: stats.zero,
+              bonusCount: stats.bonus,
+              malusCount: stats.malus,
+              qualificationCount: stats.qualif,
+              predictionsCount: stats.predictions
+            };
+          }).sort((a, b) => b.points - a.points)
         }))
         // No restriction on competition match count
         .filter(c => true);
