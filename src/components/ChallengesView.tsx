@@ -2197,9 +2197,9 @@ export default function ChallengesView({
         activeMatches.forEach(m => {
           const pMatch = matchesPreds[m.id];
           if (pMatch && pMatch.homeScore !== undefined && pMatch.awayScore !== undefined) {
-            predictedCount++;
             
             if (["FINISHED", "IN_PLAY", "LIVE", "PAUSED"].includes(m.status)) {
+              predictedCount++;
               const rHome = m.score.fullTime.home ?? m.score.regularTime?.home ?? 0;
               const rAway = m.score.fullTime.away ?? m.score.regularTime?.away ?? 0;
               const rules = challenge.pointRules;

@@ -230,8 +230,8 @@ export default function LeaderboardView() {
           activeMatches.forEach(m => {
             const pMatch = matchesPreds[m.id];
             if (pMatch && pMatch.homeScore !== undefined && pMatch.awayScore !== undefined) {
-               stats.predictions++;
                if (["FINISHED", "IN_PLAY", "LIVE", "PAUSED", "1H", "2H", "HT"].includes(m.status)) {
+                 stats.predictions++;
                  const rHome = m.score.fullTime.home ?? m.score.regularTime?.home ?? 0;
                  const rAway = m.score.fullTime.away ?? m.score.regularTime?.away ?? 0;
                  const isMatchBonusActive = !!pMatch.bonus;
