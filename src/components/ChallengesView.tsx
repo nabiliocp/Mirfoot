@@ -14,6 +14,7 @@ import {
   Share2,
   Lock,
   ChevronRight,
+  ChevronDown,
   Clock,
   Trophy,
   Trash2,
@@ -179,6 +180,7 @@ export default function ChallengesView({
   const [challenges, setChallenges] = useState<Challenge[]>([]);
   const [showFinishedChallenges, setShowFinishedChallenges] = useState(false);
   const [showPastMatches, setShowPastMatches] = useState(false); // Added this
+  const [showPreviousPronostics, setShowPreviousPronostics] = useState(false);
   const [loading, setLoading] = useState(true);
   const [userPredictions, setUserPredictions] = useState<
     Record<string, Prediction>
@@ -2775,8 +2777,22 @@ export default function ChallengesView({
                 <p className="text-center text-gray-400 py-12 text-sm italic">Aucun match programmé trouvé pour cette compétition.</p>
               ) : (
                 // Competition match list predictions style
-                <div className="space-y-4 max-h-[600px] overflow-y-auto pr-1">
-                  {activeMatches.map((m) => {
+                <>
+                  {(() => {
+                  const todayLocalStart = new Date();
+                  todayLocalStart.setHours(0, 0, 0, 0);
+
+                  const currentAndFutureMatches = activeMatches.filter((m) => {
+                    const mDate = new Date(m.utcDate);
+                    return mDate.getTime() >= todayLocalStart.getTime();
+                  });
+
+                  const pastPredictions = activeMatches.filter((m) => {
+                    const mDate = new Date(m.utcDate);
+                    return mDate.getTime() < todayLocalStart.getTime();
+                  });
+
+                  const renderMatchCard = (m: Match) => {
                     const challengeId = challenge.id;
                     const userPredMap = userPredictions[challengeId]?.matches || {};
                     const userPredMatch = userPredMap[m.id];
@@ -2863,6 +2879,7 @@ export default function ChallengesView({
                                 src={getFlagUrl(m.homeTeam.name, m.homeTeam.crest)} 
                                 alt="" 
                                 className="max-w-full max-h-full object-contain"
+                                referrerPolicy="no-referrer"
                                 onError={(e) => { e.currentTarget.src = "https://flagcdn.com/w80/un.png"; }}
                               />
                             </div>
@@ -2895,6 +2912,7 @@ export default function ChallengesView({
                                 src={getFlagUrl(m.awayTeam.name, m.awayTeam.crest)} 
                                 alt="" 
                                 className="max-w-full max-h-full object-contain"
+                                referrerPolicy="no-referrer"
                                 onError={(e) => { e.currentTarget.src = "https://flagcdn.com/w80/un.png"; }}
                               />
                             </div>
@@ -2946,8 +2964,8 @@ export default function ChallengesView({
                         <div className="mt-3">
                           {hasSubmitted ? (
                             <div className="space-y-2">
-                              <div className="bg-indigo-50 border border-indigo-100/50 py-1.5 px-2 rounded-xl text-[11px] font-extrabold text-indigo-700 text-center flex items-center justify-center gap-1 whitespace-nowrap overflow-hidden text-ellipsis">
-                                <CheckCircle2 className="w-3.5 h-3.5 text-indigo-505 shrink-0" />
+                              <div className="bg-indigo-50 border border-indigo-100/50 py-1.5 px-2 rounded-xl text-[11px] font-extrabold text-indigo-750 text-center flex items-center justify-center gap-1 whitespace-nowrap overflow-hidden text-ellipsis">
+                                <CheckCircle2 className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
                                 Prono validé : {userPredMatch.homeScore} - {userPredMatch.awayScore}
                               </div>
                               {hasFormChange && (
@@ -3038,9 +3056,9 @@ export default function ChallengesView({
                             <button
                               type="button"
                               onClick={() => {
-                                submitCompetitionPrediction(challenge, m.id, scoreHome, scoreAway).then(() => {
-                                  refreshChallengeBets();
-                                });
+                                  submitCompetitionPrediction(challenge, m.id, scoreHome, scoreAway).then(() => {
+                                    refreshChallengeBets();
+                                  });
                               }}
                               className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 rounded-xl text-xs transition duration-200 active:scale-[0.98] cursor-pointer"
                             >
@@ -3080,8 +3098,54 @@ export default function ChallengesView({
                         </div>
                       </div>
                     );
-                  })}
-                </div>
+                  };
+
+                  return (
+                    <div className="space-y-4 max-h-[600px] overflow-y-auto pr-1">
+                      {/* Current & future matches */}
+                      {currentAndFutureMatches.length > 0 ? (
+                        <div className="space-y-4">
+                          {currentAndFutureMatches.map((m) => renderMatchCard(m))}
+                        </div>
+                      ) : (
+                        <p className="text-center text-gray-400 py-8 text-xs bg-slate-50 border border-slate-100 rounded-2xl font-semibold italic">
+                          Aucun match programmé à partir du jour en cours.
+                        </p>
+                      )}
+
+                      {/* Collapse section for past matches */}
+                      {pastPredictions.length > 0 && (
+                        <div className="mt-6 border-t border-dashed border-slate-200 pt-4">
+                          <button
+                            type="button"
+                            onClick={() => setShowPreviousPronostics(!showPreviousPronostics)}
+                            className="w-full py-3 px-4 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 font-bold rounded-2xl text-xs flex items-center justify-between transition-all duration-200 active:scale-[0.99] cursor-pointer select-none"
+                          >
+                            <div className="flex items-center gap-2">
+                              <Clock className="w-4 h-4 text-slate-500" />
+                              <span className="text-left">
+                                {showPreviousPronostics ? "Masquer les pronostics précédents" : "Afficher les pronostics précédents"}
+                              </span>
+                              <span className="bg-slate-200 text-slate-800 px-2 py-0.5 rounded-full text-[10px] font-extrabold shadow-3xs text-center">
+                                {pastPredictions.length}
+                              </span>
+                            </div>
+                            <span className="text-[10px] bg-emerald-50 text-emerald-700 px-2.5 py-0.5 rounded-full font-extrabold tracking-wider uppercase shrink-0">
+                              {showPreviousPronostics ? "Fermer ▲" : "Afficher ▼"}
+                            </span>
+                          </button>
+
+                          {showPreviousPronostics && (
+                            <div className="space-y-4 mt-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                              {pastPredictions.map((m) => renderMatchCard(m))}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+                </>
               )}
             </div>
           )}
