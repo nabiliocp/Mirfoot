@@ -104,8 +104,9 @@ const getMatchPointsDetail = (
   pHome?: number,
   pAway?: number,
   isBonusActive?: boolean,
-  pointRules?: PointRules
-): { points: number | null; reason: string; label: string; basePoints: number; isBonus: boolean } | null => {
+  pointRules?: PointRules,
+  isSuperbonusActive?: boolean
+): { points: number | null; reason: string; label: string; basePoints: number; isBonus: boolean; isSuperbonus?: boolean } | null => {
   if (pHome === undefined || pAway === undefined) return null;
   const rHome = m.score?.fullTime?.home ?? m.score?.regularTime?.home;
   const rAway = m.score?.fullTime?.away ?? m.score?.regularTime?.away;
@@ -135,7 +136,16 @@ const getMatchPointsDetail = (
 
   let finalPoints = basePoints;
   let label = reason;
-  if (isBonusActive) {
+  if (isSuperbonusActive) {
+    if (basePoints > 0) {
+      finalPoints = basePoints * 4;
+      label = `${reason} (SuperBonus ×4)`;
+    } else {
+      finalPoints = -8;
+      reason = "Pénalité SuperBonus";
+      label = "Pénalité SuperBonus ×4 manqué (-8 pts)";
+    }
+  } else if (isBonusActive) {
     if (basePoints > 0) {
       finalPoints = basePoints * 2;
       label = `${reason} (Doublé ×2)`;
@@ -151,9 +161,102 @@ const getMatchPointsDetail = (
     reason,
     label,
     basePoints,
-    isBonus: !!isBonusActive
+    isBonus: !!isBonusActive,
+    isSuperbonus: !!isSuperbonusActive
   };
 };
+
+export function getUserBonusCredits(
+  challenge: Challenge,
+  predictionsObj: any,
+  activeMatches: Match[]
+) {
+  const pointRules = challenge?.pointRules as any;
+  const isEnabled = !!pointRules?.newBonusRules;
+
+  if (!isEnabled) {
+    return {
+      isEnabled: false,
+      allowedStandard: Infinity,
+      usedStandard: 0,
+      availableStandard: Infinity,
+      allowedSuper: 0,
+      usedSuper: 0,
+      availableSuper: 0,
+    };
+  }
+
+  const matchesPreds = predictionsObj?.matches || {};
+  let exactCount = 0;
+  
+  // Sort matches chronologically by date
+  const sortedMatches = [...activeMatches].sort(
+    (a, b) => new Date(a.utcDate).getTime() - new Date(b.utcDate).getTime()
+  );
+
+  // Detect which completed matches had exact score predictions
+  const exactStates = sortedMatches.map((m) => {
+    const pMatch = matchesPreds[m.id];
+    if (!pMatch || pMatch.homeScore === undefined || pMatch.awayScore === undefined) {
+      return false;
+    }
+    const isCompleted = ["FINISHED", "IN_PLAY", "LIVE", "PAUSED"].includes(m.status);
+    if (!isCompleted) return false;
+
+    const rHome = m.score?.fullTime?.home ?? m.score?.regularTime?.home ?? 0;
+    const rAway = m.score?.fullTime?.away ?? m.score?.regularTime?.away ?? 0;
+    
+    const isExact = Number(pMatch.homeScore) === Number(rHome) && Number(pMatch.awayScore) === Number(rAway);
+    return isExact;
+  });
+
+  // Count total exact scores in completed matches
+  exactStates.forEach((isExact) => {
+    if (isExact) exactCount++;
+  });
+
+  // Calculate successive exact pairs (streak of 2)
+  let allowedSuper = 0;
+  let streak = 0;
+  for (let i = 0; i < exactStates.length; i++) {
+    if (exactStates[i]) {
+      streak++;
+      if (streak === 2) {
+        allowedSuper++;
+        streak = 0; // reset streak once a Superbonus is granted
+      }
+    } else {
+      streak = 0;
+    }
+  }
+
+  const allowedStandard = 1 + exactCount;
+
+  // Let's count how many have been used currently (both past and upcoming matches)
+  let usedStandard = 0;
+  let usedSuper = 0;
+
+  Object.values(matchesPreds).forEach((p: any) => {
+    if (p) {
+      if (p.bonus) {
+        usedStandard++;
+      }
+      if (p.superbonus) {
+        usedSuper++;
+      }
+    }
+  });
+
+  return {
+    isEnabled: true,
+    allowedStandard,
+    usedStandard,
+    availableStandard: Math.max(0, allowedStandard - usedStandard),
+    allowedSuper,
+    usedSuper,
+    availableSuper: Math.max(0, allowedSuper - usedSuper),
+  };
+}
 
 interface ChallengesViewProps {
   preselectedMatch?: { match: Match; competitionId: number } | null;
@@ -380,6 +483,7 @@ export default function ChallengesView({
   const [matches, setMatches] = useState<Match[]>([]);
   const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
   const [newTitle, setNewTitle] = useState("");
+  const [newBonusRules, setNewBonusRules] = useState(false);
   const [creating, setCreating] = useState(false);
   const [loadingComps, setLoadingComps] = useState(false);
   const [loadingMatches, setLoadingMatches] = useState(false);
@@ -1075,6 +1179,7 @@ export default function ChallengesView({
       close_score: customRulesConfig.close_score.enabled ? customRulesConfig.close_score.points : 0,
       correct_winner: customRulesConfig.correct_winner.enabled ? customRulesConfig.correct_winner.points : 0,
       qualification: customRulesConfig.qualification.enabled ? customRulesConfig.qualification.points : 0,
+      newBonusRules: newBonusRules,
       match_metadata: {
         home_crest: selectedMatch.homeTeam?.crest || "",
         away_crest: selectedMatch.awayTeam?.crest || "",
@@ -1391,6 +1496,85 @@ export default function ChallengesView({
     }
   };
 
+  const handleSaveSuperbonusChange = async (
+    challenge: Challenge,
+    matchId: number,
+    newStatus: boolean,
+    hScore?: number,
+    aScore?: number,
+  ) => {
+    // 1. Update form draft first
+    setPredictionForms((prev) => {
+      const currentChallengeForm = prev[challenge.id] || {};
+      const currentMatches = currentChallengeForm.matches || {};
+      const currentMatchPred = currentMatches[matchId] || {};
+      return {
+        ...prev,
+        [challenge.id]: {
+          ...currentChallengeForm,
+          matches: {
+            ...currentMatches,
+            [matchId]: {
+              ...currentMatchPred,
+              superbonus: newStatus,
+            },
+          },
+        },
+      };
+    });
+
+    // 2. Commit immediately to Supabase
+    if (!supabase) { alert("Erreur de connexion"); return; }
+    if (!userId) { alert("Vous devez être connecté"); return; }
+    if (challenge.locked || challenge.resolved) { alert("Le défi est verrouillé ou terminé"); return; }
+
+    const finalH = hScore !== undefined ? Number(hScore) : NaN;
+    const finalA = aScore !== undefined ? Number(aScore) : NaN;
+
+    if (isNaN(finalH) || isNaN(finalA)) {
+      alert("Veuillez d'abord remplir vos scores de match !");
+      return;
+    }
+
+    const currentPreds = userPredictions[challenge.id] || {};
+    const matchesPreds = currentPreds.matches || {};
+
+    const updatedMatches = {
+      ...matchesPreds,
+      [matchId]: {
+        homeScore: finalH,
+        awayScore: finalA,
+        bonus: !!matchesPreds[matchId]?.bonus,
+        superbonus: newStatus,
+      },
+    };
+
+    const updatedChallengePreds = {
+      ...currentPreds,
+      matches: updatedMatches,
+    };
+
+    const { error } = await supabase.from("bets").upsert(
+      {
+        user_id: userId,
+        challenge_id: challenge.id,
+        predictions: updatedChallengePreds,
+      },
+      { onConflict: "user_id,challenge_id" },
+    );
+
+    if (error) {
+      console.error("Erreur d'enregistrement direct du superbonus :", error);
+      alert("Erreur lors de l'enregistrement de la modification du superbonus: " + error.message);
+    } else {
+      setUserPredictions((prev) => ({
+        ...prev,
+        [challenge.id]: updatedChallengePreds,
+      }));
+      refreshChallengeBets();
+    }
+  };
+
   const submitPrediction = async (challenge: Challenge) => {
     if (!supabase) { alert("Erreur de connexion"); return; }
     if (!userId) { alert("Vous devez être connecté"); return; }
@@ -1510,6 +1694,7 @@ export default function ChallengesView({
         homeScore: hScore,
         awayScore: aScore,
         bonus: formMatch.bonus !== undefined ? formMatch.bonus : !!matchesPreds[matchId]?.bonus,
+        superbonus: formMatch.superbonus !== undefined ? formMatch.superbonus : !!matchesPreds[matchId]?.superbonus,
       },
     };
 
@@ -1777,6 +1962,34 @@ export default function ChallengesView({
               <p className="text-[10px] text-gray-400 italic mt-3 text-center">
                 👉 Les points peuvent être personnalisés ou la règle désactivée grâce aux interrupteurs ci-dessus.
               </p>
+            </div>
+
+            {/* Nouveau Règlement Switch */}
+            <div className="bg-gradient-to-br from-amber-50/50 to-orange-50/50 p-4 rounded-2xl border border-amber-100 mt-5 transition-all">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-start gap-3">
+                  <div className="mt-0.5 bg-amber-100 text-amber-700 p-1.5 rounded-xl shrink-0">
+                    <Trophy className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-black text-slate-800">
+                      Nouveau Règlement des Bonus
+                    </h4>
+                    <p className="text-[10px] text-gray-500 font-semibold mt-0.5 leading-relaxed">
+                      Active une gestion stratégique des bonus : 1 seul Bonus de départ. Chaque score exact réussi débloque un Bonus supplémentaire, et 2 scores exacts successifs offrent un puissant <strong>SuperBonus X4 (malus -8 en cas d'erreur)</strong> !
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setNewBonusRules(!newBonusRules)}
+                  className={`w-11 h-6 shrink-0 flex items-center rounded-full p-1 cursor-pointer transition-all duration-300 focus:outline-hidden ${
+                    newBonusRules ? 'bg-amber-600 justify-end' : 'bg-gray-300 justify-start'
+                  }`}
+                >
+                  <span className="bg-white w-4 h-4 rounded-full shadow-xs transition-all duration-300" />
+                </button>
+              </div>
             </div>
 
             <button
@@ -2191,11 +2404,14 @@ export default function ChallengesView({
         let zeroCount = 0;
         let predictedCount = 0;
         let bonusCount = 0;
+        let superbonusCount = 0;
         let malusCount = 0;
         
         const predVal = typeof bet.predictions === 'string' ? JSON.parse(bet.predictions) : bet.predictions;
         const matchesPreds = predVal?.matches || {};
         
+        const isNewBonusRules = !!(challenge.pointRules as any)?.newBonusRules;
+
         activeMatches.forEach(m => {
           const pMatch = matchesPreds[m.id];
           if (pMatch && pMatch.homeScore !== undefined && pMatch.awayScore !== undefined) {
@@ -2206,6 +2422,7 @@ export default function ChallengesView({
               const rAway = m.score.fullTime.away ?? m.score.regularTime?.away ?? 0;
               const rules = challenge.pointRules;
               const isMatchBonusActive = !!pMatch.bonus;
+              const isMatchSuperbonusActive = isNewBonusRules && !!pMatch.superbonus;
               const pQualifies = pMatch.qualifies;
 
               let actualQualifier = null;
@@ -2242,17 +2459,39 @@ export default function ChallengesView({
                   isZero = true;
                 }
 
-                // Bonus X2 logic per-match
-                if (isMatchBonusActive) {
-                  if (matchPts > 0) {
-                    matchPts = matchPts * 2;
-                    bonusCount++;
-                  } else {
-                    matchPts = -4;
-                    malusCount++;
+                if (isNewBonusRules) {
+                  if (isMatchSuperbonusActive) {
+                    if (matchPts > 0) {
+                      matchPts = matchPts * 4;
+                      superbonusCount++;
+                    } else {
+                      matchPts = -8;
+                      malusCount++;
+                    }
+                  } else if (isMatchBonusActive) {
+                    if (matchPts > 0) {
+                      matchPts = matchPts * 2;
+                      bonusCount++;
+                    } else {
+                      matchPts = -4;
+                      malusCount++;
+                    }
+                  } else if (isZero) {
+                    zeroCount++;
                   }
-                } else if (isZero) {
-                  zeroCount++;
+                } else {
+                  // Bonus X2 logic per-match
+                  if (isMatchBonusActive) {
+                    if (matchPts > 0) {
+                      matchPts = matchPts * 2;
+                      bonusCount++;
+                    } else {
+                      matchPts = -4;
+                      malusCount++;
+                    }
+                  } else if (isZero) {
+                    zeroCount++;
+                  }
                 }
                 pts += matchPts;
               }
@@ -2275,6 +2514,7 @@ export default function ChallengesView({
           zeroCount,
           predictionsCount: predictedCount,
           bonusCount,
+          superbonusCount,
           malusCount
         };
       });
@@ -2779,6 +3019,37 @@ export default function ChallengesView({
                 // Competition match list predictions style
                 <>
                   {(() => {
+                    const credits = getUserBonusCredits(challenge, userPredictions[challenge.id], activeMatches);
+                    if (credits.isEnabled) {
+                      return (
+                        <div className="bg-gradient-to-r from-amber-50 to-orange-50 p-4 rounded-2xl border border-amber-200/60 shadow-3xs mb-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-3 animate-fade-in">
+                          <div>
+                            <h4 className="text-xs font-extrabold text-amber-800 flex items-center gap-1.5 uppercase tracking-wider">
+                              <Trophy className="w-4 h-4 text-amber-600 shrink-0 animate-bounce" />
+                              Gestionnaire de Bonus Stratégique (Nouveau Règlement)
+                            </h4>
+                            <p className="text-[10px] text-slate-600 mt-1 font-semibold leading-relaxed">
+                              Vous disposez de <strong>1 Bonus X2 de départ</strong>. Chaque score exact validé vous rapporte 1 Bonus X2 supplémentaire dans ce défi. <br />
+                              Chaque série de <strong>2 scores exacts successifs</strong> débloque un puissant <strong>SuperBonus X4</strong> !
+                            </p>
+                          </div>
+                          <div className="flex flex-wrap gap-2 shrink-0">
+                            <div className="bg-white/90 border border-amber-200 px-3 py-1.5 rounded-xl text-center shadow-3xs min-w-[110px]">
+                              <span className="text-[8px] font-black text-amber-800 block uppercase tracking-wider">Bonus X2 cumulés</span>
+                              <span className="font-mono text-xs font-black text-slate-800">{credits.usedStandard} / {credits.allowedStandard}</span>
+                            </div>
+                            <div className="bg-white/90 border border-amber-200 px-3 py-1.5 rounded-xl text-center shadow-3xs min-w-[110px]">
+                              <span className="text-[8px] font-black text-amber-800 block uppercase tracking-wider">SuperBonus X4</span>
+                              <span className="font-mono text-xs font-black text-slate-800">{credits.usedSuper} / {credits.allowedSuper}</span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    }
+                    return null;
+                  })()}
+
+                  {(() => {
                   const todayLocalStart = new Date();
                   todayLocalStart.setHours(0, 0, 0, 0);
 
@@ -2808,11 +3079,13 @@ export default function ChallengesView({
                     const scoreAway = formMatch?.awayScore !== undefined ? formMatch.awayScore : userPredMatch?.awayScore;
                     
                     const isBonusActive = formMatch?.bonus !== undefined ? formMatch.bonus : !!userPredMatch?.bonus;
+                    const isSuperbonusActive = formMatch?.superbonus !== undefined ? formMatch.superbonus : !!userPredMatch?.superbonus;
                     const hasSubmitted = userPredMatch?.homeScore !== undefined && userPredMatch?.awayScore !== undefined;
                     const hasFormChange = 
                       (formMatch?.homeScore !== undefined && formMatch.homeScore !== userPredMatch?.homeScore) || 
                       (formMatch?.awayScore !== undefined && formMatch.awayScore !== userPredMatch?.awayScore) ||
-                      (formMatch?.bonus !== undefined && formMatch.bonus !== !!userPredMatch?.bonus);
+                      (formMatch?.bonus !== undefined && formMatch.bonus !== !!userPredMatch?.bonus) ||
+                      (formMatch?.superbonus !== undefined && formMatch.superbonus !== !!userPredMatch?.superbonus);
 
                     return (
                       <div key={m.id} className="bg-white rounded-2xl p-4 border-2 border-slate-200/95 shadow-sm hover:border-emerald-300 transition duration-200 space-y-3.5">
@@ -2920,45 +3193,148 @@ export default function ChallengesView({
                           </div>
                         </div>
 
-                        {hasSubmitted && isOpen && (
-                          <div className="mt-2 text-center">
-                            {isBonusActive ? (
-                              <div className="w-full text-xs font-black bg-amber-100/80 text-amber-800 py-2 px-3 rounded-lg flex items-center justify-between border border-amber-200 relative">
-                                <div className="flex items-center gap-2 mx-auto justify-center">
-                                  <Trophy className="w-3.5 h-3.5 text-amber-600 animate-bounce" />
-                                  Bonus X2 activé !
-                                </div>
-                                <button 
-                                  type="button"
-                                  className="absolute right-2 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-amber-200 hover:bg-amber-300 text-amber-800 flex items-center justify-center transition cursor-pointer font-bold shadow-xs border border-amber-300/40"
-                                  onClick={() => setConfirmCancelBonus({ 
-                                    challengeId, 
-                                    matchId: m.id, 
-                                    isBonusActive,
-                                    homeTeamName: m.homeTeam.shortName || m.homeTeam.name,
-                                    awayTeamName: m.awayTeam.shortName || m.awayTeam.name,
-                                    scoreHome,
-                                    scoreAway,
-                                    challenge
-                                  })}
-                                  title="Désactiver le bonus"
-                                >
-                                  <X className="w-3 h-3" />
-                                </button>
+                        {hasSubmitted && isOpen && (() => {
+                          const isNewRules = !!(challenge.pointRules as any)?.newBonusRules;
+                          if (!isNewRules) {
+                            return (
+                              <div className="mt-2 text-center">
+                                {isBonusActive ? (
+                                  <div className="w-full text-xs font-black bg-amber-100/80 text-amber-800 py-2 px-3 rounded-lg flex items-center justify-between border border-amber-200 relative">
+                                    <div className="flex items-center gap-2 mx-auto justify-center">
+                                      <Trophy className="w-3.5 h-3.5 text-amber-600 animate-bounce" />
+                                      Bonus X2 activé !
+                                    </div>
+                                    <button 
+                                      type="button"
+                                      className="absolute right-2 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-amber-200 hover:bg-amber-300 text-amber-800 flex items-center justify-center transition cursor-pointer font-bold shadow-xs border border-amber-300/40"
+                                      onClick={() => setConfirmCancelBonus({ 
+                                        challengeId, 
+                                        matchId: m.id, 
+                                        isBonusActive,
+                                        homeTeamName: m.homeTeam.shortName || m.homeTeam.name,
+                                        awayTeamName: m.awayTeam.shortName || m.awayTeam.name,
+                                        scoreHome,
+                                        scoreAway,
+                                        challenge
+                                      })}
+                                      title="Désactiver le bonus"
+                                    >
+                                      <X className="w-3 h-3" />
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <button 
+                                    type="button"
+                                    className="w-full text-xs font-black bg-gradient-to-br from-amber-400 to-orange-500 text-white py-2 rounded-lg hover:shadow-lg transition-all cursor-pointer flex items-center justify-center gap-2 hover:scale-[1.01] active:scale-[0.99]"
+                                    onClick={() => handleSaveBonusChange(challenge, m.id, !isBonusActive, scoreHome, scoreAway)}
+                                  >
+                                     <Trophy className="w-3.5 h-3.5" />
+                                     Jouer Bonus X2
+                                  </button>
+                                )}
+                                <p className="text-[9px] text-gray-400 mt-1">Si activé : les points gagnés sont doublés | Si 0 point : -4 pts sur le score du défi en cours</p>
                               </div>
-                            ) : (
-                              <button 
-                                type="button"
-                                className="w-full text-xs font-black bg-gradient-to-br from-amber-400 to-orange-500 text-white py-2 rounded-lg hover:shadow-lg transition-all cursor-pointer flex items-center justify-center gap-2 hover:scale-[1.01] active:scale-[0.99]"
-                                onClick={() => handleSaveBonusChange(challenge, m.id, !isBonusActive, scoreHome, scoreAway)}
-                              >
-                                 <Trophy className="w-3.5 h-3.5" />
-                                 Jouer Bonus X2
-                              </button>
-                            )}
-                            <p className="text-[9px] text-gray-400 mt-1">Si activé : les points gagnés sont doublés | Si 0 point : -4 pts sur le score du défi en cours</p>
-                          </div>
-                        )}
+                            );
+                          }
+
+                          // Strategic Bonus rules
+                          const credits = getUserBonusCredits(challenge, userPredictions[challengeId], activeMatches);
+                          return (
+                            <div className="mt-2 text-center space-y-2">
+                              {isSuperbonusActive ? (
+                                <div className="w-full text-xs font-black bg-orange-100 text-orange-900 py-2 px-3 rounded-lg flex items-center justify-between border border-orange-200 relative animate-fade-in shadow-2xs">
+                                  <div className="flex items-center gap-1.5 mx-auto justify-center">
+                                    <span className="text-sm">💥</span>
+                                    <span>SuperBonus X4 activé !</span>
+                                  </div>
+                                  <button 
+                                    type="button"
+                                    className="absolute right-2 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-orange-200 hover:bg-orange-300 text-orange-900 flex items-center justify-center transition cursor-pointer font-bold shadow-xs border border-orange-300/40"
+                                    onClick={() => handleSaveSuperbonusChange(challenge, m.id, false, scoreHome, scoreAway)}
+                                    title="Désactiver le SuperBonus X4"
+                                  >
+                                    <X className="w-3 h-3" />
+                                  </button>
+                                </div>
+                              ) : isBonusActive ? (
+                                <div className="w-full text-xs font-black bg-amber-100 text-amber-800 py-2 px-3 rounded-lg flex items-center justify-between border border-amber-200 relative animate-fade-in shadow-2xs">
+                                  <div className="flex items-center gap-2 mx-auto justify-center">
+                                    <Trophy className="w-3.5 h-3.5 text-amber-600 animate-bounce" />
+                                    Bonus X2 activé !
+                                  </div>
+                                  <button 
+                                    type="button"
+                                    className="absolute right-2 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-amber-200 hover:bg-amber-300 text-amber-800 flex items-center justify-center transition cursor-pointer font-bold shadow-xs border border-amber-300/40"
+                                    onClick={() => handleSaveBonusChange(challenge, m.id, false, scoreHome, scoreAway)}
+                                    title="Désactiver le Bonus X2"
+                                  >
+                                    <X className="w-3 h-3" />
+                                  </button>
+                                </div>
+                              ) : (
+                                <div className="grid grid-cols-2 gap-2">
+                                  {credits.availableStandard > 0 ? (
+                                    <button 
+                                      type="button"
+                                      className="text-[11px] font-black bg-gradient-to-br from-amber-400 to-orange-500 text-white py-2 px-1.5 rounded-lg hover:shadow-md transition-all cursor-pointer flex items-center justify-center gap-1 hover:scale-[1.01] active:scale-[0.99]"
+                                      onClick={() => handleSaveBonusChange(challenge, m.id, true, scoreHome, scoreAway)}
+                                    >
+                                       <Trophy className="w-3 h-3" />
+                                       Bonus X2 ({credits.availableStandard})
+                                    </button>
+                                  ) : (
+                                    <button 
+                                      disabled
+                                      type="button"
+                                      className="text-[10px] font-bold bg-gray-100 text-gray-400 py-2 px-1.5 rounded-lg border border-gray-200 cursor-not-allowed flex items-center justify-center gap-1"
+                                      title="Limite de Bonus X2 atteinte pour ce défi."
+                                    >
+                                       🚫 Limite X2
+                                    </button>
+                                  )}
+
+                                  {credits.allowedSuper > 0 ? (
+                                    credits.availableSuper > 0 ? (
+                                      <button 
+                                        type="button"
+                                        className="text-[11px] font-black bg-gradient-to-br from-indigo-500 to-purple-600 text-white py-2 px-1.5 rounded-lg hover:shadow-md transition-all cursor-pointer flex items-center justify-center gap-1 hover:scale-[1.01] active:scale-[0.99] shadow-3xs"
+                                        onClick={() => handleSaveSuperbonusChange(challenge, m.id, true, scoreHome, scoreAway)}
+                                        title="Appliquez le SuperBonus X4 !"
+                                      >
+                                         💥 Super X4!
+                                      </button>
+                                    ) : (
+                                      <button 
+                                        disabled
+                                        type="button"
+                                        className="text-[10px] font-bold bg-gray-150 text-gray-400 py-2 px-1.5 rounded-lg border border-gray-205 cursor-not-allowed flex items-center justify-center gap-1"
+                                      >
+                                         🎯 Utilisé
+                                      </button>
+                                    )
+                                  ) : (
+                                    <button 
+                                      disabled
+                                      type="button"
+                                      className="text-[9px] font-bold bg-slate-50 text-slate-350 py-2 px-1 rounded-lg border border-slate-100/60 cursor-not-allowed flex items-center justify-center gap-1 leading-tight"
+                                      title="Doublez vos scores exacts consécutifs pour débloquer le SuperBonus X4 !"
+                                    >
+                                       🔒 Bloqué X4
+                                    </button>
+                                  )}
+                                </div>
+                              )}
+                              <p className="text-[8.5px] text-gray-400 leading-tight">
+                                {isSuperbonusActive 
+                                  ? "SuperBonus : X4 si gagné, -8 pts au défi si perdu !" 
+                                  : isBonusActive 
+                                    ? "Bonus standard : X2 si gagné, -4 pts au défi si perdu." 
+                                    : "Débloquez les bonus en validant des scores exacts !"
+                                }
+                              </p>
+                            </div>
+                          );
+                        })()}
 
                         {/* Submit Button for Competition Match bet */}
                         <div className="mt-3">
@@ -3243,10 +3619,11 @@ export default function ChallengesView({
                               </div>
                             )}
                             
-                            {(player.bonusCount > 0 || player.malusCount > 0) && (
+                            {(player.bonusCount > 0 || player.superbonusCount > 0 || player.malusCount > 0) && (
                               <div className="flex gap-2 text-[9px] font-bold">
-                                {player.bonusCount > 0 && <span className="text-emerald-600">Bonus X {player.bonusCount}</span>}
-                                {player.malusCount > 0 && <span className="text-rose-600">Malus X {player.malusCount}</span>}
+                                {player.bonusCount > 0 && <span className="text-emerald-600 bg-emerald-50 px-1 py-0.5 rounded border border-emerald-100">Bonus ×2 ({player.bonusCount})</span>}
+                                {player.superbonusCount > 0 && <span className="text-amber-700 bg-amber-50 px-1 py-0.5 rounded border border-amber-100">💥 Super ×4 ({player.superbonusCount})</span>}
+                                {player.malusCount > 0 && <span className="text-rose-600 bg-rose-50 px-1 py-0.5 rounded border border-rose-100">Pénalité ({player.malusCount})</span>}
                               </div>
                             )}
 
@@ -3737,11 +4114,13 @@ export default function ChallengesView({
                               const scoreAway = formMatch?.awayScore !== undefined ? formMatch.awayScore : userPredMatch?.awayScore;
                               
                               const isBonusActive = formMatch?.bonus !== undefined ? formMatch.bonus : !!userPredMatch?.bonus;
+                              const isSuperbonusActive = formMatch?.superbonus !== undefined ? formMatch.superbonus : !!userPredMatch?.superbonus;
                               const hasSubmitted = userPredMatch?.homeScore !== undefined && userPredMatch?.awayScore !== undefined;
                               const hasFormChange = 
                                 (formMatch?.homeScore !== undefined && formMatch.homeScore !== userPredMatch?.homeScore) || 
                                 (formMatch?.awayScore !== undefined && formMatch.awayScore !== userPredMatch?.awayScore) ||
-                                (formMatch?.bonus !== undefined && formMatch.bonus !== !!userPredMatch?.bonus);
+                                (formMatch?.bonus !== undefined && formMatch.bonus !== !!userPredMatch?.bonus) ||
+                                (formMatch?.superbonus !== undefined && formMatch.superbonus !== !!userPredMatch?.superbonus);
 
                               return (
                                 <div key={m.id} className="bg-white rounded-xl p-3.5 shadow-sm border border-gray-100 space-y-3">
@@ -3820,44 +4199,139 @@ export default function ChallengesView({
                                     </div>
                                   </div>
 
-                                  {hasSubmitted && isOpen && (
-                                    <div className="text-center">
-                                      {isBonusActive ? (
-                                        <div className="w-full text-[10px] font-black bg-amber-100/80 text-amber-800 py-1.5 px-2.5 rounded-lg flex items-center justify-between border border-amber-200 relative">
-                                          <div className="flex items-center gap-1 mx-auto justify-center">
-                                            <Trophy className="w-3 h-3 text-amber-600 animate-bounce" />
-                                            Bonus X2 activé !
-                                          </div>
-                                          <button
-                                            type="button"
-                                            className="absolute right-1.5 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-amber-200 hover:bg-amber-300 text-amber-800 flex items-center justify-center transition cursor-pointer font-bold border border-amber-300/40"
-                                            onClick={() => setConfirmCancelBonus({ 
-                                              challengeId, 
-                                              matchId: m.id, 
-                                              isBonusActive,
-                                              homeTeamName: m.homeTeam.shortName || m.homeTeam.name,
-                                              awayTeamName: m.awayTeam.shortName || m.awayTeam.name,
-                                              scoreHome,
-                                              scoreAway,
-                                              challenge: activeModal.challenge
-                                            })}
-                                            title="Désactiver le bonus"
-                                          >
-                                            <X className="w-2.5 h-2.5" />
-                                          </button>
+                                  {hasSubmitted && isOpen && (() => {
+                                    const challengeObj = activeModal.challenge;
+                                    const isNewRules = !!(challengeObj.pointRules as any)?.newBonusRules;
+                                    if (!isNewRules) {
+                                      return (
+                                        <div className="text-center">
+                                          {isBonusActive ? (
+                                            <div className="w-full text-[10px] font-black bg-amber-100/80 text-amber-800 py-1.5 px-2.5 rounded-lg flex items-center justify-between border border-amber-200 relative">
+                                              <div className="flex items-center gap-1 mx-auto justify-center">
+                                                <Trophy className="w-3 h-3 text-amber-600 animate-bounce" />
+                                                Bonus X2 activé !
+                                              </div>
+                                              <button
+                                                type="button"
+                                                className="absolute right-1.5 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-amber-200 hover:bg-amber-300 text-amber-800 flex items-center justify-center transition cursor-pointer font-bold border border-amber-300/40"
+                                                onClick={() => setConfirmCancelBonus({ 
+                                                  challengeId, 
+                                                  matchId: m.id, 
+                                                  isBonusActive,
+                                                  homeTeamName: m.homeTeam.shortName || m.homeTeam.name,
+                                                  awayTeamName: m.awayTeam.shortName || m.awayTeam.name,
+                                                  scoreHome,
+                                                  scoreAway,
+                                                  challenge: challengeObj
+                                                })}
+                                                title="Désactiver le bonus"
+                                              >
+                                                <X className="w-2.5 h-2.5" />
+                                              </button>
+                                            </div>
+                                          ) : (
+                                            <button 
+                                              type="button"
+                                              className="w-full text-[10px] font-black bg-gradient-to-br from-amber-400 to-orange-500 text-white py-1.5 rounded-lg hover:shadow-lg transition-all cursor-pointer flex items-center justify-center gap-1 hover:scale-[1.01] active:scale-[0.99]"
+                                              onClick={() => handleSaveBonusChange(challengeObj, m.id, !isBonusActive, scoreHome, scoreAway)}
+                                            >
+                                               <Trophy className="w-3 h-3" />
+                                               Jouer Bonus X2
+                                            </button>
+                                          )}
                                         </div>
-                                      ) : (
-                                        <button 
-                                          type="button"
-                                          className="w-full text-[10px] font-black bg-gradient-to-br from-amber-400 to-orange-500 text-white py-1.5 rounded-lg hover:shadow-lg transition-all cursor-pointer flex items-center justify-center gap-1 hover:scale-[1.01] active:scale-[0.99]"
-                                          onClick={() => handleSaveBonusChange(activeModal.challenge, m.id, !isBonusActive, scoreHome, scoreAway)}
-                                        >
-                                           <Trophy className="w-3 h-3" />
-                                           Jouer Bonus X2
-                                        </button>
-                                      )}
-                                    </div>
-                                  )}
+                                      );
+                                    }
+
+                                    // For new rules
+                                    const credits = getUserBonusCredits(challengeObj, userPredictions[challengeId], modalMatches);
+                                    return (
+                                      <div className="text-center space-y-1.5">
+                                        {isSuperbonusActive ? (
+                                          <div className="w-full text-[10px] font-black bg-orange-100 text-orange-900 py-1.5 px-2.5 rounded-lg flex items-center justify-between border border-orange-200 relative animate-fade-in shadow-2xs">
+                                            <div className="flex items-center gap-1 mx-auto justify-center">
+                                              <span>💥 Super X4 activé !</span>
+                                            </div>
+                                            <button 
+                                              type="button"
+                                              className="absolute right-1.5 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-orange-200 hover:bg-orange-300 text-orange-900 flex items-center justify-center transition cursor-pointer font-bold shadow-xs border border-orange-300/40"
+                                              onClick={() => handleSaveSuperbonusChange(challengeObj, m.id, false, scoreHome, scoreAway)}
+                                              title="Désactiver le SuperBonus X4"
+                                            >
+                                              <X className="w-2.5 h-2.5" />
+                                            </button>
+                                          </div>
+                                        ) : isBonusActive ? (
+                                          <div className="w-full text-[10px] font-black bg-amber-100 text-amber-850 py-1.5 px-2.5 rounded-lg flex items-center justify-between border border-amber-200 relative animate-fade-in shadow-2xs">
+                                            <div className="flex items-center gap-1.5 mx-auto justify-center">
+                                              <Trophy className="w-3 h-3 text-amber-600 animate-bounce" />
+                                              Bonus X2 activé !
+                                            </div>
+                                            <button 
+                                              type="button"
+                                              className="absolute right-1.5 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-amber-200 hover:bg-amber-300 text-amber-800 flex items-center justify-center transition cursor-pointer font-bold shadow-xs border border-amber-300/40"
+                                              onClick={() => handleSaveBonusChange(challengeObj, m.id, false, scoreHome, scoreAway)}
+                                              title="Désactiver le Bonus X2"
+                                            >
+                                              <X className="w-2.5 h-2.5" />
+                                            </button>
+                                          </div>
+                                        ) : (
+                                          <div className="grid grid-cols-2 gap-1.5">
+                                            {credits.availableStandard > 0 ? (
+                                              <button 
+                                                type="button"
+                                                className="text-[10px] font-black bg-gradient-to-br from-amber-400 to-orange-500 text-white py-1.5 rounded-lg hover:shadow-md transition-all cursor-pointer flex items-center justify-center gap-1 hover:scale-[1.01] active:scale-[0.99]"
+                                                onClick={() => handleSaveBonusChange(challengeObj, m.id, true, scoreHome, scoreAway)}
+                                              >
+                                                 <Trophy className="w-2.5 h-2.5" />
+                                                 Bonus X2 ({credits.availableStandard})
+                                              </button>
+                                            ) : (
+                                              <button 
+                                                disabled
+                                                type="button"
+                                                className="text-[9.5px] font-bold bg-gray-100 text-gray-400 py-1.5 rounded-lg border border-gray-200 cursor-not-allowed flex items-center justify-center gap-0.5"
+                                                title="Limite de Bonus X2 atteinte."
+                                              >
+                                                 🚫 Limite X2
+                                              </button>
+                                            )}
+
+                                            {credits.allowedSuper > 0 ? (
+                                              credits.availableSuper > 0 ? (
+                                                <button 
+                                                  type="button"
+                                                  className="text-[10px] font-black bg-gradient-to-br from-indigo-500 to-purple-600 text-white py-1.5 rounded-lg hover:shadow-md transition-all cursor-pointer flex items-center justify-center gap-1 hover:scale-[1.01] active:scale-[0.99] shadow-3xs"
+                                                  onClick={() => handleSaveSuperbonusChange(challengeObj, m.id, true, scoreHome, scoreAway)}
+                                                  title="Appliquez le SuperBonus X4 !"
+                                                >
+                                                   💥 Super X4!
+                                                </button>
+                                              ) : (
+                                                <button 
+                                                  disabled
+                                                  type="button"
+                                                  className="text-[9.5px] font-bold bg-gray-150 text-gray-400 py-1.5 rounded-lg border border-gray-205 cursor-not-allowed flex items-center justify-center gap-0.5"
+                                                >
+                                                   🎯 Utilisé
+                                                </button>
+                                              )
+                                            ) : (
+                                              <button 
+                                                disabled
+                                                type="button"
+                                                className="text-[8px] font-bold bg-slate-50 text-slate-350 py-1.5 rounded-lg border border-slate-100/60 cursor-not-allowed flex items-center justify-center gap-0.5"
+                                                title="Doublez vos scores exacts consécutifs pour débloquer le SuperBonus X4 !"
+                                              >
+                                                 🔒 Bloqué X4
+                                              </button>
+                                            )}
+                                          </div>
+                                        )}
+                                      </div>
+                                    );
+                                  })()}
 
                                   {/* Messages/State */}
                                   <div className="pt-2 border-t border-gray-50 text-center">

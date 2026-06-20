@@ -9,6 +9,7 @@ export interface PointRules {
   close_score: number;
   correct_winner: number;
   qualification: number;
+  newBonusRules?: boolean;
 }
 
 export interface Challenge {
@@ -37,6 +38,7 @@ export interface Prediction {
   qualifies?: 'home' | 'away';
   customAnswer?: string;
   bonus?: boolean;
+  superbonus?: boolean;
 }
 
 export interface Competition {
