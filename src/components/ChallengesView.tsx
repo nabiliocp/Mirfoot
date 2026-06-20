@@ -476,9 +476,9 @@ export default function ChallengesView({
                 <p>• <strong>Gain de Bonus supplémentaires :</strong> Chaque score ou résultat exact pronostiqué et validé débloque <strong>+1 Bonus X2</strong>.</p>
                 <p>• <strong>SuperBonus X4 :</strong> Pronostiquer correctement <strong>2 scores exacts d'affilée</strong> (successifs) débloque un <strong>SuperBonus X4</strong>.</p>
                 <div className="bg-amber-50/70 border border-amber-100 p-2 rounded-xl text-amber-900 mt-2 space-y-1">
-                  <p className="font-bold">⚠️ Malus et Pénalités :</p>
-                  <p>- <strong>Bonus X2 :</strong> Multiplie par 2 les points du match en cas de succès, mais engendre un malus de <strong>-4 points</strong> s'il n'y a aucun point marqué.</p>
-                  <p>- <strong>SuperBonus X4 :</strong> Multiplie par 4 les points du match en cas de succès, mais engendre un malus de <strong>-8 points</strong> s'il n'y a aucun point marqué.</p>
+                  <p className="font-bold">⚠️ Fonctionnement des Malus :</p>
+                  <p>- <strong>Bonus X2 :</strong> Multiplie par 2 les points du match en cas de succès, mais s'il n'y a aucun point marqué, vous écopez d'un <strong>Malus (-4)</strong> sur le score du défi.</p>
+                  <p>- <strong>SuperBonus X4 :</strong> Multiplie par 4 les points du match en cas de succès, mais s'il n'y a aucun point marqué, vous écopez d'un <strong>Malus (-8)</strong> sur le score du défi.</p>
                 </div>
               </div>
             ) : (
@@ -3071,23 +3071,27 @@ export default function ChallengesView({
                   const todayLocalStart = new Date();
                   todayLocalStart.setHours(0, 0, 0, 0);
 
-                  const matchesWithOpenStatus = activeMatches.map(m => {
+                  const matchesWithStatus = activeMatches.map(m => {
                     const isNotDefinedYet = isTeamsNotDefinedYet(m.homeTeam, m.awayTeam);
                     const matchTime = new Date(m.utcDate).getTime();
                     const timeLeft = matchTime - new Date().getTime();
                     const isOpen = timeLeft > 0 && !challenge.locked && !challenge.resolved && !isNotDefinedYet;
-                    return { ...m, isOpen };
+                    const isInProgress = ["IN_PLAY", "LIVE", "PAUSED"].includes(m.status);
+                    const isFutureOrInProgress = (timeLeft > 0 && !challenge.locked && !challenge.resolved) || isInProgress;
+                    return { ...m, isOpen, isInProgress, isFutureOrInProgress, isNotDefinedYet };
                   });
 
-                  const openMatches = matchesWithOpenStatus.filter(m => m.isOpen);
-                  const closedMatches = matchesWithOpenStatus.filter(m => !m.isOpen);
+                  // Tab 1 ("Pronostics"): Matches that are in the future or in progress (including TBD matches)
+                  const openOrInProgressMatches = matchesWithStatus.filter(m => m.isFutureOrInProgress);
+                  // Tab 2 ("Pronostics passés"): Matches that are in the past/finished
+                  const pastMatches = matchesWithStatus.filter(m => !m.isFutureOrInProgress);
 
-                  // Chronological order for open matches
-                  const sortedOpenMatches = [...openMatches].sort((a, b) => new Date(a.utcDate).getTime() - new Date(b.utcDate).getTime());
-                  // Reverse chronological order for past/closed matches
-                  const sortedClosedMatches = [...closedMatches].sort((a, b) => new Date(b.utcDate).getTime() - new Date(a.utcDate).getTime());
+                  // Chronological order for Tab 1 (nearest first)
+                  const sortedOpenMatches = [...openOrInProgressMatches].sort((a, b) => new Date(a.utcDate).getTime() - new Date(b.utcDate).getTime());
+                  // Reverse chronological order for Tab 2 (most recent first)
+                  const sortedClosedMatches = [...pastMatches].sort((a, b) => new Date(b.utcDate).getTime() - new Date(a.utcDate).getTime());
 
-                  const activePronoFilter = (openMatches.length === 0 && closedMatches.length > 0) ? 'closed' : challengePronoFilter;
+                  const activePronoFilter = (openOrInProgressMatches.length === 0 && pastMatches.length > 0) ? 'closed' : challengePronoFilter;
 
                   const renderMatchCard = (m: Match) => {
                     const challengeId = challenge.id;
@@ -3119,8 +3123,8 @@ export default function ChallengesView({
                           <span>
                             {new Date(m.utcDate).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' })} • {new Date(m.utcDate).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
                           </span>
-                          <span className={isOpen ? "text-emerald-600 bg-emerald-50 px-2.5 py-0.5 rounded-full animate-pulse" : "bg-gray-100 text-gray-500 px-2.5 py-0.5 rounded-full"}>
-                            {timeLeft < 0 ? "PRONOSTIC CLÔTURÉ" : isOpen ? "Ouvert" : "À venir"}
+                          <span className={isOpen ? "text-emerald-600 bg-emerald-50 px-2.5 py-0.5 rounded-full animate-pulse" : isNotDefinedYet ? "bg-amber-50 text-amber-600 border border-amber-100 px-2.5 py-0.5 rounded-full" : "bg-gray-100 text-gray-500 px-2.5 py-0.5 rounded-full"}>
+                            {timeLeft < 0 ? "PRONOSTIC CLÔTURÉ" : isOpen ? "Ouvert" : isNotDefinedYet ? "En attente des qualifiés" : "À venir"}
                           </span>
                         </div>
 
@@ -3519,7 +3523,7 @@ export default function ChallengesView({
                             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                             <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
                           </span>
-                          À Pronostiquer ({openMatches.length})
+                          Pronostics ({openOrInProgressMatches.length})
                         </button>
                         <button
                           type="button"
@@ -3531,7 +3535,7 @@ export default function ChallengesView({
                           }`}
                         >
                           <Clock className="w-3.5 h-3.5 text-slate-500" />
-                          Pronostics Clos / Passés ({closedMatches.length})
+                          Pronostics passés ({pastMatches.length})
                         </button>
                       </div>
 
@@ -3543,7 +3547,7 @@ export default function ChallengesView({
                         ) : (
                           <div className="text-center text-gray-400 py-10 text-xs bg-slate-50 border border-slate-100 rounded-2xl font-semibold italic flex flex-col items-center gap-2">
                             <span className="text-lg">🎯</span>
-                            <span>Aucun match ouvert aux pronostics en cours.</span>
+                            <span>Aucun pronostic disponible ou match en cours.</span>
                           </div>
                         )
                       ) : (
@@ -3554,7 +3558,7 @@ export default function ChallengesView({
                         ) : (
                           <div className="text-center text-gray-400 py-10 text-xs bg-slate-50 border border-slate-100 rounded-2xl font-semibold italic flex flex-col items-center gap-2">
                             <Clock className="w-5 h-5 text-gray-300" />
-                            <span>Aucun match clos ou prediction passée pour ce défi.</span>
+                            <span>Aucun pronostic passé pour ce défi.</span>
                           </div>
                         )
                       )}
@@ -4168,8 +4172,8 @@ export default function ChallengesView({
                                     <span>
                                       {new Date(m.utcDate).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' })} • {new Date(m.utcDate).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
                                     </span>
-                                    <span className={isOpen ? "text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded animate-pulse" : "bg-gray-100 text-gray-500 px-2 py-0.5 rounded"}>
-                                      {timeLeft < 0 ? "PRONOSTIC CLÔTURÉ" : isOpen ? "Ouvert" : "À venir"}
+                                    <span className={isOpen ? "text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded animate-pulse" : isNotDefinedYet ? "bg-amber-50 text-amber-600 border border-amber-100 px-2 py-0.5 rounded" : "bg-gray-100 text-gray-500 px-2 py-0.5 rounded"}>
+                                      {timeLeft < 0 ? "PRONOSTIC CLÔTURÉ" : isOpen ? "Ouvert" : isNotDefinedYet ? "En attente des qualifiés" : "À venir"}
                                     </span>
                                   </div>
 
