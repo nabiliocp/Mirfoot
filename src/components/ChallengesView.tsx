@@ -142,8 +142,8 @@ const getMatchPointsDetail = (
       label = `${reason} (SuperBonus ×4)`;
     } else {
       finalPoints = -8;
-      reason = "Pénalité SuperBonus";
-      label = "Pénalité SuperBonus ×4 manqué (-8 pts)";
+      reason = "Malus (-8)";
+      label = "Malus SuperBonus ×4 manqué (-8 pts)";
     }
   } else if (isBonusActive) {
     if (basePoints > 0) {
@@ -151,8 +151,8 @@ const getMatchPointsDetail = (
       label = `${reason} (Doublé ×2)`;
     } else {
       finalPoints = -4;
-      reason = "Pénalité Bonus";
-      label = "Pénalité Bonus ×2 manqué";
+      reason = "Malus (-4)";
+      label = "Malus Bonus ×2 manqué (-4 pts)";
     }
   }
 
@@ -3667,7 +3667,7 @@ export default function ChallengesView({
                               <div className="flex gap-2 text-[9px] font-bold">
                                 {player.bonusCount > 0 && <span className="text-emerald-600 bg-emerald-50 px-1 py-0.5 rounded border border-emerald-100">Bonus ×2 ({player.bonusCount})</span>}
                                 {player.superbonusCount > 0 && <span className="text-amber-700 bg-amber-50 px-1 py-0.5 rounded border border-amber-100">💥 Super ×4 ({player.superbonusCount})</span>}
-                                {player.malusCount > 0 && <span className="text-rose-600 bg-rose-50 px-1 py-0.5 rounded border border-rose-100">Pénalité ({player.malusCount})</span>}
+                                {player.malusCount > 0 && <span className="text-rose-600 bg-rose-50 px-1 py-0.5 rounded border border-rose-100">Malus ({player.malusCount})</span>}
                               </div>
                             )}
 
