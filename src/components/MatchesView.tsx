@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Match, Competition } from '../types';
-import { AlertCircle, Clock, Search, ChevronRight, X, CalendarCheck } from 'lucide-react';
+import { AlertCircle, Clock, Search, ChevronRight, X, CalendarCheck, ChevronLeft, Calendar } from 'lucide-react';
 
 interface MatchesViewProps {
   onPronoClick?: (match: Match, competitionId: number) => void;
@@ -32,15 +32,35 @@ export default function MatchesView({ onPronoClick, userProfile, onProfileUpdate
   const [todayFilter, setTodayFilter] = useState<'all' | 'live' | 'upcoming' | 'finished'>('all');
   const [activeMode, setActiveMode] = useState<'today' | 'season'>('today');
   const [viewingComp, setViewingComp] = useState<Competition | null>(null);
+  const [selectedDate, setSelectedDate] = useState<string>(() => {
+    return new Date().toISOString().split("T")[0];
+  });
+
+  const handlePrevDay = () => {
+    const d = new Date(selectedDate);
+    d.setDate(d.getDate() - 1);
+    setSelectedDate(d.toISOString().split("T")[0]);
+  };
+
+  const handleNextDay = () => {
+    const d = new Date(selectedDate);
+    d.setDate(d.getDate() + 1);
+    setSelectedDate(d.toISOString().split("T")[0]);
+  };
+
+  const handleSetToday = () => {
+    const todayStr = new Date().toISOString().split("T")[0];
+    setSelectedDate(todayStr);
+  };
 
   useEffect(() => {
-    // Fetch competitions and Today's matches
+    // Fetch competitions and selected date's matches
     setLoading(true);
     setError(null);
 
     Promise.all([
       fetch('/api/competitions').then(res => res.json()),
-      fetch(`/api/matches/today`).then(res => res.json())
+      fetch(`/api/matches/today?date=${selectedDate}`).then(res => res.json())
     ])
     .then(([compData, todayData]) => {
       if (compData.error) {
@@ -61,7 +81,7 @@ export default function MatchesView({ onPronoClick, userProfile, onProfileUpdate
       setError("Chargement temporairement indisponible.");
       setLoading(false);
     });
-  }, [retryTrigger]);
+  }, [retryTrigger, selectedDate]);
 
   useEffect(() => {
     if (selectedCompId === 'all') {
@@ -849,9 +869,15 @@ export default function MatchesView({ onPronoClick, userProfile, onProfileUpdate
       <div className="space-y-4">
         <div className="flex flex-col gap-4 pl-1 border-l-4 border-emerald-600 pt-1 pb-1">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest flex items-center gap-2">
-              ⚡ Matchs du Jour <span className="text-xs text-gray-400 font-bold lowercase tracking-normal">(Toutes compétitions confondues)</span>
-            </h3>
+            <div>
+              <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest flex items-center gap-1.5 matches-title">
+                ⚡ {selectedDate === new Date().toISOString().split("T")[0] ? "Matchs du Jour" : "Historique des Matchs"}
+              </h3>
+              <p className="text-[10px] text-emerald-700 font-extrabold uppercase mt-1 flex items-center gap-1 select-none tracking-wider">
+                <Calendar className="w-3.5 h-3.5 text-emerald-600 animate-pulse" />
+                <span>{new Date(selectedDate).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</span>
+              </p>
+            </div>
             
             {todayMatches.length > 0 && (
               <select 
@@ -866,6 +892,52 @@ export default function MatchesView({ onPronoClick, userProfile, onProfileUpdate
                 })}
               </select>
             )}
+          </div>
+
+          {/* Selector / Navigation of historical dates */}
+          <div className="flex items-center justify-between gap-2.5 bg-slate-50 border border-slate-200/60 p-2.5 rounded-2xl shadow-3xs w-full">
+            <button
+              onClick={handlePrevDay}
+              type="button"
+              className="px-3 py-1.5 bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 font-bold rounded-xl text-xs flex items-center gap-1 transition cursor-pointer select-none active:scale-95 shadow-4xs"
+              title="Jour précédent"
+            >
+              <ChevronLeft className="w-4 h-4 shrink-0" />
+              <span className="hidden sm:inline text-[11px] uppercase tracking-wider font-extrabold">Hier</span>
+            </button>
+
+            <div className="flex items-center gap-2 justify-center flex-1">
+              <input 
+                type="date"
+                value={selectedDate}
+                onChange={(e) => {
+                  if (e.target.value) {
+                    setSelectedDate(e.target.value);
+                  }
+                }}
+                className="bg-white border border-slate-200 hover:border-slate-300 rounded-xl px-3 py-1.5 text-xs font-extrabold text-slate-800 outline-none cursor-pointer focus:border-emerald-500 shadow-4xs text-center"
+              />
+              {selectedDate !== new Date().toISOString().split("T")[0] && (
+                <button
+                  onClick={handleSetToday}
+                  type="button"
+                  className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-xl text-[10px] uppercase tracking-wider transition cursor-pointer select-none active:scale-95 shadow-sm animate-fade-in"
+                  title="Revenir à aujourd'hui"
+                >
+                  Aujourd'hui
+                </button>
+              )}
+            </div>
+
+            <button
+              onClick={handleNextDay}
+              type="button"
+              className="px-3 py-1.5 bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 font-bold rounded-xl text-xs flex items-center gap-1 transition cursor-pointer select-none active:scale-95 shadow-4xs"
+              title="Jour suivant"
+            >
+              <span className="hidden sm:inline text-[11px] uppercase tracking-wider font-extrabold">Demain</span>
+              <ChevronRight className="w-4 h-4 shrink-0" />
+            </button>
           </div>
           
           <div className="flex items-center gap-2 flex-wrap pt-2 border-t border-gray-100">
@@ -905,7 +977,7 @@ export default function MatchesView({ onPronoClick, userProfile, onProfileUpdate
         ) : (
           <div className="bg-gray-50 rounded-2xl p-8 border-2 border-dashed border-gray-200 text-center flex flex-col items-center gap-3">
             <CalendarCheck className="w-8 h-8 text-gray-300" />
-            <p className="text-sm font-bold text-gray-400">Aucun match aujourd'hui correspondant à ces filtres.</p>
+            <p className="text-sm font-bold text-gray-400">Aucun match correspondant pour cette date avec ces filtres.</p>
           </div>
         )}
       </div>

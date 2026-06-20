@@ -468,7 +468,21 @@ export default function ChallengesView({
             Bonus
           </h4>
           <div className="pl-4 border-l-2 border-amber-100 text-amber-800 text-xs font-medium space-y-1">
-            <p><strong>Bonus X2 :</strong> Si activé, les points gagnés sont doublés, si 0 point -4 pts sur le score du défi en cours.</p>
+            {rules.newBonusRules ? (
+              <div className="space-y-2 text-slate-700 text-[11px] leading-relaxed">
+                <p className="font-bold text-amber-800">🎯 Règlement de Bonus Stratégique :</p>
+                <p>• <strong>Bonus X2 initial :</strong> Vous débutez avec <strong>1 Bonus X2</strong> de départ.</p>
+                <p>• <strong>Gain de Bonus supplémentaires :</strong> Chaque score ou résultat exact pronostiqué et validé débloque <strong>+1 Bonus X2</strong>.</p>
+                <p>• <strong>SuperBonus X4 :</strong> Pronostiquer correctement <strong>2 scores exacts d'affilée</strong> (successifs) débloque un <strong>SuperBonus X4</strong>.</p>
+                <div className="bg-amber-50/70 border border-amber-100 p-2 rounded-xl text-amber-900 mt-2 space-y-1">
+                  <p className="font-bold">⚠️ Malus et Pénalités :</p>
+                  <p>- <strong>Bonus X2 :</strong> Multiplie par 2 les points du match en cas de succès, mais engendre un malus de <strong>-4 points</strong> s'il n'y a aucun point marqué.</p>
+                  <p>- <strong>SuperBonus X4 :</strong> Multiplie par 4 les points du match en cas de succès, mais engendre un malus de <strong>-8 points</strong> s'il n'y a aucun point marqué.</p>
+                </div>
+              </div>
+            ) : (
+              <p><strong>Bonus X2 :</strong> Si activé, les points gagnés sont doublés, si 0 point -4 pts sur le score du défi en cours.</p>
+            )}
           </div>
         </div>
 
@@ -3022,24 +3036,27 @@ export default function ChallengesView({
                     const credits = getUserBonusCredits(challenge, userPredictions[challenge.id], activeMatches);
                     if (credits.isEnabled) {
                       return (
-                        <div className="bg-gradient-to-r from-amber-50 to-orange-50 p-4 rounded-2xl border border-amber-200/60 shadow-3xs mb-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-3 animate-fade-in">
-                          <div>
-                            <h4 className="text-xs font-extrabold text-amber-800 flex items-center gap-1.5 uppercase tracking-wider">
-                              <Trophy className="w-4 h-4 text-amber-600 shrink-0 animate-bounce" />
-                              Gestionnaire de Bonus Stratégique (Nouveau Règlement)
-                            </h4>
-                            <p className="text-[10px] text-slate-600 mt-1 font-semibold leading-relaxed">
-                              Vous disposez de <strong>1 Bonus X2 de départ</strong>. Chaque score exact validé vous rapporte 1 Bonus X2 supplémentaire dans ce défi. <br />
-                              Chaque série de <strong>2 scores exacts successifs</strong> débloque un puissant <strong>SuperBonus X4</strong> !
-                            </p>
+                        <div className="bg-gradient-to-r from-amber-50/70 to-orange-50/70 p-3 rounded-2xl border border-amber-200/50 shadow-3xs mb-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 animate-fade-in">
+                          <div className="flex items-center gap-2">
+                            <div className="bg-amber-100 text-amber-700 p-1.5 rounded-xl shrink-0">
+                              <Trophy className="w-4 h-4 shrink-0 animate-pulse" />
+                            </div>
+                            <div>
+                              <h4 className="text-[11px] font-black text-amber-900 uppercase tracking-wider">
+                                Bonus de défi disponibles
+                              </h4>
+                              <p className="text-[10px] text-slate-500 font-semibold leading-none mt-0.5">
+                                Voir le barème ci-dessus pour le détail des règles.
+                              </p>
+                            </div>
                           </div>
-                          <div className="flex flex-wrap gap-2 shrink-0">
-                            <div className="bg-white/90 border border-amber-200 px-3 py-1.5 rounded-xl text-center shadow-3xs min-w-[110px]">
-                              <span className="text-[8px] font-black text-amber-800 block uppercase tracking-wider">Bonus X2 cumulés</span>
+                          <div className="flex gap-2 shrink-0 w-full sm:w-auto">
+                            <div className="bg-white/90 border border-amber-100 px-3 py-1 rounded-xl flex items-center gap-2 shadow-3xs flex-1 sm:flex-initial justify-center sm:justify-start">
+                              <span className="text-[9px] font-extrabold text-amber-800 uppercase tracking-widest">Bonus X2:</span>
                               <span className="font-mono text-xs font-black text-slate-800">{credits.usedStandard} / {credits.allowedStandard}</span>
                             </div>
-                            <div className="bg-white/90 border border-amber-200 px-3 py-1.5 rounded-xl text-center shadow-3xs min-w-[110px]">
-                              <span className="text-[8px] font-black text-amber-800 block uppercase tracking-wider">SuperBonus X4</span>
+                            <div className="bg-white/90 border border-amber-100 px-3 py-1 rounded-xl flex items-center gap-2 shadow-3xs flex-1 sm:flex-initial justify-center sm:justify-start">
+                              <span className="text-[9px] font-extrabold text-amber-800 uppercase tracking-widest">💥 Super X4:</span>
                               <span className="font-mono text-xs font-black text-slate-800">{credits.usedSuper} / {credits.allowedSuper}</span>
                             </div>
                           </div>
