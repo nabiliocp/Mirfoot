@@ -284,6 +284,7 @@ export default function ChallengesView({
   const [showFinishedChallenges, setShowFinishedChallenges] = useState(false);
   const [showPastMatches, setShowPastMatches] = useState(false); // Added this
   const [showPreviousPronostics, setShowPreviousPronostics] = useState(false);
+  const [challengePronoFilter, setChallengePronoFilter] = useState<'open' | 'closed'>('open');
   const [loading, setLoading] = useState(true);
   const [userPredictions, setUserPredictions] = useState<
     Record<string, Prediction>
@@ -3070,15 +3071,23 @@ export default function ChallengesView({
                   const todayLocalStart = new Date();
                   todayLocalStart.setHours(0, 0, 0, 0);
 
-                  const currentAndFutureMatches = activeMatches.filter((m) => {
-                    const mDate = new Date(m.utcDate);
-                    return mDate.getTime() >= todayLocalStart.getTime();
+                  const matchesWithOpenStatus = activeMatches.map(m => {
+                    const isNotDefinedYet = isTeamsNotDefinedYet(m.homeTeam, m.awayTeam);
+                    const matchTime = new Date(m.utcDate).getTime();
+                    const timeLeft = matchTime - new Date().getTime();
+                    const isOpen = timeLeft > 0 && !challenge.locked && !challenge.resolved && !isNotDefinedYet;
+                    return { ...m, isOpen };
                   });
 
-                  const pastPredictions = activeMatches.filter((m) => {
-                    const mDate = new Date(m.utcDate);
-                    return mDate.getTime() < todayLocalStart.getTime();
-                  });
+                  const openMatches = matchesWithOpenStatus.filter(m => m.isOpen);
+                  const closedMatches = matchesWithOpenStatus.filter(m => !m.isOpen);
+
+                  // Chronological order for open matches
+                  const sortedOpenMatches = [...openMatches].sort((a, b) => new Date(a.utcDate).getTime() - new Date(b.utcDate).getTime());
+                  // Reverse chronological order for past/closed matches
+                  const sortedClosedMatches = [...closedMatches].sort((a, b) => new Date(b.utcDate).getTime() - new Date(a.utcDate).getTime());
+
+                  const activePronoFilter = (openMatches.length === 0 && closedMatches.length > 0) ? 'closed' : challengePronoFilter;
 
                   const renderMatchCard = (m: Match) => {
                     const challengeId = challenge.id;
@@ -3495,45 +3504,59 @@ export default function ChallengesView({
 
                   return (
                     <div className="space-y-4 max-h-[600px] overflow-y-auto pr-1">
-                      {/* Current & future matches */}
-                      {currentAndFutureMatches.length > 0 ? (
-                        <div className="space-y-4">
-                          {currentAndFutureMatches.map((m) => renderMatchCard(m))}
-                        </div>
+                      {/* Sub-tabs segment control for Open vs Closed/Past Pronostics */}
+                      <div className="flex bg-slate-100 p-1 rounded-2xl border border-slate-200/50 shadow-3xs">
+                        <button
+                          type="button"
+                          onClick={() => setChallengePronoFilter('open')}
+                          className={`flex-1 py-1.5 px-3 text-[11px] font-black rounded-xl transition flex items-center justify-center gap-1.5 cursor-pointer hover:bg-white/50 active:scale-95 select-none ${
+                            activePronoFilter === 'open'
+                              ? "bg-white text-emerald-800 shadow-3xs font-extrabold"
+                              : "text-slate-500 hover:text-slate-800"
+                          }`}
+                        >
+                          <span className="relative flex h-2 w-2">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                          </span>
+                          À Pronostiquer ({openMatches.length})
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setChallengePronoFilter('closed')}
+                          className={`flex-1 py-1.5 px-3 text-[11px] font-black rounded-xl transition flex items-center justify-center gap-1.5 cursor-pointer hover:bg-white/50 active:scale-95 select-none ${
+                            activePronoFilter === 'closed'
+                              ? "bg-white text-slate-800 shadow-3xs font-extrabold"
+                              : "text-slate-500 hover:text-slate-800"
+                          }`}
+                        >
+                          <Clock className="w-3.5 h-3.5 text-slate-500" />
+                          Pronostics Clos / Passés ({closedMatches.length})
+                        </button>
+                      </div>
+
+                      {activePronoFilter === 'open' ? (
+                        sortedOpenMatches.length > 0 ? (
+                          <div className="space-y-4">
+                            {sortedOpenMatches.map((m) => renderMatchCard(m))}
+                          </div>
+                        ) : (
+                          <div className="text-center text-gray-400 py-10 text-xs bg-slate-50 border border-slate-100 rounded-2xl font-semibold italic flex flex-col items-center gap-2">
+                            <span className="text-lg">🎯</span>
+                            <span>Aucun match ouvert aux pronostics en cours.</span>
+                          </div>
+                        )
                       ) : (
-                        <p className="text-center text-gray-400 py-8 text-xs bg-slate-50 border border-slate-100 rounded-2xl font-semibold italic">
-                          Aucun match programmé à partir du jour en cours.
-                        </p>
-                      )}
-
-                      {/* Collapse section for past matches */}
-                      {pastPredictions.length > 0 && (
-                        <div className="mt-6 border-t border-dashed border-slate-200 pt-4">
-                          <button
-                            type="button"
-                            onClick={() => setShowPreviousPronostics(!showPreviousPronostics)}
-                            className="w-full py-3 px-4 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 font-bold rounded-2xl text-xs flex items-center justify-between transition-all duration-200 active:scale-[0.99] cursor-pointer select-none"
-                          >
-                            <div className="flex items-center gap-2">
-                              <Clock className="w-4 h-4 text-slate-500" />
-                              <span className="text-left">
-                                {showPreviousPronostics ? "Masquer les pronostics précédents" : "Afficher les pronostics précédents"}
-                              </span>
-                              <span className="bg-slate-200 text-slate-800 px-2 py-0.5 rounded-full text-[10px] font-extrabold shadow-3xs text-center">
-                                {pastPredictions.length}
-                              </span>
-                            </div>
-                            <span className="text-[10px] bg-emerald-50 text-emerald-700 px-2.5 py-0.5 rounded-full font-extrabold tracking-wider uppercase shrink-0">
-                              {showPreviousPronostics ? "Fermer ▲" : "Afficher ▼"}
-                            </span>
-                          </button>
-
-                          {showPreviousPronostics && (
-                            <div className="space-y-4 mt-4 animate-in fade-in slide-in-from-top-2 duration-300">
-                              {pastPredictions.map((m) => renderMatchCard(m))}
-                            </div>
-                          )}
-                        </div>
+                        sortedClosedMatches.length > 0 ? (
+                          <div className="space-y-4">
+                            {sortedClosedMatches.map((m) => renderMatchCard(m))}
+                          </div>
+                        ) : (
+                          <div className="text-center text-gray-400 py-10 text-xs bg-slate-50 border border-slate-100 rounded-2xl font-semibold italic flex flex-col items-center gap-2">
+                            <Clock className="w-5 h-5 text-gray-300" />
+                            <span>Aucun match clos ou prediction passée pour ce défi.</span>
+                          </div>
+                        )
                       )}
                     </div>
                   );
