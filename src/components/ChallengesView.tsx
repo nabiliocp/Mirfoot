@@ -2179,7 +2179,7 @@ export default function ChallengesView({
                 const realHome = singleMatch.score?.fullTime?.home ?? singleMatch.score?.regularTime?.home;
                 const realAway = singleMatch.score?.fullTime?.away ?? singleMatch.score?.regularTime?.away;
                 if (realHome !== null && realAway !== null && realHome !== undefined && realAway !== undefined) {
-                  const ptsDetail = getMatchPointsDetail(singleMatch, userPred.homeScore, userPred.awayScore, !!userPred.bonus, challenge.pointRules);
+                  const ptsDetail = getMatchPointsDetail(singleMatch, userPred.homeScore, userPred.awayScore, !!userPred.bonus, challenge.pointRules, !!userPred.superbonus);
                   const matchPts = ptsDetail?.points;
                   return (
                     <div className={`text-xs rounded-xl p-3 border shadow-xs flex flex-col gap-2 text-left font-sans ${
@@ -3413,7 +3413,7 @@ export default function ChallengesView({
                                   const realHome = m.score?.fullTime?.home ?? m.score?.regularTime?.home;
                                   const realAway = m.score?.fullTime?.away ?? m.score?.regularTime?.away;
                                   if (realHome !== null && realAway !== null && realHome !== undefined && realAway !== undefined) {
-                                    const ptsDetail = getMatchPointsDetail(m, userPredMatch.homeScore, userPredMatch.awayScore, !!userPredMatch.bonus, challenge.pointRules);
+                                    const ptsDetail = getMatchPointsDetail(m, userPredMatch.homeScore, userPredMatch.awayScore, isBonusActive, challenge.pointRules, isSuperbonusActive);
                                     const matchPts = ptsDetail?.points;
                                     return (
                                       <div className={`text-xs rounded-xl p-3 border shadow-xs flex flex-col gap-2 text-left font-sans animate-fade-in ${
@@ -4425,7 +4425,7 @@ export default function ChallengesView({
                                             const realHome = m.score?.fullTime?.home ?? m.score?.regularTime?.home;
                                             const realAway = m.score?.fullTime?.away ?? m.score?.regularTime?.away;
                                             if (realHome !== null && realAway !== null && realHome !== undefined && realAway !== undefined) {
-                                              const ptsDetail = getMatchPointsDetail(m, userPredMatch.homeScore, userPredMatch.awayScore, !!userPredMatch.bonus, activeModal.challenge.pointRules);
+                                              const ptsDetail = getMatchPointsDetail(m, userPredMatch.homeScore, userPredMatch.awayScore, !!userPredMatch.bonus, activeModal.challenge.pointRules, !!userPredMatch.superbonus);
                                               const matchPts = ptsDetail?.points;
                                               return (
                                                 <div className={`text-xs rounded-xl p-2.5 border shadow-xs flex flex-col gap-1.5 text-left font-sans mt-2 animate-fade-in ${
