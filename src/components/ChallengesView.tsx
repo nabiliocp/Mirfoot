@@ -2387,6 +2387,7 @@ export default function ChallengesView({
             let isZero = false;
             if (pts === 0) {
               isZero = true;
+              zeroCount++;
             }
 
             // Bonus X2 logic
@@ -2399,8 +2400,6 @@ export default function ChallengesView({
                 malusCount = 1;
                 malus4Count = 1;
               }
-            } else if (isZero) {
-              zeroCount++;
             }
           }
         }
@@ -2494,6 +2493,7 @@ export default function ChallengesView({
                 let isZero = false;
                 if (matchPts === 0) {
                   isZero = true;
+                  zeroCount++;
                 }
 
                 if (isNewBonusRules) {
@@ -2515,8 +2515,6 @@ export default function ChallengesView({
                       malusCount++;
                       malus4Count++;
                     }
-                  } else if (isZero) {
-                    zeroCount++;
                   }
                 } else {
                   // Bonus X2 logic per-match
@@ -2529,8 +2527,6 @@ export default function ChallengesView({
                       malusCount++;
                       malus4Count++;
                     }
-                  } else if (isZero) {
-                    zeroCount++;
                   }
                 }
                 pts += matchPts;
@@ -3692,11 +3688,11 @@ export default function ChallengesView({
                             
                             {(player.bonusCount > 0 || player.superbonusCount > 0 || player.malusCount > 0) && (
                               <div className="flex gap-2 text-[9px] font-bold">
-                                {player.bonusCount > 0 && <span className="text-emerald-600 bg-emerald-50 px-1 py-0.5 rounded border border-emerald-100">Bonus ×2 ({player.bonusCount})</span>}
-                                {player.superbonusCount > 0 && <span className="text-amber-700 bg-amber-50 px-1 py-0.5 rounded border border-amber-100">💥 Super ×4 ({player.superbonusCount})</span>}
-                                {player.malus4Count > 0 && <span className="text-rose-600 bg-rose-50 px-1 py-0.5 rounded border border-rose-100">Malus (-4) ({player.malus4Count})</span>}
-                                {player.malus8Count > 0 && <span className="text-rose-600 bg-rose-50 px-1 py-0.5 rounded border border-rose-100">Malus (-8) ({player.malus8Count})</span>}
-                                {player.malusCount > 0 && (!player.malus4Count && !player.malus8Count) && <span className="text-rose-600 bg-rose-50 px-1 py-0.5 rounded border border-rose-100">Malus ({player.malusCount})</span>}
+                                {player.bonusCount > 0 && <span className="text-emerald-600 bg-emerald-50 px-1 py-0.5 rounded border border-emerald-100">{player.bonusCount}x Bonus ×2</span>}
+                                {player.superbonusCount > 0 && <span className="text-amber-700 bg-amber-50 px-1 py-0.5 rounded border border-amber-100">💥 {player.superbonusCount}x Super ×4</span>}
+                                {player.malus4Count > 0 && <span className="text-rose-600 bg-rose-50 px-1 py-0.5 rounded border border-rose-100">{player.malus4Count}x Malus -4</span>}
+                                {player.malus8Count > 0 && <span className="text-rose-600 bg-rose-50 px-1 py-0.5 rounded border border-rose-100">{player.malus8Count}x Malus -8</span>}
+                                {player.malusCount > 0 && (!player.malus4Count && !player.malus8Count) && <span className="text-rose-600 bg-rose-50 px-1 py-0.5 rounded border border-rose-100">{player.malusCount}x Malus</span>}
                               </div>
                             )}
 

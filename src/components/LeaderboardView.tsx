@@ -474,8 +474,8 @@ export default function LeaderboardView() {
                     </div>
                     {(p.bonusCount > 0 || p.malusCount > 0) && (
                       <div className="flex gap-2 text-[9px] font-bold">
-                        {p.bonusCount > 0 && <span className="text-emerald-600">Bonus X {p.bonusCount}</span>}
-                        {p.malusCount > 0 && <span className="text-rose-600">Malus X {p.malusCount}</span>}
+                        {p.bonusCount > 0 && <span className="text-emerald-600">{p.bonusCount}x Bonus</span>}
+                        {p.malusCount > 0 && <span className="text-rose-600">{p.malusCount}x Malus</span>}
                       </div>
                     )}
                     <div className="font-black text-lg text-emerald-700">
