@@ -2278,17 +2278,32 @@ export default function ChallengesView({
 
     // Authorized check and limited matches definition for test simulation
     const isAuthorizedForSimulation = userEmail === "rouijel.nabil@gmail.com" || userEmail === "rouijel.nabil.cp@gmail.com";
-    const simGroupMatches = modalMatches.filter(m => !translateStage(m.stage, m.group, m.matchday).isKnockout);
-    const simKnockoutMatches = modalMatches.filter(m => translateStage(m.stage, m.group, m.matchday).isKnockout);
+    
+    // Filter proposed matches in test mode configuration: future or in-progress, and with known teams (not TBD)
+    const testProposedMatchesRaw = modalMatches.filter(m => {
+      const isNotDefinedYet = isTeamsNotDefinedYet(m.homeTeam, m.awayTeam);
+      const matchTime = new Date(m.utcDate).getTime();
+      const timeLeft = matchTime - new Date().getTime();
+      const isInProgress = ["IN_PLAY", "LIVE", "PAUSED"].includes(m.status);
+      const isScheduled = m.status === "SCHEDULED" || m.status === "TIMED";
+      const isFutureOrInProgress = (timeLeft > 0 && !challenge.locked && !challenge.resolved) || isInProgress || isScheduled;
+      return isFutureOrInProgress && !isNotDefinedYet;
+    });
+
+    // Fallback to all matches if no active/future matches are left (e.g. historical challenge)
+    const testProposedMatches = testProposedMatchesRaw.length > 0 ? testProposedMatchesRaw : modalMatches;
+
+    const simGroupMatches = testProposedMatches.filter(m => !translateStage(m.stage, m.group, m.matchday).isKnockout);
+    const simKnockoutMatches = testProposedMatches.filter(m => translateStage(m.stage, m.group, m.matchday).isKnockout);
     const defaultSimMatches = [
       ...simGroupMatches.slice(0, 5),
       ...simKnockoutMatches.slice(0, 5)
     ];
-    if (defaultSimMatches.length === 0 && modalMatches.length > 0) {
-      defaultSimMatches.push(...modalMatches.slice(0, 10));
+    if (defaultSimMatches.length === 0 && testProposedMatches.length > 0) {
+      defaultSimMatches.push(...testProposedMatches.slice(0, 10));
     }
 
-    const limitSimMatches = modalMatches.filter(m => simulatedScores[m.id] !== undefined);
+    const limitSimMatches = testProposedMatches.filter(m => simulatedScores[m.id] !== undefined);
 
     // Prepare leaderboard data
     const activeMatches = modalMatches.map(m => {
@@ -2751,7 +2766,7 @@ export default function ChallengesView({
                   <summary className="flex items-center justify-between p-3.5 px-4 font-black text-xs text-indigo-950 cursor-pointer hover:bg-slate-50 transition select-none">
                     <div className="flex items-center gap-2">
                       <span className="text-base">🛠️</span>
-                      <span>Configurer les matchs à inclure dans le test ({limitSimMatches.length} / {modalMatches.length})</span>
+                      <span>Configurer les matchs à inclure dans le test ({limitSimMatches.length} / {testProposedMatches.length})</span>
                     </div>
                     <span className="text-[10px] bg-slate-100 text-slate-500 font-bold px-2 py-0.5 rounded-md group-open:hidden">Cliquer pour déplier</span>
                     <span className="text-[10px] bg-indigo-50 text-indigo-700 font-bold px-2 py-0.5 rounded-md hidden group-open:inline-block">Cliquer pour replier</span>
@@ -2762,7 +2777,7 @@ export default function ChallengesView({
                         type="button"
                         onClick={() => {
                           const allSims: Record<number, { home: number | string; away: number | string; status: string }> = {};
-                          modalMatches.forEach(m => {
+                          testProposedMatches.forEach(m => {
                             allSims[m.id] = {
                               home: m.score.fullTime.home !== null ? m.score.fullTime.home : 0,
                               away: m.score.fullTime.away !== null ? m.score.fullTime.away : 0,
@@ -2773,7 +2788,7 @@ export default function ChallengesView({
                         }}
                         className="text-[10px] text-indigo-750 bg-white hover:bg-indigo-50 border border-indigo-200 px-2.5 py-1 rounded-lg font-black cursor-pointer shadow-3xs"
                       >
-                        Sélectionner tous les matchs ({modalMatches.length})
+                        Sélectionner tous les matchs ({testProposedMatches.length})
                       </button>
                       <button
                         type="button"
@@ -2786,7 +2801,7 @@ export default function ChallengesView({
                       </button>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                      {modalMatches.map(m => {
+                      {testProposedMatches.map(m => {
                         const isSelected = simulatedScores[m.id] !== undefined;
                         return (
                           <label 
