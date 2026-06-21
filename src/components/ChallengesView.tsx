@@ -2320,6 +2320,8 @@ export default function ChallengesView({
         let isWinner = false;
         let bonusCount = 0;
         let malusCount = 0;
+        let malus4Count = 0;
+        let malus8Count = 0;
         let exactCount = 0;
         let winnerCount = 0;
         let closeCount = 0;
@@ -2380,6 +2382,7 @@ export default function ChallengesView({
               } else {
                 pts = -4;
                 malusCount = 1;
+                malus4Count = 1;
               }
             } else if (isZero) {
               zeroCount++;
@@ -2404,7 +2407,9 @@ export default function ChallengesView({
           qualificationCount,
           zeroCount,
           bonusCount,
-          malusCount
+          malusCount,
+          malus4Count,
+          malus8Count
         };
       });
     } else {
@@ -2421,6 +2426,8 @@ export default function ChallengesView({
         let bonusCount = 0;
         let superbonusCount = 0;
         let malusCount = 0;
+        let malus4Count = 0;
+        let malus8Count = 0;
         
         const predVal = typeof bet.predictions === 'string' ? JSON.parse(bet.predictions) : bet.predictions;
         const matchesPreds = predVal?.matches || {};
@@ -2482,6 +2489,7 @@ export default function ChallengesView({
                     } else {
                       matchPts = -8;
                       malusCount++;
+                      malus8Count++;
                     }
                   } else if (isMatchBonusActive) {
                     if (matchPts > 0) {
@@ -2490,6 +2498,7 @@ export default function ChallengesView({
                     } else {
                       matchPts = -4;
                       malusCount++;
+                      malus4Count++;
                     }
                   } else if (isZero) {
                     zeroCount++;
@@ -2503,6 +2512,7 @@ export default function ChallengesView({
                     } else {
                       matchPts = -4;
                       malusCount++;
+                      malus4Count++;
                     }
                   } else if (isZero) {
                     zeroCount++;
@@ -2530,7 +2540,9 @@ export default function ChallengesView({
           predictionsCount: predictedCount,
           bonusCount,
           superbonusCount,
-          malusCount
+          malusCount,
+          malus4Count,
+          malus8Count
         };
       });
     }
@@ -3667,7 +3679,9 @@ export default function ChallengesView({
                               <div className="flex gap-2 text-[9px] font-bold">
                                 {player.bonusCount > 0 && <span className="text-emerald-600 bg-emerald-50 px-1 py-0.5 rounded border border-emerald-100">Bonus ×2 ({player.bonusCount})</span>}
                                 {player.superbonusCount > 0 && <span className="text-amber-700 bg-amber-50 px-1 py-0.5 rounded border border-amber-100">💥 Super ×4 ({player.superbonusCount})</span>}
-                                {player.malusCount > 0 && <span className="text-rose-600 bg-rose-50 px-1 py-0.5 rounded border border-rose-100">Malus ({player.malusCount})</span>}
+                                {player.malus4Count > 0 && <span className="text-rose-600 bg-rose-50 px-1 py-0.5 rounded border border-rose-100">Malus (-4) ({player.malus4Count})</span>}
+                                {player.malus8Count > 0 && <span className="text-rose-600 bg-rose-50 px-1 py-0.5 rounded border border-rose-100">Malus (-8) ({player.malus8Count})</span>}
+                                {player.malusCount > 0 && (!player.malus4Count && !player.malus8Count) && <span className="text-rose-600 bg-rose-50 px-1 py-0.5 rounded border border-rose-100">Malus ({player.malusCount})</span>}
                               </div>
                             )}
 
