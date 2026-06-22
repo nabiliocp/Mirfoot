@@ -2113,13 +2113,24 @@ export default function ChallengesView({
                   qualifText = m.awayTeam?.name || challenge.matchAwayTeam || "Extérieur";
                 }
 
+                // Calculate other participant points detail for this match
+                const ptsDetail = getMatchPointsDetail(
+                  m,
+                  op.homeScore,
+                  op.awayScore,
+                  op.bonus,
+                  challenge.pointRules,
+                  op.superbonus
+                );
+                const matchPts = ptsDetail?.points ?? null;
+
                 return (
                   <div key={`${op.userId}-${idx}`} className="flex items-center justify-between p-1.5 bg-slate-50 border border-slate-100 rounded-lg text-slate-700 hover:bg-white transition shadow-3xs leading-none">
-                    <div className="flex items-center gap-1.5 min-w-0 pr-1">
-                      <div className="w-5 h-5 flex items-center justify-center bg-white rounded-full text-xs shrink-0 select-none border border-slate-100 shadow-3xs font-sans">
+                    <div className="flex items-center gap-1.5 min-w-0 pr-1 block">
+                      <div className="w-5 h-5 flex items-center justify-center bg-white rounded-full text-xs shrink-0 select-none border border-slate-100 shadow-3xs font-sans inline-flex">
                         {op.profile.avatar_type === "emoji" ? op.profile.avatar_value : "⚽"}
                       </div>
-                      <span className="text-[10.5px] font-bold text-slate-800 truncate" title={op.profile.username}>
+                      <span className="text-[10.5px] font-bold text-slate-800 truncate inline-block align-middle ml-1" title={op.profile.username}>
                         {op.profile.username}
                       </span>
                     </div>
@@ -2142,6 +2153,22 @@ export default function ChallengesView({
                       {qualifText && (
                         <span className="text-[8.5px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-100 px-1 rounded truncate max-w-[55px]" title={`Qualif: ${qualifText}`}>
                           👑 {qualifText}
+                        </span>
+                      )}
+
+                      {/* Points badge */}
+                      {matchPts !== null && (
+                        <span 
+                          className={`px-1.5 py-0.5 rounded font-mono font-black text-[9px] shadow-3xs border shrink-0 select-none ${
+                            matchPts > 0 
+                              ? 'bg-emerald-600 text-white border-emerald-700' 
+                              : matchPts < 0 
+                                ? 'bg-rose-600 text-white border-rose-700' 
+                                : 'bg-slate-700 text-white border-slate-800'
+                          }`}
+                          title={ptsDetail?.label || ptsDetail?.reason}
+                        >
+                          {matchPts > 0 ? `+${matchPts}` : matchPts} {Math.abs(matchPts) > 1 ? 'pts' : 'pt'}
                         </span>
                       )}
                     </div>
@@ -3811,25 +3838,25 @@ export default function ChallengesView({
                                 <span className={player.closeCount > 0 ? "bg-amber-50/70 text-amber-800 px-1.5 py-0.5 rounded border border-amber-200" : "bg-gray-50/50 text-gray-400 px-1.5 py-0.5 rounded border border-gray-100"}>{player.closeCount || 0} Proche</span>
                                 <span className={player.winnerCount > 0 ? "bg-indigo-50/70 text-indigo-800 px-1.5 py-0.5 rounded border border-indigo-200" : "bg-gray-50/50 text-gray-400 px-1.5 py-0.5 rounded border border-gray-100"}>{player.winnerCount || 0} Winner</span>
                                 {player.qualificationCount > 0 && <span className="bg-blue-50/70 text-blue-800 px-1.5 py-0.5 rounded border border-blue-200">{player.qualificationCount} Qualif</span>}
-                                {player.zeroCount > 0 && <span className="bg-rose-50/70 text-rose-800 px-1.5 py-0.5 rounded border border-rose-200">{player.zeroCount} x 0 pt</span>}
+                                <span className={player.zeroCount > 0 ? "bg-rose-50/70 text-rose-800 px-1.5 py-0.5 rounded border border-rose-200" : "bg-gray-50/50 text-gray-400 px-1.5 py-0.5 rounded border border-gray-100"}>{player.zeroCount || 0} x 0 pt</span>
                               </div>
                             ) : (
                                <div className="flex flex-wrap justify-end gap-1.5 text-[9px] font-bold text-gray-400 max-w-[120px]">
-                                {player.isExact && <span className="bg-emerald-50/70 text-emerald-800 px-1.5 py-0.5 rounded border border-emerald-200">Exact</span>}
-                                {player.closeCount > 0 && <span className="bg-amber-50/70 text-amber-800 px-1.5 py-0.5 rounded border border-amber-200">Proche</span>}
-                                {player.isWinner && !player.isExact && player.closeCount === 0 && <span className="bg-indigo-50/70 text-indigo-800 px-1.5 py-0.5 rounded border border-indigo-200">Winner</span>}
+                                <span className={player.isExact ? "bg-emerald-50/70 text-emerald-800 px-1.5 py-0.5 rounded border border-emerald-200" : "bg-gray-50/50 text-gray-400 px-1.5 py-0.5 rounded border border-gray-100"}>Exact</span>
+                                <span className={player.closeCount > 0 ? "bg-amber-50/70 text-amber-800 px-1.5 py-0.5 rounded border border-amber-200" : "bg-gray-50/50 text-gray-400 px-1.5 py-0.5 rounded border border-gray-100"}>Proche</span>
+                                <span className={player.isWinner && !player.isExact && player.closeCount === 0 ? "bg-indigo-50/70 text-indigo-800 px-1.5 py-0.5 rounded border border-indigo-200" : "bg-gray-50/50 text-gray-400 px-1.5 py-0.5 rounded border border-gray-100"}>Winner</span>
                                 {player.qualificationCount > 0 && <span className="bg-blue-50/70 text-blue-800 px-1.5 py-0.5 rounded border border-blue-200">Qualif</span>}
-                                {player.zeroCount > 0 && <span className="bg-rose-50/70 text-rose-800 px-1.5 py-0.5 rounded border border-rose-200">0 pt</span>}
+                                <span className={player.zeroCount > 0 ? "bg-rose-50/70 text-rose-800 px-1.5 py-0.5 rounded border border-rose-200" : "bg-gray-50/50 text-gray-400 px-1.5 py-0.5 rounded border border-gray-100"}>0 pt</span>
                               </div>
                             )}
                             
                             {(player.bonusCount > 0 || player.superbonusCount > 0 || player.malusCount > 0) && (
-                              <div className="flex gap-2 text-[9px] font-bold">
-                                {player.bonusCount > 0 && <span className="text-emerald-600 bg-emerald-50 px-1 py-0.5 rounded border border-emerald-100">{player.bonusCount}x Bonus ×2</span>}
-                                {player.superbonusCount > 0 && <span className="text-amber-700 bg-amber-50 px-1 py-0.5 rounded border border-amber-100">💥 {player.superbonusCount}x Super ×4</span>}
-                                {player.malus4Count > 0 && <span className="text-rose-600 bg-rose-50 px-1 py-0.5 rounded border border-rose-100">{player.malus4Count}x Malus -4</span>}
-                                {player.malus8Count > 0 && <span className="text-rose-600 bg-rose-50 px-1 py-0.5 rounded border border-rose-100">{player.malus8Count}x Malus -8</span>}
-                                {player.malusCount > 0 && (!player.malus4Count && !player.malus8Count) && <span className="text-rose-600 bg-rose-50 px-1 py-0.5 rounded border border-rose-100">{player.malusCount}x Malus</span>}
+                              <div className="flex gap-1.5 text-[9px] font-bold mt-1 shadow-3xs w-fit">
+                                {player.bonusCount > 0 && <span className="text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-100 whitespace-nowrap">{player.bonusCount}x Bonus ×2</span>}
+                                {player.superbonusCount > 0 && <span className="text-amber-800 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-100 whitespace-nowrap">{player.superbonusCount}x Super ×4</span>}
+                                {player.malus4Count > 0 && <span className="text-rose-700 bg-rose-50 px-1.5 py-0.5 rounded border border-rose-100 whitespace-nowrap">{player.malus4Count}x Malus -4</span>}
+                                {player.malus8Count > 0 && <span className="text-rose-700 bg-rose-50 px-1.5 py-0.5 rounded border border-rose-100 whitespace-nowrap">{player.malus8Count}x Malus -8</span>}
+                                {player.malusCount > 0 && (!player.malus4Count && !player.malus8Count) && <span className="text-rose-700 bg-rose-50 px-1.5 py-0.5 rounded border border-rose-100 whitespace-nowrap">{player.malusCount}x Malus</span>}
                               </div>
                             )}
 
