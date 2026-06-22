@@ -15,6 +15,7 @@ import {
   Lock,
   ChevronRight,
   ChevronDown,
+  ChevronUp,
   Clock,
   Trophy,
   Trash2,
@@ -364,6 +365,7 @@ export default function ChallengesView({
 
   // Cloud sync states - prevent updating state while loading initial metadata values from cloud
   const [loadingCloudSim, setLoadingCloudSim] = useState(true);
+  const [expandedPredictions, setExpandedPredictions] = useState<Record<string, boolean>>({});
 
   // 1. Fetch simulation state on load from Supabase Auth metadata
   useEffect(() => {
@@ -2021,6 +2023,138 @@ export default function ChallengesView({
     );
   };
 
+  const renderOtherMatchPredictions = (m: Match | any, challenge: Challenge) => {
+    const isNotDefinedYet = isTeamsNotDefinedYet(m.homeTeam, m.awayTeam);
+    const matchTime = m.utcDate ? new Date(m.utcDate).getTime() : (challenge.matchDate ? new Date(challenge.matchDate).getTime() : 0);
+    const timeLeft = matchTime - new Date().getTime();
+    
+    // Check if predictions are closed
+    const isLocked = challenge.locked || challenge.resolved;
+    const isClosed = timeLeft <= 0 || isLocked;
+
+    if (!isClosed) return null;
+
+    // Filter and map other participants' predictions
+    const otherPreds = challengeBets.map(bet => {
+      // Find player profile
+      const profile = allProfiles.find(p => p.id === bet.user_id) || { username: "Joueur", avatar_type: "emoji", avatar_value: "⚽" };
+      const predVal = typeof bet.predictions === 'string' ? JSON.parse(bet.predictions) : bet.predictions;
+      
+      let homeScore: number | undefined = undefined;
+      let awayScore: number | undefined = undefined;
+      let bonus = false;
+      let superbonus = false;
+      let qualifies: string | undefined = undefined;
+
+      if (Number(challenge.matchId) !== 0) {
+        // Single match challenge
+        homeScore = predVal?.homeScore;
+        awayScore = predVal?.awayScore;
+        bonus = !!predVal?.bonus;
+        superbonus = !!predVal?.superbonus;
+        qualifies = predVal?.qualifies;
+      } else {
+        // Competition challenge
+        const pMatch = predVal?.matches?.[m.id];
+        homeScore = pMatch?.homeScore;
+        awayScore = pMatch?.awayScore;
+        bonus = !!pMatch?.bonus;
+        superbonus = !!pMatch?.superbonus;
+        qualifies = pMatch?.qualifies;
+      }
+
+      return {
+        userId: bet.user_id,
+        profile,
+        homeScore,
+        awayScore,
+        bonus,
+        superbonus,
+        qualifies
+      };
+    }).filter(p => p.userId !== userId && p.homeScore !== undefined && p.awayScore !== undefined);
+
+    const matchIdStr = `${challenge.id}-${m.id || 'single'}`;
+    const isExpanded = !!expandedPredictions[matchIdStr];
+
+    return (
+      <div className="pt-2 border-t border-gray-100/60 mt-2">
+        <button
+          type="button"
+          onClick={() => {
+            setExpandedPredictions(prev => ({
+              ...prev,
+              [matchIdStr]: !prev[matchIdStr]
+            }));
+          }}
+          className="flex items-center justify-between w-full text-[10px] font-bold text-gray-500 hover:text-indigo-600 transition py-1 px-1.5 rounded-lg hover:bg-slate-50 cursor-pointer"
+        >
+          <span className="flex items-center gap-1">
+            <Users className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
+            <span>Pronostics des autres participants ({otherPreds.length})</span>
+          </span>
+          {isExpanded ? (
+            <ChevronUp className="w-3 h-3 text-gray-450 shrink-0" />
+          ) : (
+            <ChevronDown className="w-3 h-3 text-gray-450 shrink-0" />
+          )}
+        </button>
+
+        {isExpanded && (
+          <div className="mt-2 space-y-1.5 animate-fade-in pl-1 max-h-48 overflow-y-auto pr-1">
+            {otherPreds.length === 0 ? (
+              <p className="text-[10px] text-gray-400 italic text-center py-1">Aucun autre pronostic enregistré.</p>
+            ) : (
+              otherPreds.map((op, idx) => {
+                let qualifText = "";
+                if (op.qualifies === "home") {
+                  qualifText = m.homeTeam?.name || challenge.matchHomeTeam || "Domicile";
+                } else if (op.qualifies === "away") {
+                  qualifText = m.awayTeam?.name || challenge.matchAwayTeam || "Extérieur";
+                }
+
+                return (
+                  <div key={`${op.userId}-${idx}`} className="flex items-center justify-between p-1.5 bg-slate-50 border border-slate-100 rounded-lg text-slate-700 hover:bg-white transition shadow-3xs leading-none">
+                    <div className="flex items-center gap-1.5 min-w-0 pr-1">
+                      <div className="w-5 h-5 flex items-center justify-center bg-white rounded-full text-xs shrink-0 select-none border border-slate-100 shadow-3xs font-sans">
+                        {op.profile.avatar_type === "emoji" ? op.profile.avatar_value : "⚽"}
+                      </div>
+                      <span className="text-[10.5px] font-bold text-slate-800 truncate" title={op.profile.username}>
+                        {op.profile.username}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      {/* Play badges */}
+                      {op.superbonus ? (
+                        <span className="text-[8px] font-black text-amber-700 bg-amber-50 px-1 py-0.5 rounded border border-amber-200" title="Super Bonus ×4">💥 ×4</span>
+                      ) : op.bonus ? (
+                        <span className="text-[8px] font-black text-emerald-600 bg-emerald-50 px-1 py-0.5 rounded border border-emerald-200" title="Bonus ×2">🏆 ×2</span>
+                      ) : null}
+
+                      {/* Score display */}
+                      <div className="flex items-center gap-1 px-1.5 py-0.5 bg-white border border-slate-200/80 rounded font-mono font-black text-[10px] select-none text-slate-900 shadow-3xs">
+                        <span>{op.homeScore}</span>
+                        <span className="text-slate-350 text-[8.5px]">-</span>
+                        <span>{op.awayScore}</span>
+                      </div>
+
+                      {qualifText && (
+                        <span className="text-[8.5px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-100 px-1 rounded truncate max-w-[55px]" title={`Qualif: ${qualifText}`}>
+                          👑 {qualifText}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   const renderPredictionForm = (challenge: Challenge) => {
     const isLocked = challenge.locked || challenge.resolved;
     const userPred = userPredictions[challenge.id];
@@ -2260,6 +2394,8 @@ export default function ChallengesView({
             Pronostics fermés
           </div>
         )}
+
+        {renderOtherMatchPredictions(singleMatch || { id: challenge.matchId, utcDate: challenge.matchDate }, challenge)}
 
         {/* Real match result displays below single match predictions/open states - REMOVED AS DUPLICATE */}
       </div>
@@ -3525,6 +3661,7 @@ export default function ChallengesView({
                             </div>
                           )}
                         </div>
+                        {renderOtherMatchPredictions(m, challenge)}
                       </div>
                     );
                   };
@@ -4516,6 +4653,7 @@ export default function ChallengesView({
                                       </div>
                                     )}
                                   </div>
+                                  {renderOtherMatchPredictions(m, activeModal.challenge)}
                                 </div>
                               );
                             })
