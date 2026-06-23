@@ -105,7 +105,7 @@ export default function LeaderboardView() {
         
       console.log('DEBUG: Challenges fetched:', challenges);
 
-      const compIds = Array.from(new Set(challenges?.map(c => c.competition_id).filter(id => id != null) || []));
+      const compIds = Array.from(new Set(challenges?.map(c => c.competition_id).filter(id => id != null) || [])) as number[];
       console.log('Unique Comp IDs:', compIds);
 
       // 3. Fetch all challenges and bets for these competitions
@@ -358,7 +358,7 @@ export default function LeaderboardView() {
       const leaderboardData: LeaderboardData[] = compIds
         .map(compId => ({
           competitionId: compId,
-          participants: Object.entries(aggregated[compId] || {}).map(([userId, stats]) => {
+          participants: (Object.entries(aggregated[compId] || {}) as [string, any][]).map(([userId, stats]) => {
              return {
               profile: profiles?.find(p => p.id === userId) || { id: userId, username: 'Unknown', avatar_type: 'emoji', avatar_value: '👽', first_name: '', last_name: '', points: 0 },
               points: stats.points,

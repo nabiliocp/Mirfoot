@@ -259,7 +259,13 @@ export default function App() {
       }
     };
 
+    const safetyTimeout = setTimeout(() => {
+      console.warn("[App] getSession took too long (safety timeout). Forcing loadingSession to false.");
+      setLoadingSession(false);
+    }, 3000);
+
     supabase.auth.getSession().then(({ data: { session } }) => {
+      clearTimeout(safetyTimeout);
       console.log("getSession resolved. Session exists:", !!session);
       
       if (session) {
@@ -268,6 +274,7 @@ export default function App() {
       }
       setLoadingSession(false);
     }).catch(err => {
+      clearTimeout(safetyTimeout);
       console.error("Error in getSession:", err);
       setLoadingSession(false);
     });
