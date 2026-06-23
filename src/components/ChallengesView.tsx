@@ -3263,7 +3263,12 @@ export default function ChallengesView({
                     const timeLeft = matchTime - new Date().getTime();
                     const isOpen = timeLeft > 0 && !challenge.locked && !challenge.resolved && !isNotDefinedYet;
                     const isInProgress = ["IN_PLAY", "LIVE", "PAUSED"].includes(m.status);
-                    const isFutureOrInProgress = (timeLeft > 0 && !challenge.locked && !challenge.resolved) || isInProgress;
+                    const isFinishedReal = m.status === "FINISHED" || m.status === "AWARDED";
+                    // Le match est récent/futur s'il n'a pas commencé ou s'il a démarré il y a moins de 3.5 heures
+                    const isRecentOrFuture = timeLeft > -3.5 * 60 * 60 * 1000;
+                    // Le match reste dans l'onglet actif s'il n'est pas encore fini (FINISHED/AWARDED) et 
+                    // qu'il est en cours, futur ou récent, et que le défi n'est pas clôturé.
+                    const isFutureOrInProgress = !challenge.resolved && !isFinishedReal && (isRecentOrFuture || isInProgress);
                     return { ...m, isOpen, isInProgress, isFutureOrInProgress, isNotDefinedYet };
                   });
 
