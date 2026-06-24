@@ -25,6 +25,7 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
   onSaveSuccess
 }) => {
   const [activeTab, setActiveTab] = useState<"r32" | "r16" | "r8" | "r4" | "r2">("r32");
+  const [viewStyle, setViewStyle] = useState<"tree" | "tabs">("tree");
   const [picks, setPicks] = useState<BracketPredictions>(createEmptyBracketPredictions());
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -402,6 +403,279 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
   const totalSlots = 16 + 8 + 4 + 2 + 1; // 31 total slots to fill
   const progressPercent = Math.round((totalCompletedPicks / totalSlots) * 100);
 
+  const getSelectedWinner = (round: "r32" | "r16" | "r8" | "r4" | "r2", matchId: string): string => {
+    if (round === "r32") {
+      const slotMap: Record<string, string> = {
+        R32_L1: "R16_L1_H", R32_L2: "R16_L1_A",
+        R32_L3: "R16_L2_H", R32_L4: "R16_L2_A",
+        R32_L5: "R16_L3_H", R32_L6: "R16_L3_A",
+        R32_L7: "R16_L4_H", R32_L8: "R16_L4_A",
+        R32_R1: "R16_R1_H", R32_R2: "R16_R1_A",
+        R32_R3: "R16_R2_H", R32_R4: "R16_R2_A",
+        R32_R5: "R16_R3_H", R32_R6: "R16_R3_A",
+        R32_R7: "R16_R4_H", R32_R8: "R16_R4_A",
+      };
+      return picks.r16[slotMap[matchId]] || "";
+    } else if (round === "r16") {
+      const slotMap: Record<string, string> = {
+        R16_L1: "R8_L1_H", R16_L2: "R8_L1_A",
+        R16_L3: "R8_L2_H", R16_L4: "R8_L2_A",
+        R16_R1: "R8_R1_H", R16_R2: "R8_R1_A",
+        R16_R3: "R8_R2_H", R16_R4: "R8_R2_A",
+      };
+      return picks.r8[slotMap[matchId]] || "";
+    } else if (round === "r8") {
+      const slotMap: Record<string, string> = {
+        R8_L1: "R4_L1_H", R8_L2: "R4_L1_A",
+        R8_R1: "R4_R1_H", R8_R2: "R4_R1_A",
+      };
+      return picks.r4[slotMap[matchId]] || "";
+    } else if (round === "r4") {
+      const slotMap: Record<string, string> = {
+        R4_L1: "R2_L1_H", R4_R1: "R2_L1_A",
+      };
+      return picks.r2[slotMap[matchId]] || "";
+    } else if (round === "r2") {
+      return picks.winner || "";
+    }
+    return "";
+  };
+
+  const renderTreeMatchNode = (
+    round: "r32" | "r16" | "r8" | "r4" | "r2",
+    matchId: string,
+    teamAId: string,
+    teamBId: string,
+    direction: "left" | "right" | "center"
+  ) => {
+    const teamA = BRACKET_TEAMS[teamAId];
+    const teamB = BRACKET_TEAMS[teamBId];
+    const winnerId = getSelectedWinner(round, matchId);
+    const locked = mode === "prediction" && isBracketMatchStarted(matchId);
+
+    const isWinnerA = winnerId === teamAId && teamAId !== "";
+    const isWinnerB = winnerId === teamBId && teamBId !== "";
+
+    return (
+      <div className="relative w-[180px] bg-slate-900 border border-slate-800 rounded-2xl p-2.5 shadow-lg hover:border-slate-700 transition duration-300">
+        {locked && (
+          <div className="absolute -top-1.5 -right-1 flex items-center bg-red-500 text-white text-[8px] font-black px-1 rounded-full border border-red-400">
+            <Lock className="w-2.5 h-2.5" />
+          </div>
+        )}
+
+        <div className="text-[9px] text-slate-500 font-bold mb-1 px-1 flex justify-between">
+          <span>{matchId.replace("R32_", "").replace("R16_", "").replace("R8_", "").replace("R4_", "")}</span>
+          {BRACKET_MATCH_TIMES[matchId] && round === "r32" && (
+            <span className="text-[8px] text-slate-600">
+              {new Date(BRACKET_MATCH_TIMES[matchId]).toLocaleDateString("fr-FR", {day: "numeric", month: "short"})}
+            </span>
+          )}
+        </div>
+
+        <div className="space-y-1">
+          <button
+            type="button"
+            disabled={locked || !teamA}
+            onClick={() => teamA && handleSelectWinner(round, matchId, teamAId)}
+            className={`w-full flex items-center justify-between p-1.5 rounded-lg text-xs font-bold transition-all ${
+              !teamA
+                ? "bg-slate-950/40 border border-dashed border-slate-800 text-slate-600 cursor-not-allowed"
+                : isWinnerA
+                  ? "bg-emerald-950/80 border border-emerald-500 text-emerald-300"
+                  : "bg-slate-950/80 border border-slate-800 text-slate-300 hover:bg-slate-850 hover:border-slate-700 cursor-pointer"
+            }`}
+          >
+            <span className="flex items-center gap-1.5 truncate">
+              <span className="text-sm shrink-0">{teamA ? teamA.flag : "❓"}</span>
+              <span className="truncate">{teamA ? teamA.name : "À déterminer"}</span>
+            </span>
+            {isWinnerA && <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />}
+          </button>
+
+          <button
+            type="button"
+            disabled={locked || !teamB}
+            onClick={() => teamB && handleSelectWinner(round, matchId, teamBId)}
+            className={`w-full flex items-center justify-between p-1.5 rounded-lg text-xs font-bold transition-all ${
+              !teamB
+                ? "bg-slate-950/40 border border-dashed border-slate-800 text-slate-600 cursor-not-allowed"
+                : isWinnerB
+                  ? "bg-emerald-950/80 border border-emerald-500 text-emerald-300"
+                  : "bg-slate-950/80 border border-slate-800 text-slate-300 hover:bg-slate-850 hover:border-slate-700 cursor-pointer"
+            }`}
+          >
+            <span className="flex items-center gap-1.5 truncate">
+              <span className="text-sm shrink-0">{teamB ? teamB.flag : "❓"}</span>
+              <span className="truncate">{teamB ? teamB.name : "À déterminer"}</span>
+            </span>
+            {isWinnerB && <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />}
+          </button>
+        </div>
+
+        {direction === "left" && (
+          <div className={`absolute right-[-16px] top-1/2 -translate-y-1/2 w-4 h-[2px] transition ${
+            winnerId ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" : "bg-slate-800"
+          }`}></div>
+        )}
+        {direction === "right" && (
+          <div className={`absolute left-[-16px] top-1/2 -translate-y-1/2 w-4 h-[2px] transition ${
+            winnerId ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" : "bg-slate-800"
+          }`}></div>
+        )}
+      </div>
+    );
+  };
+
+  const renderBracketTree = () => {
+    const r32Left = STARTING_R32_MATCHES.filter(m => m.id.includes("_L"));
+    const r32Right = STARTING_R32_MATCHES.filter(m => m.id.includes("_R"));
+
+    const r16Left = bracketState.r16Matches.filter(m => m.id.includes("_L"));
+    const r16Right = bracketState.r16Matches.filter(m => m.id.includes("_R"));
+
+    const r8Left = bracketState.r8Matches.filter(m => m.id.includes("_L"));
+    const r8Right = bracketState.r8Matches.filter(m => m.id.includes("_R"));
+
+    const r4Left = bracketState.r4Matches.filter(m => m.id.includes("_L"));
+    const r4Right = bracketState.r4Matches.filter(m => m.id.includes("_R"));
+
+    return (
+      <div className="space-y-4">
+        {/* Scroll Tip Helper */}
+        <div className="flex items-center justify-between text-xs text-slate-400 font-bold px-1 sm:hidden">
+          <span>👈 Défilez vers la droite pour voir tout le tableau</span>
+          <span className="animate-pulse">👉</span>
+        </div>
+
+        <div className="overflow-x-auto pb-6 rounded-3xl border border-slate-800 shadow-2xl bg-slate-950">
+          <div className="min-w-[1840px] p-8 flex justify-between items-center h-[1000px] gap-6 select-none relative">
+            
+            {/* Subtle grid background to look like a stadium turf or tech sheet */}
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-slate-900/40 via-slate-950/95 to-slate-950 pointer-events-none"></div>
+
+            {/* COL 1: 1/16 LEFT */}
+            <div className="flex flex-col h-full justify-between relative z-10 py-4">
+              <div className="text-[10px] text-slate-500 font-black tracking-widest uppercase text-center mb-2">1/16 Finales (G)</div>
+              {r32Left.map(m => (
+                <div key={m.id} className="relative">
+                  {renderTreeMatchNode("r32", m.id, m.homeId, m.awayId, "left")}
+                </div>
+              ))}
+            </div>
+
+            {/* COL 2: 1/8 LEFT */}
+            <div className="flex flex-col h-full justify-around relative z-10 py-12">
+              <div className="text-[10px] text-slate-500 font-black tracking-widest uppercase text-center mb-2">Huitièmes (G)</div>
+              {r16Left.map(m => (
+                <div key={m.id} className="relative">
+                  {renderTreeMatchNode("r16", m.id, m.homeId, m.awayId, "left")}
+                </div>
+              ))}
+            </div>
+
+            {/* COL 3: 1/4 LEFT */}
+            <div className="flex flex-col h-full justify-around relative z-10 py-24">
+              <div className="text-[10px] text-slate-500 font-black tracking-widest uppercase text-center mb-2">Quarts (G)</div>
+              {r8Left.map(m => (
+                <div key={m.id} className="relative">
+                  {renderTreeMatchNode("r8", m.id, m.homeId, m.awayId, "left")}
+                </div>
+              ))}
+            </div>
+
+            {/* COL 4: 1/2 LEFT */}
+            <div className="flex flex-col h-full justify-center relative z-10 py-32 space-y-4">
+              <div className="text-[10px] text-slate-500 font-black tracking-widest uppercase text-center mb-2">Demi-finale (G)</div>
+              {r4Left.map(m => (
+                <div key={m.id} className="relative">
+                  {renderTreeMatchNode("r4", m.id, m.homeId, m.awayId, "left")}
+                </div>
+              ))}
+            </div>
+
+            {/* COL 5: CENTER FINALE */}
+            <div className="flex flex-col h-full justify-center items-center relative z-10 w-[220px]">
+              <div className="flex flex-col items-center justify-center space-y-6 w-full text-center">
+                {/* Champion Box */}
+                {picks.winner ? (
+                  <div className="relative group">
+                    <div className="absolute inset-0 bg-amber-500/10 rounded-2xl blur-lg opacity-60"></div>
+                    <div className="relative bg-gradient-to-b from-amber-400 to-yellow-600 border border-amber-300 rounded-2xl p-4 text-slate-950 shadow-[0_0_20px_rgba(245,158,11,0.3)] space-y-2 w-[180px]">
+                      <Trophy className="w-10 h-10 mx-auto text-amber-950 animate-bounce" />
+                      <div>
+                        <div className="text-[10px] font-extrabold uppercase tracking-widest text-amber-900">Champion Prédit</div>
+                        <div className="text-sm font-black flex items-center justify-center gap-1.5 mt-1 truncate">
+                          <span>{BRACKET_TEAMS[picks.winner]?.flag}</span>
+                          <span className="truncate max-w-[120px]">{BRACKET_TEAMS[picks.winner]?.name}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="bg-slate-900/60 border border-slate-800 border-dashed rounded-2xl p-4 text-slate-500 space-y-2 w-[180px]">
+                    <HelpCircle className="w-8 h-8 mx-auto text-slate-600 animate-pulse" />
+                    <div className="text-[10px] font-extrabold uppercase tracking-wider">Champion à prédire</div>
+                  </div>
+                )}
+
+                {/* Connector from Champion */}
+                <div className="w-[2px] h-10 bg-gradient-to-b from-amber-500 to-slate-800"></div>
+
+                {/* Finale Match */}
+                <div className="space-y-1.5">
+                  <div className="text-[10px] text-amber-400 font-extrabold uppercase tracking-widest text-center">🏆 Grande Finale 🏆</div>
+                  {renderTreeMatchNode("r2", "R2_F1", bracketState.finalMatch.homeId, bracketState.finalMatch.awayId, "center")}
+                </div>
+              </div>
+            </div>
+
+            {/* COL 6: 1/2 RIGHT */}
+            <div className="flex flex-col h-full justify-center relative z-10 py-32 space-y-4">
+              <div className="text-[10px] text-slate-500 font-black tracking-widest uppercase text-center mb-2">Demi-finale (D)</div>
+              {r4Right.map(m => (
+                <div key={m.id} className="relative">
+                  {renderTreeMatchNode("r4", m.id, m.homeId, m.awayId, "right")}
+                </div>
+              ))}
+            </div>
+
+            {/* COL 7: 1/4 RIGHT */}
+            <div className="flex flex-col h-full justify-around relative z-10 py-24">
+              <div className="text-[10px] text-slate-500 font-black tracking-widest uppercase text-center mb-2">Quarts (D)</div>
+              {r8Right.map(m => (
+                <div key={m.id} className="relative">
+                  {renderTreeMatchNode("r8", m.id, m.homeId, m.awayId, "right")}
+                </div>
+              ))}
+            </div>
+
+            {/* COL 8: 1/8 RIGHT */}
+            <div className="flex flex-col h-full justify-around relative z-10 py-12">
+              <div className="text-[10px] text-slate-500 font-black tracking-widest uppercase text-center mb-2">Huitièmes (D)</div>
+              {r16Right.map(m => (
+                <div key={m.id} className="relative">
+                  {renderTreeMatchNode("r16", m.id, m.homeId, m.awayId, "right")}
+                </div>
+              ))}
+            </div>
+
+            {/* COL 9: 1/16 RIGHT */}
+            <div className="flex flex-col h-full justify-between relative z-10 py-4">
+              <div className="text-[10px] text-slate-500 font-black tracking-widest uppercase text-center mb-2">1/16 Finales (D)</div>
+              {r32Right.map(m => (
+                <div key={m.id} className="relative">
+                  {renderTreeMatchNode("r32", m.id, m.homeId, m.awayId, "right")}
+                </div>
+              ))}
+            </div>
+
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-6">
       {/* Dynamic Header */}
@@ -477,45 +751,75 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
         </div>
       </div>
 
-      {/* Tab Selectors for Rounds */}
-      <div className="flex bg-gray-100 p-1 rounded-2xl gap-1">
-        {(["r32", "r16", "r8", "r4", "r2"] as const).map((round) => {
-          const labels = {
-            r32: "1/16 Finales",
-            r16: "Huitièmes",
-            r8: "Quarts",
-            r4: "Demi-finales",
-            r2: "Finale"
-          };
-          const counts = {
-            r32: "16 Matchs",
-            r16: `${r16Progress}/8 Qualifiés`,
-            r8: `${r8Progress}/4 Qualifiés`,
-            r4: `${r4Progress}/2 Qualifiés`,
-            r2: `${r2Progress}/1 Champion`
-          };
-
-          return (
-            <button
-              key={round}
-              type="button"
-              onClick={() => setActiveTab(round)}
-              className={`flex-1 py-3 px-2 rounded-xl text-center transition cursor-pointer ${
-                activeTab === round 
-                  ? "bg-white text-emerald-950 font-black shadow-sm" 
-                  : "text-gray-500 hover:text-gray-800 font-bold"
-              }`}
-            >
-              <div className="text-xs">{labels[round]}</div>
-              <div className="text-[9px] text-gray-400 mt-0.5 font-semibold">{counts[round]}</div>
-            </button>
-          );
-        })}
+      {/* View Style Switcher */}
+      <div className="flex bg-gray-150 p-1 rounded-2xl gap-1 max-w-sm mx-auto">
+        <button
+          type="button"
+          onClick={() => setViewStyle("tree")}
+          className={`flex-1 py-2 rounded-xl text-center text-xs font-black transition cursor-pointer flex items-center justify-center gap-1 ${
+            viewStyle === "tree" 
+              ? "bg-emerald-600 text-white shadow-sm font-black" 
+              : "text-gray-500 hover:text-gray-850"
+          }`}
+        >
+          🌿 Vue Arborescence
+        </button>
+        <button
+          type="button"
+          onClick={() => setViewStyle("tabs")}
+          className={`flex-1 py-2 rounded-xl text-center text-xs font-black transition cursor-pointer flex items-center justify-center gap-1 ${
+            viewStyle === "tabs" 
+              ? "bg-emerald-600 text-white shadow-sm font-black" 
+              : "text-gray-500 hover:text-gray-850"
+          }`}
+        >
+          📋 Vue par Étapes
+        </button>
       </div>
 
-      {/* Tab Content Matches */}
-      <div className="py-2">
-        {activeTab === "r32" && (
+      {viewStyle === "tree" ? (
+        renderBracketTree()
+      ) : (
+        <>
+          {/* Tab Selectors for Rounds */}
+          <div className="flex bg-gray-100 p-1 rounded-2xl gap-1">
+            {(["r32", "r16", "r8", "r4", "r2"] as const).map((round) => {
+              const labels = {
+                r32: "1/16 Finales",
+                r16: "Huitièmes",
+                r8: "Quarts",
+                r4: "Demi-finales",
+                r2: "Finale"
+              };
+              const counts = {
+                r32: "16 Matchs",
+                r16: `${r16Progress}/8 Qualifiés`,
+                r8: `${r8Progress}/4 Qualifiés`,
+                r4: `${r4Progress}/2 Qualifiés`,
+                r2: `${r2Progress}/1 Champion`
+              };
+
+              return (
+                <button
+                  key={round}
+                  type="button"
+                  onClick={() => setActiveTab(round)}
+                  className={`flex-1 py-3 px-2 rounded-xl text-center transition cursor-pointer ${
+                    activeTab === round 
+                      ? "bg-white text-emerald-950 font-black shadow-sm" 
+                      : "text-gray-500 hover:text-gray-800 font-bold"
+                  }`}
+                >
+                  <div className="text-xs">{labels[round]}</div>
+                  <div className="text-[9px] text-gray-400 mt-0.5 font-semibold">{counts[round]}</div>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Tab Content Matches */}
+          <div className="py-2">
+            {activeTab === "r32" && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {STARTING_R32_MATCHES.map((m) => (
               <div key={m.id} className="space-y-1">
@@ -617,6 +921,8 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
           </div>
         )}
       </div>
+    </>
+  )}
 
       {/* Messages */}
       {message && (
