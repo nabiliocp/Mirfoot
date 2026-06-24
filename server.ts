@@ -522,61 +522,87 @@ async function startServer() {
           return res.json({ matches: [] });
         }
 
-        let season = reqSeason || getSeasonYearForLeague(mappedLeagueId);
-        let response = await fetch(
-          `https://v3.football.api-sports.io/fixtures?league=${mappedLeagueId}&season=${season}`,
-          {
-            headers: { "x-apisports-key": apiKey },
-          },
-        );
+        try {
+          let season = reqSeason || getSeasonYearForLeague(mappedLeagueId);
+          let response = await fetch(
+            `https://v3.football.api-sports.io/fixtures?league=${mappedLeagueId}&season=${season}`,
+            {
+              headers: { "x-apisports-key": apiKey },
+            },
+          );
 
-        if (!response.ok) throw new Error("API-Football Error");
-        let data = await response.json();
+          if (!response.ok) throw new Error("API-Football Error");
+          let data = await response.json();
 
-        // Handle Free Plan restrictions gracefully
-        if (data && data.errors && Object.keys(data.errors).length > 0) {
-          const hasPlanError = JSON.stringify(data.errors).toLowerCase().includes("plan");
-          if (hasPlanError) {
-            console.log("Free plan restriction detected for season", season, "- Falling back to season 2024.");
-            season = 2024;
-            response = await fetch(
-              `https://v3.football.api-sports.io/fixtures?league=${mappedLeagueId}&season=${season}`,
-              {
-                headers: { "x-apisports-key": apiKey },
-              },
-            );
-            if (response.ok) {
-              data = await response.json();
+          // Handle Free Plan restrictions gracefully
+          if (data && data.errors && Object.keys(data.errors).length > 0) {
+            const hasPlanError = JSON.stringify(data.errors).toLowerCase().includes("plan");
+            if (hasPlanError) {
+              console.log("Free plan restriction detected for season", season, "- Falling back to season 2024.");
+              season = 2024;
+              response = await fetch(
+                `https://v3.football.api-sports.io/fixtures?league=${mappedLeagueId}&season=${season}`,
+                {
+                  headers: { "x-apisports-key": apiKey },
+                },
+              );
+              if (response.ok) {
+                data = await response.json();
+              }
             }
           }
+
+          const fixtures = data.response || [];
+
+          const mappedMatches = fixtures
+            .map(translateApiFootballMatchToFootballData)
+            .filter(Boolean);
+
+          if (mappedMatches.length === 0 && fdCompId === 2000) {
+            throw new Error("No matches returned from API-Football for World Cup");
+          }
+
+          const cachedResult = { matches: mappedMatches };
+          apiCache[cacheKey] = { data: cachedResult, timestamp: now };
+          return res.json(cachedResult);
+        } catch (apiErr) {
+          console.error("API-Football error, trying fallback:", apiErr);
+          if (fdCompId === 2000) {
+            console.log("Using local fallback for World Cup (competition 2000) on API-Football error");
+            const fallbackData = JSON.parse(fs.readFileSync('./world_cup_fallback.json', 'utf-8'));
+            apiCache[cacheKey] = { data: fallbackData, timestamp: now };
+            return res.json(fallbackData);
+          }
+          throw apiErr;
         }
-
-        const fixtures = data.response || [];
-
-        const mappedMatches = fixtures
-          .map(translateApiFootballMatchToFootballData)
-          .filter(Boolean);
-
-        const cachedResult = { matches: mappedMatches };
-        apiCache[cacheKey] = { data: cachedResult, timestamp: now };
-        return res.json(cachedResult);
       }
 
       const apiKey = process.env.FOOTBALL_DATA_API_KEY;
       if (!apiKey) return res.status(401).json({ error: "Clé API manquante" });
 
-      const response = await fetch(
-        `https://api.football-data.org/v4/competitions/${req.params.competitionId}/matches`,
-        {
-          headers: { "X-Auth-Token": apiKey },
-        },
-      );
+      try {
+        const response = await fetch(
+          `https://api.football-data.org/v4/competitions/${req.params.competitionId}/matches`,
+          {
+            headers: { "X-Auth-Token": apiKey },
+          },
+        );
 
-      if (!response.ok) throw new Error("API Error");
-      const data = await response.json();
+        if (!response.ok) throw new Error(`API Error status ${response.status}`);
+        const data = await response.json();
 
-      apiCache[cacheKey] = { data, timestamp: now };
-      res.json(data);
+        apiCache[cacheKey] = { data, timestamp: now };
+        res.json(data);
+      } catch (apiErr) {
+        console.error("Football-Data API error, trying fallback:", apiErr);
+        if (fdCompId === 2000) {
+          console.log("Using local fallback for World Cup (competition 2000) on Football-Data error");
+          const fallbackData = JSON.parse(fs.readFileSync('./world_cup_fallback.json', 'utf-8'));
+          apiCache[cacheKey] = { data: fallbackData, timestamp: now };
+          return res.json(fallbackData);
+        }
+        throw apiErr;
+      }
     } catch (err) {
       console.error(err);
       res.status(500).json({ error: "Erreur réseau" });
