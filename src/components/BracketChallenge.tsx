@@ -6,7 +6,8 @@ import {
   isBracketMatchStarted,
   BracketPredictions,
   createEmptyBracketPredictions,
-  BRACKET_MATCH_TIMES
+  BRACKET_MATCH_TIMES,
+  generateRandomBracketPicks
 } from "../bracketData";
 import { supabase } from "../lib/supabase";
 import { Check, Lock, Trophy, AlertTriangle, Sparkles, HelpCircle } from "lucide-react";
@@ -29,11 +30,26 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
+  // Participant list and selected participant for viewing bracket
+  const [participants, setParticipants] = useState<any[]>([]);
+  const [selectedParticipant, setSelectedParticipant] = useState<any | null>(null);
+  const [activeSubTab, setActiveSubTab] = useState<"myBracket" | "leaderboard">("myBracket");
+
+  // Test mode options
+  const [testMode, setTestMode] = useState(false);
+  const [seeding, setSeeding] = useState(false);
+  const [forceLockMatches, setForceLockMatches] = useState(false);
+
   // Drag-to-scroll implementation for full-size view on both desktop/laptop and mobile
   const scrollRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [startX, setStartX] = useState(0);
   const [scrollLeft, setScrollLeft] = useState(0);
+
+  const isMatchLocked = (matchId: string): boolean => {
+    if (forceLockMatches) return true;
+    return isBracketMatchStarted(matchId);
+  };
 
   const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!scrollRef.current) return;
@@ -63,6 +79,20 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
     scrollRef.current.scrollLeft = scrollLeft - walk;
   };
 
+  const loadParticipants = async () => {
+    try {
+      const res = await fetch(`/api/challenges/${challenge.id}/bets`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.bets) {
+          setParticipants(data.bets);
+        }
+      }
+    } catch (err) {
+      console.error("Error loading challenge participants:", err);
+    }
+  };
+
   // Load existing prediction (if in prediction mode) or actual results (if in results mode)
   useEffect(() => {
     const loadData = async () => {
@@ -80,25 +110,23 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
             setPicks(createEmptyBracketPredictions());
           }
         } else {
-          // In prediction mode, load the user's prediction from bets table
-          const { data, error } = await supabase
-            .from("bets")
-            .select("predictions")
-            .eq("challenge_id", challenge.id)
-            .eq("user_id", userId)
-            .maybeSingle();
-
-          if (error) {
-            console.error("Error loading user bracket predictions:", error);
-          } else if (data && data.predictions) {
-            const savedPicks = typeof data.predictions === "string"
-              ? JSON.parse(data.predictions)
-              : data.predictions;
-            setPicks(savedPicks);
+          // In prediction mode, load the user's prediction from our secure backend API proxy
+          const res = await fetch(`/api/bets?userId=${userId}&challengeId=${challenge.id}`);
+          if (res.ok) {
+            const result = await res.json();
+            if (result.data && result.data.predictions) {
+              const savedPicks = typeof result.data.predictions === "string"
+                ? JSON.parse(result.data.predictions)
+                : result.data.predictions;
+              setPicks(savedPicks);
+            } else {
+              setPicks(createEmptyBracketPredictions());
+            }
           } else {
             setPicks(createEmptyBracketPredictions());
           }
         }
+        await loadParticipants();
       } catch (err) {
         console.error("Error initializing bracket picks:", err);
       } finally {
@@ -116,7 +144,7 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
   // maps previous round winner to subsequent round position key
   const handleSelectWinner = (round: "r32" | "r16" | "r8" | "r4" | "r2", matchId: string, teamId: string) => {
     // Check lock conditions if in prediction mode
-    if (mode === "prediction" && isBracketMatchStarted(matchId)) {
+    if (mode === "prediction" && isMatchLocked(matchId)) {
       setMessage({ type: "error", text: "Ce match a déjà commencé. Les pronostics sont clôturés." });
       return;
     }
@@ -238,23 +266,65 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
     setSaving(true);
     setMessage(null);
     try {
-      const { error } = await supabase
-        .from("bets")
-        .upsert({
+      const response = await fetch("/api/bets/upsert", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
           user_id: userId,
           challenge_id: challenge.id,
           predictions: picks,
-        }, { onConflict: "user_id,challenge_id" });
+        }),
+      });
 
-      if (error) throw error;
+      const resData = await response.json();
+      if (!response.ok) {
+        throw new Error(resData.error || "Une erreur est survenue lors de l'enregistrement.");
+      }
 
       setMessage({ type: "success", text: "Vos pronostics ont été enregistrés avec succès !" });
+      await loadParticipants();
       if (onSaveSuccess) onSaveSuccess();
     } catch (err: any) {
       console.error(err);
       setMessage({ type: "error", text: "Erreur lors de la sauvegarde : " + err.message });
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleSeedMockParticipants = async () => {
+    setSeeding(true);
+    setMessage(null);
+    try {
+      const response = await fetch(`/api/challenges/${challenge.id}/seed-mock-bets`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ count: 5 }),
+      });
+
+      const resData = await response.json();
+      if (!response.ok) {
+        throw new Error(resData.error || "Erreur lors de la génération.");
+      }
+
+      setMessage({ type: "success", text: `Génération réussie : ${resData.count} participants fictifs ajoutés !` });
+      await loadParticipants();
+    } catch (err: any) {
+      console.error(err);
+      setMessage({ type: "error", text: "Erreur de génération : " + err.message });
+    } finally {
+      setSeeding(false);
+    }
+  };
+
+  const handleFillRandomPicks = () => {
+    try {
+      const randomPicks = generateRandomBracketPicks();
+      setPicks(randomPicks);
+      setMessage({ type: "success", text: "Pronostics aléatoires générés dans le tableau ! N'oubliez pas d'enregistrer." });
+    } catch (err: any) {
+      console.error(err);
+      setMessage({ type: "error", text: "Erreur lors de la génération : " + err.message });
     }
   };
 
@@ -351,7 +421,7 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
       }
     }
 
-    const locked = mode === "prediction" && isBracketMatchStarted(matchId);
+    const locked = mode === "prediction" && isMatchLocked(matchId);
 
     return (
       <div className="bg-white border border-gray-150 rounded-2xl p-3 shadow-xs hover:shadow-md transition-all duration-300 relative overflow-hidden">
@@ -435,8 +505,9 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
   const totalSlots = 16 + 8 + 4 + 2 + 1; // 31 total slots to fill
   const progressPercent = Math.round((totalCompletedPicks / totalSlots) * 100);
 
-  const getSelectedWinner = (round: "r32" | "r16" | "r8" | "r4" | "r2", matchId: string): string => {
-    if (round === "r32") {
+  const getSelectedWinnerForPredictions = (pPicks: BracketPredictions, mId: string): string => {
+    if (!pPicks) return "";
+    if (mId.startsWith("R32_")) {
       const slotMap: Record<string, string> = {
         R32_L1: "R16_L1_H", R32_L2: "R16_L1_A",
         R32_L3: "R16_L2_H", R32_L4: "R16_L2_A",
@@ -447,28 +518,28 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
         R32_R5: "R16_R3_H", R32_R6: "R16_R3_A",
         R32_R7: "R16_R4_H", R32_R8: "R16_R4_A",
       };
-      return picks.r16[slotMap[matchId]] || "";
-    } else if (round === "r16") {
+      return pPicks.r16?.[slotMap[mId]] || "";
+    } else if (mId.startsWith("R16_")) {
       const slotMap: Record<string, string> = {
         R16_L1: "R8_L1_H", R16_L2: "R8_L1_A",
         R16_L3: "R8_L2_H", R16_L4: "R8_L2_A",
         R16_R1: "R8_R1_H", R16_R2: "R8_R1_A",
         R16_R3: "R8_R2_H", R16_R4: "R8_R2_A",
       };
-      return picks.r8[slotMap[matchId]] || "";
-    } else if (round === "r8") {
+      return pPicks.r8?.[slotMap[mId]] || "";
+    } else if (mId.startsWith("R8_")) {
       const slotMap: Record<string, string> = {
         R8_L1: "R4_L1_H", R8_L2: "R4_L1_A",
         R8_R1: "R4_R1_H", R8_R2: "R4_R1_A",
       };
-      return picks.r4[slotMap[matchId]] || "";
-    } else if (round === "r4") {
+      return pPicks.r4?.[slotMap[mId]] || "";
+    } else if (mId.startsWith("R4_")) {
       const slotMap: Record<string, string> = {
         R4_L1: "R2_L1_H", R4_R1: "R2_L1_A",
       };
-      return picks.r2[slotMap[matchId]] || "";
-    } else if (round === "r2") {
-      return picks.winner || "";
+      return pPicks.r2?.[slotMap[mId]] || "";
+    } else if (mId === "R2_F1") {
+      return pPicks.winner || "";
     }
     return "";
   };
@@ -480,19 +551,53 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
     teamBId: string,
     direction: "left" | "right" | "center"
   ) => {
+    const isViewingOther = selectedParticipant !== null;
+    const currentPicks = isViewingOther ? selectedParticipant.predictions : picks;
+
     const teamA = BRACKET_TEAMS[teamAId];
     const teamB = BRACKET_TEAMS[teamBId];
-    const winnerId = getSelectedWinner(round, matchId);
-    const locked = mode === "prediction" && isBracketMatchStarted(matchId);
+
+    const winnerId = getSelectedWinnerForPredictions(currentPicks, matchId);
+    
+    const isStarted = isMatchLocked(matchId);
+    const locked = mode === "prediction" && (isStarted || isViewingOther);
 
     const isWinnerA = winnerId === teamAId && teamAId !== "";
     const isWinnerB = winnerId === teamBId && teamBId !== "";
 
+    // Mask predictions for other players if match has NOT started yet
+    const maskPrediction = isViewingOther && !isStarted;
+
+    // Get match betting statistics from all participants
+    const getMatchStats = (mId: string, tAId: string, tBId: string) => {
+      let votesA = 0;
+      let votesB = 0;
+      
+      participants.forEach(p => {
+        const pPicks = p.predictions;
+        if (!pPicks) return;
+        
+        const pWinner = getSelectedWinnerForPredictions(pPicks, mId);
+        if (pWinner === tAId) votesA++;
+        else if (pWinner === tBId) votesB++;
+      });
+      
+      const total = votesA + votesB;
+      if (total === 0) return null;
+      
+      const percentA = Math.round((votesA / total) * 100);
+      const percentB = Math.round((votesB / total) * 100);
+      return { votesA, votesB, percentA, percentB };
+    };
+
+    const stats = isStarted ? getMatchStats(matchId, teamAId, teamBId) : null;
+
     return (
       <div className="relative w-[180px] bg-white border border-gray-200 rounded-2xl p-2.5 shadow-sm hover:shadow-md hover:border-slate-350 transition duration-300">
-        {locked && (
-          <div className="absolute -top-1.5 -right-1 flex items-center bg-red-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded-full border border-red-400">
+        {isStarted && (
+          <div className="absolute -top-1.5 -right-1 flex items-center bg-red-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded-full border border-red-400 gap-0.5 shadow-xs">
             <Lock className="w-2.5 h-2.5" />
+            <span>CLÔTURÉ</span>
           </div>
         )}
 
@@ -519,10 +624,19 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
             }`}
           >
             <span className="flex items-center gap-1.5 truncate">
-              <span className="text-sm shrink-0">{teamA ? teamA.flag : "❓"}</span>
-              <span className="truncate">{teamA ? teamA.name : "À déterminer"}</span>
+              {maskPrediction ? (
+                <>
+                  <span className="text-xs shrink-0">🔒</span>
+                  <span className="text-gray-400 italic">Masqué</span>
+                </>
+              ) : (
+                <>
+                  <span className="text-sm shrink-0">{teamA ? teamA.flag : "❓"}</span>
+                  <span className="truncate">{teamA ? teamA.name : "À déterminer"}</span>
+                </>
+              )}
             </span>
-            {isWinnerA && <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />}
+            {isWinnerA && !maskPrediction && <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />}
           </button>
 
           <button
@@ -538,12 +652,34 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
             }`}
           >
             <span className="flex items-center gap-1.5 truncate">
-              <span className="text-sm shrink-0">{teamB ? teamB.flag : "❓"}</span>
-              <span className="truncate">{teamB ? teamB.name : "À déterminer"}</span>
+              {maskPrediction ? (
+                <>
+                  <span className="text-xs shrink-0">🔒</span>
+                  <span className="text-gray-400 italic">Masqué</span>
+                </>
+              ) : (
+                <>
+                  <span className="text-sm shrink-0">{teamB ? teamB.flag : "❓"}</span>
+                  <span className="truncate">{teamB ? teamB.name : "À déterminer"}</span>
+                </>
+              )}
             </span>
-            {isWinnerB && <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />}
+            {isWinnerB && !maskPrediction && <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />}
           </button>
         </div>
+
+        {stats && (
+          <div className="mt-1.5 pt-1.5 border-t border-gray-100 flex flex-col gap-0.5">
+            <div className="flex justify-between text-[7.5px] font-bold text-gray-400">
+              <span>{stats.percentA}% {teamA?.flag}</span>
+              <span>{stats.percentB}% {teamB?.flag}</span>
+            </div>
+            <div className="w-full h-1 bg-gray-100 rounded-full overflow-hidden flex">
+              <div className="bg-emerald-500 h-full" style={{ width: `${stats.percentA}%` }}></div>
+              <div className="bg-blue-400 h-full" style={{ width: `${stats.percentB}%` }}></div>
+            </div>
+          </div>
+        )}
 
         {direction === "left" && (
           <div className={`absolute right-[-16px] top-1/2 -translate-y-1/2 w-4 h-[2px] transition ${
@@ -717,136 +853,349 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* Dynamic Header */}
-      <div className="bg-gradient-to-br from-emerald-950 to-emerald-850 text-white rounded-3xl p-5 shadow-sm relative overflow-hidden">
-        <div className="absolute right-0 top-0 opacity-10 translate-x-4 -translate-y-4">
-          <Trophy className="w-48 h-48 text-white" />
+      {/* Test / Simu Mode Toggle and Panel */}
+      <div className="flex justify-between items-center bg-gray-50 p-3 rounded-2xl border border-gray-200 mb-4">
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-black text-gray-800">🛠️ Mode Test / Simulateur</span>
+          <span className="text-[9px] text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded-full font-bold">Bêta</span>
         </div>
-        <div className="relative z-10 space-y-3">
-          <div className="flex items-center gap-2">
-            <span className="bg-emerald-500 text-emerald-950 text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider flex items-center gap-1">
-              <Sparkles className="w-3 h-3" />
-              {mode === "results" ? "Administration" : "Pronostic Spécial"}
-            </span>
-            <span className="text-xs text-emerald-200 font-bold">🎯 Tableau Phase Éliminatoire</span>
+        <button
+          type="button"
+          onClick={() => setTestMode(!testMode)}
+          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${
+            testMode 
+              ? "bg-amber-600 text-white hover:bg-amber-700" 
+              : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+          }`}
+        >
+          {testMode ? "Désactiver" : "Activer"}
+        </button>
+      </div>
+
+      {testMode && (
+        <div className="bg-amber-50/50 border border-amber-200 rounded-2xl p-4 space-y-3">
+          <h4 className="text-xs font-extrabold text-amber-900 uppercase tracking-wider">Options de Simulation</h4>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+            <button
+              type="button"
+              disabled={seeding}
+              onClick={handleSeedMockParticipants}
+              className="bg-white border border-amber-300 hover:bg-amber-50 text-amber-950 font-black px-3 py-2 rounded-xl text-xs flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+            >
+              {seeding ? (
+                <>
+                  <div className="w-3.5 h-3.5 border-2 border-amber-800 border-t-transparent rounded-full animate-spin"></div>
+                  Génération...
+                </>
+              ) : (
+                <>👥 Générer 5 joueurs fictifs</>
+              )}
+            </button>
+
+            <button
+              type="button"
+              onClick={handleFillRandomPicks}
+              className="bg-white border border-amber-300 hover:bg-amber-50 text-amber-950 font-black px-3 py-2 rounded-xl text-xs flex items-center justify-center gap-1.5 cursor-pointer"
+            >
+              🎲 Remplir mes pronos au hasard
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setForceLockMatches(!forceLockMatches)}
+              className={`font-black px-3 py-2 rounded-xl text-xs flex items-center justify-center gap-1.5 cursor-pointer border ${
+                forceLockMatches
+                  ? "bg-amber-600 border-amber-600 text-white hover:bg-amber-700"
+                  : "bg-white border-amber-300 hover:bg-amber-50 text-amber-950"
+              }`}
+            >
+              🔒 {forceLockMatches ? "Matches Verrouillés (Activé)" : "Verrouiller tous les matches"}
+            </button>
           </div>
-          
-          <h2 className="text-2xl font-black tracking-tight">
-            {mode === "results" ? "Saisie des Résultats Officiels" : "Remplir le Tableau de Championnat"}
-          </h2>
-          
-          <p className="text-xs text-emerald-100 max-w-xl leading-relaxed">
-            {mode === "results" 
-              ? "Sélectionnez les pays qui se sont réellement qualifiés à chaque étape du tournoi. En validant, les scores de tous les participants seront recalculés immédiatement."
-              : "Cliquez sur l'équipe de votre choix dans chaque match pour la qualifier au tour de suivant. Complétez tout le tableau pour tenter de décrocher le bonus maximal de points !"}
+          <p className="text-[10px] text-amber-700 font-semibold leading-relaxed">
+            💡 <strong>Astuce :</strong> Activez "Verrouiller tous les matches" pour tester instantanément le dévoilement des pronostics des autres participants. Allez ensuite dans l'onglet "Participants & Classement" et cliquez sur un participant pour voir ses choix !
           </p>
-
-          {/* Progress bar */}
-          <div className="pt-2">
-            <div className="flex justify-between items-center text-xs font-bold text-emerald-100 mb-1">
-              <span>Progression du tableau</span>
-              <span>{totalCompletedPicks} / {totalSlots} ({progressPercent}%)</span>
-            </div>
-            <div className="w-full bg-emerald-900/50 rounded-full h-2.5 overflow-hidden border border-emerald-800/30">
-              <div 
-                className="bg-emerald-400 h-full transition-all duration-500 ease-out rounded-full"
-                style={{ width: `${progressPercent}%` }}
-              ></div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Point Barème Overview */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 bg-gray-50 p-4 rounded-2xl border border-gray-150">
-        <div className="text-center p-2">
-          <div className="text-xs text-gray-500 font-bold">Phase de 32</div>
-          <div className="text-base font-black text-emerald-800">+100 pts <span className="text-xs font-medium text-gray-400">/qualif</span></div>
-        </div>
-        <div className="text-center p-2 border-l border-gray-200">
-          <div className="text-xs text-gray-500 font-bold">Huitièmes (16)</div>
-          <div className="text-base font-black text-emerald-800">+200 pts <span className="text-xs font-medium text-gray-400">/qualif</span></div>
-        </div>
-        <div className="text-center p-2 border-l border-gray-200">
-          <div className="text-xs text-gray-500 font-bold">Quarts (8)</div>
-          <div className="text-base font-black text-emerald-800">+300 pts <span className="text-xs font-medium text-gray-400">/qualif</span></div>
-        </div>
-        <div className="text-center p-2 border-l border-gray-200">
-          <div className="text-xs text-gray-500 font-bold">Demis (4)</div>
-          <div className="text-base font-black text-emerald-800">+400 pts <span className="text-xs font-medium text-gray-400">/qualif</span></div>
-        </div>
-      </div>
-
-      {/* Bonus Box */}
-      <div className="bg-pink-50/50 border border-pink-100/70 rounded-2xl p-3 px-4 flex items-start gap-3">
-        <Sparkles className="w-5 h-5 text-pink-600 shrink-0 mt-0.5" />
-        <div className="text-xs space-y-1">
-          <p className="font-extrabold text-pink-950">🏆 Méga Bonus Spéciaux :</p>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-pink-900 font-medium">
-            <p>⭐ <strong>4 Demis Exacts:</strong> +1000 pts</p>
-            <p>⭐ <strong>2 Finalistes Exacts:</strong> +2000 pts</p>
-            <p>⭐ <strong>Vainqueur Exact:</strong> +2000 pts</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Tableau Phase Éliminatoire */}
-      {renderBracketTree()}
-
-      {/* Messages */}
-      {message && (
-        <div className={`p-4 rounded-2xl text-sm font-semibold border ${
-          message.type === "success" 
-            ? "bg-emerald-50 border-emerald-100 text-emerald-800" 
-            : "bg-red-50 border-red-100 text-red-800"
-        }`}>
-          {message.text}
         </div>
       )}
 
-      {/* Action Buttons */}
-      <div className="pt-4 border-t border-gray-100 flex justify-end">
-        {mode === "results" ? (
-          <button
-            type="button"
-            disabled={saving}
-            onClick={handleResolveChallenge}
-            className="bg-emerald-700 hover:bg-emerald-800 text-white font-black px-6 py-3.5 rounded-2xl shadow-sm transition disabled:opacity-50 disabled:cursor-not-allowed text-sm flex items-center gap-2 cursor-pointer"
-          >
-            {saving ? (
-              <>
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                Enregistrement en cours...
-              </>
-            ) : (
-              <>
-                🎯 Enregistrer les résultats officiels & Résoudre le défi
-              </>
-            )}
-          </button>
-        ) : (
-          <button
-            type="button"
-            disabled={saving}
-            onClick={handleSavePredictions}
-            className="bg-emerald-600 hover:bg-emerald-700 text-white font-black px-6 py-3.5 rounded-2xl shadow-sm transition disabled:opacity-50 disabled:cursor-not-allowed text-sm flex items-center gap-2 cursor-pointer"
-          >
-            {saving ? (
-              <>
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                Enregistrement...
-              </>
-            ) : (
-              <>
-                💾 Enregistrer mes pronostics ({totalCompletedPicks}/{totalSlots})
-              </>
-            )}
-          </button>
-        )}
+      {/* Tab Switcher */}
+      <div className="flex bg-gray-100 p-1 rounded-2xl gap-1 max-w-md mx-auto border border-gray-200">
+        <button
+          type="button"
+          onClick={() => {
+            setActiveSubTab("myBracket");
+            setSelectedParticipant(null);
+          }}
+          className={`flex-1 py-2 rounded-xl text-center text-xs font-black transition cursor-pointer flex items-center justify-center gap-1.5 ${
+            activeSubTab === "myBracket" && !selectedParticipant
+              ? "bg-emerald-600 text-white shadow-xs" 
+              : "text-gray-500 hover:text-gray-800 hover:bg-gray-200/50"
+          }`}
+        >
+          🌿 {mode === "results" ? "Résultats Officiels" : "Mon Tableau de Pronos"}
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveSubTab("leaderboard")}
+          className={`flex-1 py-2 rounded-xl text-center text-xs font-black transition cursor-pointer flex items-center justify-center gap-1.5 ${
+            activeSubTab === "leaderboard" || selectedParticipant
+              ? "bg-emerald-600 text-white shadow-xs" 
+              : "text-gray-500 hover:text-gray-800 hover:bg-gray-200/50"
+          }`}
+        >
+          🏆 Participants & Classement ({participants.length})
+        </button>
       </div>
-      <p className="text-[11px] text-gray-400 font-bold text-right mt-1">
-        * Vous pouvez enregistrer vos pronostics à tout moment et modifier vos choix pour tous les matchs non débutés.
-      </p>
+
+      {/* CONDITIONAL RENDERING OF CONTENT */}
+      {selectedParticipant !== null ? (
+        <div className="space-y-4">
+          {/* Header of selected participant */}
+          <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-4 flex items-center justify-between gap-3 shadow-xs">
+            <div className="flex items-center gap-2.5">
+              <div className="w-10 h-10 bg-emerald-600 rounded-full flex items-center justify-center text-xl shadow-md">
+                {selectedParticipant.avatar_value}
+              </div>
+              <div>
+                <div className="text-[9px] text-emerald-800 font-extrabold uppercase tracking-widest">Pronostics de :</div>
+                <div className="text-base font-black text-gray-900">{selectedParticipant.username}</div>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setSelectedParticipant(null)}
+              className="bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 font-black text-xs px-3.5 py-2 rounded-xl transition cursor-pointer flex items-center gap-1 shadow-xs"
+            >
+              ⬅️ Retour au classement
+            </button>
+          </div>
+          
+          <div className="bg-amber-50/40 border border-amber-150 rounded-2xl p-3 text-[11px] text-amber-900 font-semibold text-center">
+            🔒 Les matchs non commencés de ce joueur restent masqués par sécurité et équité.
+          </div>
+
+          {/* Render the other participant's bracket (read-only and auto-masked) */}
+          {renderBracketTree()}
+        </div>
+      ) : activeSubTab === "leaderboard" ? (
+        <div className="space-y-4">
+          <div className="bg-white rounded-2xl border border-gray-150 overflow-hidden shadow-xs">
+            <div className="bg-gray-50/50 px-4 py-3 border-b border-gray-150 flex items-center justify-between">
+              <h3 className="text-xs font-extrabold text-gray-500 uppercase tracking-widest">Classement du Défi</h3>
+              <span className="text-[10px] text-gray-400 font-bold">{participants.length} Participants</span>
+            </div>
+            
+            {participants.length === 0 ? (
+              <div className="p-8 text-center text-gray-400 space-y-2">
+                <div className="text-3xl">👥</div>
+                <p className="text-xs font-bold">Aucun participant pour le moment.</p>
+                <p className="text-[10px] text-gray-400">Invitez vos amis en partageant le code du défi !</p>
+              </div>
+            ) : (
+              <div className="divide-y divide-gray-150">
+                {[...participants]
+                  .sort((a, b) => {
+                    const ptsA = a.points_awarded || 0;
+                    const ptsB = b.points_awarded || 0;
+                    if (ptsA !== ptsB) return ptsB - ptsA;
+                    return (b.profile_points || 0) - (a.profile_points || 0);
+                  })
+                  .map((p, index) => {
+                    const isCurrentUser = p.user_id === userId;
+                    const rank = index + 1;
+                    
+                    const pPicks = p.predictions || {};
+                    const r16C = Object.keys(pPicks.r16 || {}).filter(k => pPicks.r16[k]).length;
+                    const r8C = Object.keys(pPicks.r8 || {}).filter(k => pPicks.r8[k]).length;
+                    const r4C = Object.keys(pPicks.r4 || {}).filter(k => pPicks.r4[k]).length;
+                    const r2C = Object.keys(pPicks.r2 || {}).filter(k => pPicks.r2[k]).length;
+                    const winC = pPicks.winner ? 1 : 0;
+                    const totalC = r16C + r8C + r4C + r2C + winC;
+                    
+                    return (
+                      <div 
+                        key={p.id || p.user_id} 
+                        className={`flex items-center justify-between p-4 transition hover:bg-gray-50/50 ${
+                          isCurrentUser ? "bg-emerald-50/20" : ""
+                        }`}
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="w-7 text-center font-black text-sm text-gray-500 shrink-0">
+                            {rank === 1 ? "🥇" : rank === 2 ? "🥈" : rank === 3 ? "🥉" : `#${rank}`}
+                          </div>
+                          
+                          <div className="w-9 h-9 bg-gray-100 rounded-full flex items-center justify-center text-lg shadow-inner shrink-0">
+                            {p.avatar_value}
+                          </div>
+                          <div className="min-w-0">
+                            <div className="font-extrabold text-sm text-gray-800 flex items-center gap-1.5 truncate">
+                              <span className="truncate">{p.username}</span>
+                              {isCurrentUser && (
+                                <span className="text-[8px] bg-emerald-600 text-white px-1.5 py-0.5 rounded-full font-black uppercase shrink-0">Vous</span>
+                              )}
+                            </div>
+                            <div className="text-[10px] text-gray-400 font-semibold">
+                              {totalC}/31 pronostics complétés
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-center gap-3 shrink-0">
+                          <div className="text-right">
+                            <div className="text-sm font-black text-emerald-800">
+                              {p.points_awarded || 0} pts
+                            </div>
+                            <div className="text-[9px] text-gray-400 font-bold">
+                              Profil: {p.profile_points || 0} pts
+                            </div>
+                          </div>
+                          
+                          <button
+                            type="button"
+                            onClick={() => setSelectedParticipant(p)}
+                            className="bg-white hover:bg-gray-100 text-gray-750 border border-gray-200 font-black text-xs px-3 py-1.5 rounded-xl transition cursor-pointer flex items-center gap-1 shadow-xs"
+                          >
+                            👁️ Voir
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+              </div>
+            )}
+          </div>
+        </div>
+      ) : (
+        /* USER'S OWN ACTIVE BRACKET WITH HEADERS */
+        <>
+          <div className="bg-gradient-to-br from-emerald-950 to-emerald-850 text-white rounded-3xl p-5 shadow-sm relative overflow-hidden">
+            <div className="absolute right-0 top-0 opacity-10 translate-x-4 -translate-y-4">
+              <Trophy className="w-48 h-48 text-white" />
+            </div>
+            
+            <div className="relative z-10 space-y-3">
+              <div className="flex items-center gap-2">
+                <span className="bg-emerald-500 text-emerald-950 text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider flex items-center gap-1">
+                  <Sparkles className="w-3 h-3" />
+                  {mode === "results" ? "Administration" : "Pronostic Spécial"}
+                </span>
+                <span className="text-xs text-emerald-200 font-bold">🎯 Tableau Phase Éliminatoire</span>
+              </div>
+              
+              <h2 className="text-2xl font-black tracking-tight">
+                {mode === "results" ? "Saisie des Résultats Officiels" : "Remplir le Tableau de Championnat"}
+              </h2>
+              
+              <p className="text-xs text-emerald-100 max-w-xl leading-relaxed">
+                {mode === "results" 
+                  ? "Sélectionnez les pays qui se sont réellement qualifiés à chaque étape du tournoi. En validant, les scores de tous les participants seront recalculés immédiatement."
+                  : "Cliquez sur l'équipe de votre choix dans chaque match pour la qualifier au tour de suivant. Complétez tout le tableau pour tenter de décrocher le bonus maximal de points !"}
+              </p>
+
+              {/* Progress bar */}
+              <div className="pt-2">
+                <div className="flex justify-between items-center text-xs font-bold text-emerald-100 mb-1">
+                  <span>Progression du tableau</span>
+                  <span>{totalCompletedPicks} / {totalSlots} ({progressPercent}%)</span>
+                </div>
+                <div className="w-full bg-emerald-900/50 rounded-full h-2.5 overflow-hidden border border-emerald-800/30">
+                  <div 
+                    className="bg-emerald-400 h-full transition-all duration-500 ease-out rounded-full"
+                    style={{ width: `${progressPercent}%` }}
+                  ></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Point Barème Overview */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 bg-gray-50 p-4 rounded-2xl border border-gray-150">
+            <div className="text-center p-2">
+              <div className="text-xs text-gray-500 font-bold">Phase de 32</div>
+              <div className="text-base font-black text-emerald-800">+100 pts <span className="text-xs font-medium text-gray-400">/qualif</span></div>
+            </div>
+            <div className="text-center p-2 border-l border-gray-200">
+              <div className="text-xs text-gray-500 font-bold">Huitièmes (16)</div>
+              <div className="text-base font-black text-emerald-800">+200 pts <span className="text-xs font-medium text-gray-400">/qualif</span></div>
+            </div>
+            <div className="text-center p-2 border-l border-gray-200">
+              <div className="text-xs text-gray-500 font-bold">Quarts (8)</div>
+              <div className="text-base font-black text-emerald-800">+300 pts <span className="text-xs font-medium text-gray-400">/qualif</span></div>
+            </div>
+            <div className="text-center p-2 border-l border-gray-200">
+              <div className="text-xs text-gray-500 font-bold">Demis (4)</div>
+              <div className="text-base font-black text-emerald-800">+400 pts <span className="text-xs font-medium text-gray-400">/qualif</span></div>
+            </div>
+          </div>
+
+          {/* Bonus Box */}
+          <div className="bg-pink-50/50 border border-pink-100/70 rounded-2xl p-3 px-4 flex items-start gap-3">
+            <Sparkles className="w-5 h-5 text-pink-600 shrink-0 mt-0.5" />
+            <div className="text-xs space-y-1">
+              <p className="font-extrabold text-pink-950">🏆 Méga Bonus Spéciaux :</p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-pink-900 font-medium">
+                <p>⭐ <strong>4 Demis Exacts:</strong> +1000 pts</p>
+                <p>⭐ <strong>2 Finalistes Exacts:</strong> +2000 pts</p>
+                <p>⭐ <strong>Vainqueur Exact:</strong> +2000 pts</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Actual Bracket Tree */}
+          {renderBracketTree()}
+
+          {/* Save Messages */}
+          {message && (
+            <div className={`p-4 rounded-2xl text-sm font-semibold border ${
+              message.type === "success" 
+                ? "bg-emerald-50 border-emerald-100 text-emerald-800" 
+                : "bg-red-50 border-red-100 text-red-800"
+            }`}>
+              {message.text}
+            </div>
+          )}
+
+          {/* Action Buttons */}
+          <div className="pt-4 border-t border-gray-100 flex justify-end">
+            {mode === "results" ? (
+              <button
+                type="button"
+                disabled={saving}
+                onClick={handleResolveChallenge}
+                className="bg-emerald-700 hover:bg-emerald-800 text-white font-black px-6 py-3.5 rounded-2xl shadow-sm transition disabled:opacity-50 disabled:cursor-not-allowed text-sm flex items-center gap-2 cursor-pointer"
+              >
+                {saving ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    Enregistrement en cours...
+                  </>
+                ) : (
+                  <>🎯 Enregistrer les résultats officiels & Résoudre le défi</>
+                )}
+              </button>
+            ) : (
+              <button
+                type="button"
+                disabled={saving}
+                onClick={handleSavePredictions}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white font-black px-6 py-3.5 rounded-2xl shadow-sm transition disabled:opacity-50 disabled:cursor-not-allowed text-sm flex items-center gap-2 cursor-pointer"
+              >
+                {saving ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    Enregistrement...
+                  </>
+                ) : (
+                  <>💾 Enregistrer mes pronostics ({totalCompletedPicks}/{totalSlots})</>
+                )}
+              </button>
+            )}
+          </div>
+          <p className="text-[11px] text-gray-400 font-bold text-right mt-1">
+            * Vous pouvez enregistrer vos pronostics à tout moment et modifier vos choix pour tous les matchs non débutés.
+          </p>
+        </>
+      )}
     </div>
   );
 };

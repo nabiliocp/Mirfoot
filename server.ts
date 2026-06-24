@@ -1016,6 +1016,250 @@ async function startServer() {
     }
   });
 
+  // Proxy endpoint to save bets safely and bypass client-side network blocks / CORS issues
+  app.post("/api/bets/upsert", async (req, res) => {
+    if (!supabase) {
+      return res.status(500).json({ error: "Configuration Supabase manquante." });
+    }
+    try {
+      const { user_id, challenge_id, predictions } = req.body;
+      if (!user_id || !challenge_id || !predictions) {
+        return res.status(400).json({ error: "Données requises manquantes." });
+      }
+
+      const { data, error } = await supabase
+        .from("bets")
+        .upsert({
+          user_id,
+          challenge_id,
+          predictions,
+        }, { onConflict: "user_id,challenge_id" })
+        .select();
+
+      if (error) {
+        console.error("Error upserting bet in backend:", error);
+        return res.status(500).json({ error: error.message });
+      }
+
+      res.json({ success: true, data });
+    } catch (err: any) {
+      console.error("Error in bets upsert endpoint:", err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // Proxy endpoint to fetch a single bet
+  app.get("/api/bets", async (req, res) => {
+    if (!supabase) {
+      return res.status(500).json({ error: "Configuration Supabase manquante." });
+    }
+    try {
+      const { userId, challengeId } = req.query;
+      if (!userId || !challengeId) {
+        return res.status(400).json({ error: "userId et challengeId requis." });
+      }
+
+      const { data, error } = await supabase
+        .from("bets")
+        .select("*")
+        .eq("challenge_id", challengeId)
+        .eq("user_id", userId)
+        .maybeSingle();
+
+      if (error) {
+        return res.status(500).json({ error: error.message });
+      }
+
+      res.json({ data });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // Endpoint to fetch all bets for a challenge along with participant profiles
+  app.get("/api/challenges/:challengeId/bets", async (req, res) => {
+    if (!supabase) {
+      return res.status(500).json({ error: "Configuration Supabase manquante." });
+    }
+    try {
+      const { challengeId } = req.params;
+      if (!challengeId) {
+        return res.status(400).json({ error: "challengeId est requis." });
+      }
+
+      // 1. Fetch all bets for this challenge
+      const { data: bets, error: betsError } = await supabase
+        .from("bets")
+        .select("*")
+        .eq("challenge_id", challengeId);
+
+      if (betsError) {
+        console.error("Error fetching bets for challenge:", betsError);
+        return res.status(500).json({ error: betsError.message });
+      }
+
+      // 2. Fetch profiles of all users who bet
+      const userIds = bets.map(b => b.user_id);
+      let profiles: any[] = [];
+      if (userIds.length > 0) {
+        const { data: profs, error: profsError } = await supabase
+          .from("profiles")
+          .select("id, username, first_name, last_name, avatar_type, avatar_value, points")
+          .in("id", userIds);
+        
+        if (profsError) {
+          console.error("Error fetching profiles for bets:", profsError);
+        } else {
+          profiles = profs || [];
+        }
+      }
+
+      // Map profiles to bets
+      const results = bets.map(bet => {
+        const profile = profiles.find(p => p.id === bet.user_id);
+        return {
+          ...bet,
+          username: profile?.username || "Joueur Anonyme",
+          avatar_type: profile?.avatar_type || "emoji",
+          avatar_value: profile?.avatar_value || "⚽",
+          profile_points: profile?.points || 0
+        };
+      });
+
+      res.json({ bets: results });
+    } catch (err: any) {
+      console.error("Error in challenge bets endpoint:", err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // Endpoint to generate random test/mock participants and predictions
+  app.post("/api/challenges/:challengeId/seed-mock-bets", async (req, res) => {
+    if (!supabase) {
+      return res.status(500).json({ error: "Configuration Supabase manquante." });
+    }
+    try {
+      const { challengeId } = req.params;
+      const { count } = req.body;
+      const seedCount = Number(count) || 5;
+
+      const baseMockNames = [
+        "Simulateur_Pro", "PronoBot_99", "LeSorcier", "L_Expert", "Footix_75", 
+        "Tactico_Elite", "GoalBuster", "Challenger_3000", "GoldPredic"
+      ];
+      // Select random subset of names
+      const mockNames = [...baseMockNames].sort(() => Math.random() - 0.5).slice(0, seedCount);
+      const createdBets = [];
+
+      const pickRandom = (teamA: string, teamB: string) => (Math.random() < 0.5 ? teamA : teamB);
+
+      for (const name of mockNames) {
+        // Create a unique deterministic UUID format for this mock user
+        const fakeUserId = `00000000-0000-4000-a000-${name.toLowerCase().padEnd(12, '0').substring(0, 12)}`;
+
+        // Check/Insert Profile
+        const { data: existingProfile } = await supabase
+          .from("profiles")
+          .select("id")
+          .eq("id", fakeUserId)
+          .maybeSingle();
+
+        if (!existingProfile) {
+          await supabase.from("profiles").insert({
+            id: fakeUserId,
+            username: name,
+            avatar_type: "emoji",
+            avatar_value: ["⚽", "🏆", "🦁", "🔥", "👑", "🎯", "⚡", "🦊", "🐯", "🐼"][Math.floor(Math.random() * 10)],
+            points: Math.floor(Math.random() * 3) * 100 // some starting virtual points
+          });
+        }
+
+        // Generate a fully valid prediction bracket
+        const picks: any = {
+          r16: {},
+          r8: {},
+          r4: {},
+          r2: {},
+          winner: ""
+        };
+
+        // 1. R32 to R16
+        picks.r16["R16_L1_H"] = pickRandom("GER", "SCO");
+        picks.r16["R16_L1_A"] = pickRandom("FRA", "SWE");
+        picks.r16["R16_L2_H"] = pickRandom("KOR", "SUI");
+        picks.r16["R16_L2_A"] = pickRandom("NED", "MAR");
+        picks.r16["R16_L3_H"] = pickRandom("COL", "GHA");
+        picks.r16["R16_L3_A"] = pickRandom("ESP", "AUT");
+        picks.r16["R16_L4_H"] = pickRandom("USA", "ALG");
+        picks.r16["R16_L4_A"] = pickRandom("EGY", "CZE");
+
+        picks.r16["R16_R1_H"] = pickRandom("BRA", "JPN");
+        picks.r16["R16_R1_A"] = pickRandom("CIV", "NOR");
+        picks.r16["R16_R2_H"] = pickRandom("MEX", "CPV");
+        picks.r16["R16_R2_A"] = pickRandom("ENG", "COD");
+        picks.r16["R16_R3_H"] = pickRandom("ARG", "URU");
+        picks.r16["R16_R3_A"] = pickRandom("AUS", "IRN");
+        picks.r16["R16_R4_H"] = pickRandom("CAN", "BEL");
+        picks.r16["R16_R4_A"] = pickRandom("POR", "PAR");
+
+        // 2. R16 to R8
+        picks.r8["R8_L1_H"] = pickRandom(picks.r16["R16_L1_H"], picks.r16["R16_L1_A"]);
+        picks.r8["R8_L1_A"] = pickRandom(picks.r16["R16_L2_H"], picks.r16["R16_L2_A"]);
+        picks.r8["R8_L2_H"] = pickRandom(picks.r16["R16_L3_H"], picks.r16["R16_L3_A"]);
+        picks.r8["R8_L2_A"] = pickRandom(picks.r16["R16_L4_H"], picks.r16["R16_L4_A"]);
+
+        picks.r8["R8_R1_H"] = pickRandom(picks.r16["R16_R1_H"], picks.r16["R16_R1_A"]);
+        picks.r8["R8_R1_A"] = pickRandom(picks.r16["R16_R2_H"], picks.r16["R16_R2_A"]);
+        picks.r8["R8_R2_H"] = pickRandom(picks.r16["R16_R3_H"], picks.r16["R16_R3_A"]);
+        picks.r8["R8_R2_A"] = pickRandom(picks.r16["R16_R4_H"], picks.r16["R16_R4_A"]);
+
+        // 3. R8 to R4
+        picks.r4["R4_L1_H"] = pickRandom(picks.r8["R8_L1_H"], picks.r8["R8_L1_A"]);
+        picks.r4["R4_L1_A"] = pickRandom(picks.r8["R8_L2_H"], picks.r8["R8_L2_A"]);
+        picks.r4["R4_R1_H"] = pickRandom(picks.r8["R8_R1_H"], picks.r8["R8_R1_A"]);
+        picks.r4["R4_R1_A"] = pickRandom(picks.r8["R8_R2_H"], picks.r8["R8_R2_A"]);
+
+        // 4. R4 to R2
+        picks.r2["R2_L1_H"] = pickRandom(picks.r4["R4_L1_H"], picks.r4["R4_L1_A"]);
+        picks.r2["R2_L1_A"] = pickRandom(picks.r4["R4_R1_H"], picks.r4["R4_R1_A"]);
+
+        // 5. R2 to Winner
+        picks.winner = pickRandom(picks.r2["R2_L1_H"], picks.r2["R2_L1_A"]);
+
+        // Insert invitation
+        await supabase
+          .from("challenge_invitations")
+          .upsert({
+            challenge_id: challengeId,
+            user_id: fakeUserId,
+            accepted: true
+          }, { onConflict: "challenge_id,user_id" });
+
+        // Upsert bet
+        const { data: bet, error: betError } = await supabase
+          .from("bets")
+          .upsert({
+            user_id: fakeUserId,
+            challenge_id: challengeId,
+            predictions: picks,
+            points_awarded: 0
+          }, { onConflict: "user_id,challenge_id" })
+          .select();
+
+        if (betError) {
+          console.error("Error seeding mock bet:", betError);
+        } else if (bet) {
+          createdBets.push(bet);
+        }
+      }
+
+      res.json({ success: true, count: createdBets.length });
+    } catch (err: any) {
+      console.error("Exception in seeding mock bets:", err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   // Search challenge by code (bypasses RLS utilizing the service role key)
   app.delete("/api/challenges/:challengeId", async (req, res) => {
     if (!supabase)
