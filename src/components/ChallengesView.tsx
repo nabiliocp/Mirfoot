@@ -2746,6 +2746,7 @@ export default function ChallengesView({
         let qualificationCount = 0;
         let zeroCount = 0;
         let predictedCount = 0;
+        let totalPredictedCount = 0;
         let bonusCount = 0;
         let superbonusCount = 0;
         let malusCount = 0;
@@ -2760,7 +2761,7 @@ export default function ChallengesView({
         activeMatches.forEach(m => {
           const pMatch = matchesPreds[m.id];
           if (pMatch && pMatch.homeScore !== undefined && pMatch.awayScore !== undefined) {
-            
+            totalPredictedCount++;
             if (["FINISHED", "IN_PLAY", "LIVE", "PAUSED"].includes(m.status)) {
               predictedCount++;
               const rHome = m.score.fullTime.home ?? m.score.regularTime?.home ?? 0;
@@ -2857,7 +2858,7 @@ export default function ChallengesView({
           closeCount,
           qualificationCount,
           zeroCount,
-          predictionsCount: predictedCount,
+          predictionsCount: totalPredictedCount,
           bonusCount,
           superbonusCount,
           malusCount,
