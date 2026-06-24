@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { 
   BRACKET_TEAMS, 
   STARTING_R32_MATCHES, 
@@ -24,32 +24,44 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
   mode,
   onSaveSuccess
 }) => {
-  const [activeTab, setActiveTab] = useState<"r32" | "r16" | "r8" | "r4" | "r2">("r32");
-  const [viewStyle, setViewStyle] = useState<"tree" | "tabs">("tree");
-  const [zoom, setZoom] = useState<"fit" | "full">("fit");
-  const [containerWidth, setContainerWidth] = useState(360);
   const [picks, setPicks] = useState<BracketPredictions>(createEmptyBracketPredictions());
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
-  // Measure the container to compute the exact scale factor for fit screen / miniature mode
-  useEffect(() => {
-    const handleResize = () => {
-      const el = document.getElementById("bracket-container-wrap");
-      if (el) {
-        setContainerWidth(el.clientWidth);
-      }
-    };
-    handleResize();
-    // Use a small delay/timeout to make sure elements are fully painted and measured on mount/view change
-    const timer = setTimeout(handleResize, 150);
-    window.addEventListener("resize", handleResize);
-    return () => {
-      clearTimeout(timer);
-      window.removeEventListener("resize", handleResize);
-    };
-  }, [viewStyle, zoom]);
+  // Drag-to-scroll implementation for full-size view on both desktop/laptop and mobile
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [startX, setStartX] = useState(0);
+  const [scrollLeft, setScrollLeft] = useState(0);
+
+  const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!scrollRef.current) return;
+    const target = e.target as HTMLElement;
+    // Don't drag if clicking interactive elements inside a team button
+    if (target.closest("button") || target.closest("a") || target.closest("input")) {
+      return;
+    }
+    setIsDragging(true);
+    setStartX(e.pageX - scrollRef.current.offsetLeft);
+    setScrollLeft(scrollRef.current.scrollLeft);
+  };
+
+  const handleMouseLeave = () => {
+    setIsDragging(false);
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!isDragging || !scrollRef.current) return;
+    e.preventDefault();
+    const x = e.pageX - scrollRef.current.offsetLeft;
+    const walk = (x - startX) * 1.5; // multiplier
+    scrollRef.current.scrollLeft = scrollLeft - walk;
+  };
 
   // Load existing prediction (if in prediction mode) or actual results (if in results mode)
   useEffect(() => {
@@ -560,296 +572,144 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
     const r4Left = bracketState.r4Matches.filter(m => m.id.includes("_L"));
     const r4Right = bracketState.r4Matches.filter(m => m.id.includes("_R"));
 
-    const scaleFactor = Math.min(1, Math.max(0.12, containerWidth / 1860));
-    const scaledHeight = 1000 * scaleFactor;
-    const marginBottomVal = -(1000 - scaledHeight);
-
     return (
-      <div className="space-y-4" id="bracket-container-wrap">
-        {/* Controls to Switch zoom between Miniature and Full Size */}
-        <div className="flex items-center justify-between gap-3 p-1 bg-gray-100 rounded-2xl max-w-sm mx-auto border border-gray-200 shadow-xs">
-          <button
-            type="button"
-            onClick={() => setZoom("fit")}
-            className={`flex-1 py-1.5 px-3 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-              zoom === "fit" 
-                ? "bg-emerald-600 text-white shadow-xs" 
-                : "text-gray-500 hover:text-gray-800"
-            }`}
-          >
-            📱 Vue Miniature (Ajuster)
-          </button>
-          <button
-            type="button"
-            onClick={() => setZoom("full")}
-            className={`flex-1 py-1.5 px-3 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-              zoom === "full" 
-                ? "bg-emerald-600 text-white shadow-xs" 
-                : "text-gray-500 hover:text-gray-800"
-            }`}
-          >
-            🔍 Pleine Taille (Défiler)
-          </button>
+      <div className="space-y-3">
+        {/* Helper Drag tip */}
+        <div className="flex items-center justify-center gap-1.5 text-xs text-emerald-700 font-extrabold bg-emerald-50 py-2.5 px-4 rounded-xl border border-emerald-100/60 max-w-md mx-auto text-center select-none">
+          <span className="animate-pulse">👈</span>
+          <span>Glissez le tableau de gauche à droite pour voir l'ensemble des matchs</span>
+          <span className="animate-pulse">👉</span>
         </div>
 
-        {/* Outer Wrapper */}
-        <div className="overflow-hidden border border-gray-200 rounded-3xl bg-white shadow-xs">
-          {zoom === "fit" ? (
-            <div className="w-full overflow-hidden p-2 flex justify-start items-start">
-              <div 
-                className="origin-top-left transition-all duration-300 select-none relative"
-                style={{ 
-                  transform: `scale(${scaleFactor})`,
-                  width: "1840px",
-                  height: "1000px",
-                  marginBottom: `${marginBottomVal}px`
-                }}
-              >
-                {/* Stadium Blueprint pattern on white bg */}
-                <div className="absolute inset-0 bg-[radial-gradient(#e2e8f0_1.5px,transparent_1.5px)] [background-size:24px_24px] bg-slate-50/40 pointer-events-none rounded-3xl"></div>
+        {/* Outer Draggable scroll container */}
+        <div 
+          ref={scrollRef}
+          onMouseDown={handleMouseDown}
+          onMouseLeave={handleMouseLeave}
+          onMouseUp={handleMouseUp}
+          onMouseMove={handleMouseMove}
+          className="overflow-x-auto pb-4 border border-gray-200 rounded-3xl bg-white shadow-xs cursor-grab active:cursor-grabbing select-none scrollbar-thin scrollbar-thumb-gray-200 scrollbar-track-transparent"
+          id="bracket-container-wrap"
+        >
+          <div className="min-w-[1840px] p-8 flex justify-between items-center h-[1000px] gap-6 relative">
+            <div className="absolute inset-0 bg-[radial-gradient(#e2e8f0_1.5px,transparent_1.5px)] [background-size:24px_24px] bg-slate-50/40 pointer-events-none rounded-3xl"></div>
 
-                <div className="absolute inset-0 p-8 flex justify-between items-center h-[1000px] gap-6">
-                  {/* COL 1: 1/16 LEFT */}
-                  <div className="flex flex-col h-full justify-between relative z-10 py-4">
-                    <div className="text-[10px] text-gray-400 font-black tracking-widest uppercase text-center mb-2">1/16 Finales (G)</div>
-                    {r32Left.map(m => (
-                      <div key={m.id} className="relative">
-                        {renderTreeMatchNode("r32", m.id, m.homeId, m.awayId, "left")}
-                      </div>
-                    ))}
-                  </div>
+            {/* COL 1: 1/16 LEFT */}
+            <div className="flex flex-col h-full justify-between relative z-10 py-4">
+              <div className="text-[10px] text-gray-400 font-black tracking-widest uppercase text-center mb-2">1/16 Finales (G)</div>
+              {r32Left.map(m => (
+                <div key={m.id} className="relative">
+                  {renderTreeMatchNode("r32", m.id, m.homeId, m.awayId, "left")}
+                </div>
+              ))}
+            </div>
 
-                  {/* COL 2: 1/8 LEFT */}
-                  <div className="flex flex-col h-full justify-around relative z-10 py-12">
-                    <div className="text-[10px] text-gray-400 font-black tracking-widest uppercase text-center mb-2">Huitièmes (G)</div>
-                    {r16Left.map(m => (
-                      <div key={m.id} className="relative">
-                        {renderTreeMatchNode("r16", m.id, m.homeId, m.awayId, "left")}
-                      </div>
-                    ))}
-                  </div>
+            {/* COL 2: 1/8 LEFT */}
+            <div className="flex flex-col h-full justify-around relative z-10 py-12">
+              <div className="text-[10px] text-gray-400 font-black tracking-widest uppercase text-center mb-2">Huitièmes (G)</div>
+              {r16Left.map(m => (
+                <div key={m.id} className="relative">
+                  {renderTreeMatchNode("r16", m.id, m.homeId, m.awayId, "left")}
+                </div>
+              ))}
+            </div>
 
-                  {/* COL 3: 1/4 LEFT */}
-                  <div className="flex flex-col h-full justify-around relative z-10 py-24">
-                    <div className="text-[10px] text-gray-400 font-black tracking-widest uppercase text-center mb-2">Quarts (G)</div>
-                    {r8Left.map(m => (
-                      <div key={m.id} className="relative">
-                        {renderTreeMatchNode("r8", m.id, m.homeId, m.awayId, "left")}
-                      </div>
-                    ))}
-                  </div>
+            {/* COL 3: 1/4 LEFT */}
+            <div className="flex flex-col h-full justify-around relative z-10 py-24">
+              <div className="text-[10px] text-gray-400 font-black tracking-widest uppercase text-center mb-2">Quarts (G)</div>
+              {r8Left.map(m => (
+                <div key={m.id} className="relative">
+                  {renderTreeMatchNode("r8", m.id, m.homeId, m.awayId, "left")}
+                </div>
+              ))}
+            </div>
 
-                  {/* COL 4: 1/2 LEFT */}
-                  <div className="flex flex-col h-full justify-center relative z-10 py-32 space-y-4">
-                    <div className="text-[10px] text-gray-400 font-black tracking-widest uppercase text-center mb-2">Demi-finale (G)</div>
-                    {r4Left.map(m => (
-                      <div key={m.id} className="relative">
-                        {renderTreeMatchNode("r4", m.id, m.homeId, m.awayId, "left")}
-                      </div>
-                    ))}
-                  </div>
+            {/* COL 4: 1/2 LEFT */}
+            <div className="flex flex-col h-full justify-center relative z-10 py-32 space-y-4">
+              <div className="text-[10px] text-gray-400 font-black tracking-widest uppercase text-center mb-2">Demi-finale (G)</div>
+              {r4Left.map(m => (
+                <div key={m.id} className="relative">
+                  {renderTreeMatchNode("r4", m.id, m.homeId, m.awayId, "left")}
+                </div>
+              ))}
+            </div>
 
-                  {/* COL 5: CENTER FINALE */}
-                  <div className="flex flex-col h-full justify-center items-center relative z-10 w-[220px]">
-                    <div className="flex flex-col items-center justify-center space-y-6 w-full text-center">
-                      {/* Champion Box */}
-                      {picks.winner ? (
-                        <div className="relative group">
-                          <div className="absolute inset-0 bg-amber-500/10 rounded-2xl blur-lg opacity-60"></div>
-                          <div className="relative bg-gradient-to-b from-amber-400 to-yellow-500 border border-amber-300 rounded-2xl p-4 text-slate-950 shadow-md space-y-2 w-[180px]">
-                            <Trophy className="w-10 h-10 mx-auto text-amber-950 animate-bounce" />
-                            <div>
-                              <div className="text-[10px] font-extrabold uppercase tracking-widest text-amber-900">Champion Prédit</div>
-                              <div className="text-sm font-black flex items-center justify-center gap-1.5 mt-1 truncate">
-                                <span>{BRACKET_TEAMS[picks.winner]?.flag}</span>
-                                <span className="truncate max-w-[120px]">{BRACKET_TEAMS[picks.winner]?.name}</span>
-                              </div>
-                            </div>
-                          </div>
+            {/* COL 5: CENTER FINALE */}
+            <div className="flex flex-col h-full justify-center items-center relative z-10 w-[220px]">
+              <div className="flex flex-col items-center justify-center space-y-6 w-full text-center">
+                {/* Champion Box */}
+                {picks.winner ? (
+                  <div className="relative group">
+                    <div className="absolute inset-0 bg-amber-500/10 rounded-2xl blur-lg opacity-60"></div>
+                    <div className="relative bg-gradient-to-b from-amber-400 to-yellow-500 border border-amber-300 rounded-2xl p-4 text-slate-950 shadow-md space-y-2 w-[180px]">
+                      <Trophy className="w-10 h-10 mx-auto text-amber-950 animate-bounce" />
+                      <div>
+                        <div className="text-[10px] font-extrabold uppercase tracking-widest text-amber-900">Champion Prédit</div>
+                        <div className="text-sm font-black flex items-center justify-center gap-1.5 mt-1 truncate">
+                          <span>{BRACKET_TEAMS[picks.winner]?.flag}</span>
+                          <span className="truncate max-w-[120px]">{BRACKET_TEAMS[picks.winner]?.name}</span>
                         </div>
-                      ) : (
-                        <div className="bg-white border border-gray-200 border-dashed rounded-2xl p-4 text-gray-400 space-y-2 w-[180px]">
-                          <HelpCircle className="w-8 h-8 mx-auto text-gray-300 animate-pulse" />
-                          <div className="text-[10px] font-extrabold uppercase tracking-wider">Champion à prédire</div>
-                        </div>
-                      )}
-
-                      {/* Connector from Champion */}
-                      <div className="w-[2px] h-10 bg-gradient-to-b from-amber-500 to-gray-200"></div>
-
-                      {/* Finale Match */}
-                      <div className="space-y-1.5">
-                        <div className="text-[10px] text-amber-600 font-extrabold uppercase tracking-widest text-center">🏆 Grande Finale 🏆</div>
-                        {renderTreeMatchNode("r2", "R2_F1", bracketState.finalMatch.homeId, bracketState.finalMatch.awayId, "center")}
                       </div>
                     </div>
                   </div>
-
-                  {/* COL 6: 1/2 RIGHT */}
-                  <div className="flex flex-col h-full justify-center relative z-10 py-32 space-y-4">
-                    <div className="text-[10px] text-gray-400 font-black tracking-widest uppercase text-center mb-2">Demi-finale (D)</div>
-                    {r4Right.map(m => (
-                      <div key={m.id} className="relative">
-                        {renderTreeMatchNode("r4", m.id, m.homeId, m.awayId, "right")}
-                      </div>
-                    ))}
+                ) : (
+                  <div className="bg-white border border-gray-200 border-dashed rounded-2xl p-4 text-gray-400 space-y-2 w-[180px]">
+                    <HelpCircle className="w-8 h-8 mx-auto text-gray-300 animate-pulse" />
+                    <div className="text-[10px] font-extrabold uppercase tracking-wider">Champion à prédire</div>
                   </div>
+                )}
 
-                  {/* COL 7: 1/4 RIGHT */}
-                  <div className="flex flex-col h-full justify-around relative z-10 py-24">
-                    <div className="text-[10px] text-gray-400 font-black tracking-widest uppercase text-center mb-2">Quarts (D)</div>
-                    {r8Right.map(m => (
-                      <div key={m.id} className="relative">
-                        {renderTreeMatchNode("r8", m.id, m.homeId, m.awayId, "right")}
-                      </div>
-                    ))}
-                  </div>
+                {/* Connector from Champion */}
+                <div className="w-[2px] h-10 bg-gradient-to-b from-amber-500 to-gray-200"></div>
 
-                  {/* COL 8: 1/8 RIGHT */}
-                  <div className="flex flex-col h-full justify-around relative z-10 py-12">
-                    <div className="text-[10px] text-gray-400 font-black tracking-widest uppercase text-center mb-2">Huitièmes (D)</div>
-                    {r16Right.map(m => (
-                      <div key={m.id} className="relative">
-                        {renderTreeMatchNode("r16", m.id, m.homeId, m.awayId, "right")}
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* COL 9: 1/16 RIGHT */}
-                  <div className="flex flex-col h-full justify-between relative z-10 py-4">
-                    <div className="text-[10px] text-gray-400 font-black tracking-widest uppercase text-center mb-2">1/16 Finales (D)</div>
-                    {r32Right.map(m => (
-                      <div key={m.id} className="relative">
-                        {renderTreeMatchNode("r32", m.id, m.homeId, m.awayId, "right")}
-                      </div>
-                    ))}
-                  </div>
+                {/* Finale Match */}
+                <div className="space-y-1.5">
+                  <div className="text-[10px] text-amber-600 font-extrabold uppercase tracking-widest text-center">🏆 Grande Finale 🏆</div>
+                  {renderTreeMatchNode("r2", "R2_F1", bracketState.finalMatch.homeId, bracketState.finalMatch.awayId, "center")}
                 </div>
               </div>
             </div>
-          ) : (
-            <div className="overflow-x-auto pb-6">
-              <div className="min-w-[1840px] p-8 flex justify-between items-center h-[1000px] gap-6 select-none relative bg-white">
-                <div className="absolute inset-0 bg-[radial-gradient(#e2e8f0_1.5px,transparent_1.5px)] [background-size:24px_24px] bg-slate-50/40 pointer-events-none rounded-3xl"></div>
 
-                {/* COL 1: 1/16 LEFT */}
-                <div className="flex flex-col h-full justify-between relative z-10 py-4">
-                  <div className="text-[10px] text-gray-400 font-black tracking-widest uppercase text-center mb-2">1/16 Finales (G)</div>
-                  {r32Left.map(m => (
-                    <div key={m.id} className="relative">
-                      {renderTreeMatchNode("r32", m.id, m.homeId, m.awayId, "left")}
-                    </div>
-                  ))}
+            {/* COL 6: 1/2 RIGHT */}
+            <div className="flex flex-col h-full justify-center relative z-10 py-32 space-y-4">
+              <div className="text-[10px] text-gray-400 font-black tracking-widest uppercase text-center mb-2">Demi-finale (D)</div>
+              {r4Right.map(m => (
+                <div key={m.id} className="relative">
+                  {renderTreeMatchNode("r4", m.id, m.homeId, m.awayId, "right")}
                 </div>
-
-                {/* COL 2: 1/8 LEFT */}
-                <div className="flex flex-col h-full justify-around relative z-10 py-12">
-                  <div className="text-[10px] text-gray-400 font-black tracking-widest uppercase text-center mb-2">Huitièmes (G)</div>
-                  {r16Left.map(m => (
-                    <div key={m.id} className="relative">
-                      {renderTreeMatchNode("r16", m.id, m.homeId, m.awayId, "left")}
-                    </div>
-                  ))}
-                </div>
-
-                {/* COL 3: 1/4 LEFT */}
-                <div className="flex flex-col h-full justify-around relative z-10 py-24">
-                  <div className="text-[10px] text-gray-400 font-black tracking-widest uppercase text-center mb-2">Quarts (G)</div>
-                  {r8Left.map(m => (
-                    <div key={m.id} className="relative">
-                      {renderTreeMatchNode("r8", m.id, m.homeId, m.awayId, "left")}
-                    </div>
-                  ))}
-                </div>
-
-                {/* COL 4: 1/2 LEFT */}
-                <div className="flex flex-col h-full justify-center relative z-10 py-32 space-y-4">
-                  <div className="text-[10px] text-gray-400 font-black tracking-widest uppercase text-center mb-2">Demi-finale (G)</div>
-                  {r4Left.map(m => (
-                    <div key={m.id} className="relative">
-                      {renderTreeMatchNode("r4", m.id, m.homeId, m.awayId, "left")}
-                    </div>
-                  ))}
-                </div>
-
-                {/* COL 5: CENTER FINALE */}
-                <div className="flex flex-col h-full justify-center items-center relative z-10 w-[220px]">
-                  <div className="flex flex-col items-center justify-center space-y-6 w-full text-center">
-                    {/* Champion Box */}
-                    {picks.winner ? (
-                      <div className="relative group">
-                        <div className="absolute inset-0 bg-amber-500/10 rounded-2xl blur-lg opacity-60"></div>
-                        <div className="relative bg-gradient-to-b from-amber-400 to-yellow-500 border border-amber-300 rounded-2xl p-4 text-slate-950 shadow-md space-y-2 w-[180px]">
-                          <Trophy className="w-10 h-10 mx-auto text-amber-950 animate-bounce" />
-                          <div>
-                            <div className="text-[10px] font-extrabold uppercase tracking-widest text-amber-900">Champion Prédit</div>
-                            <div className="text-sm font-black flex items-center justify-center gap-1.5 mt-1 truncate">
-                              <span>{BRACKET_TEAMS[picks.winner]?.flag}</span>
-                              <span className="truncate max-w-[120px]">{BRACKET_TEAMS[picks.winner]?.name}</span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="bg-white border border-gray-200 border-dashed rounded-2xl p-4 text-gray-400 space-y-2 w-[180px]">
-                        <HelpCircle className="w-8 h-8 mx-auto text-gray-300 animate-pulse" />
-                        <div className="text-[10px] font-extrabold uppercase tracking-wider">Champion à prédire</div>
-                      </div>
-                    )}
-
-                    {/* Connector from Champion */}
-                    <div className="w-[2px] h-10 bg-gradient-to-b from-amber-500 to-gray-200"></div>
-
-                    {/* Finale Match */}
-                    <div className="space-y-1.5">
-                      <div className="text-[10px] text-amber-600 font-extrabold uppercase tracking-widest text-center">🏆 Grande Finale 🏆</div>
-                      {renderTreeMatchNode("r2", "R2_F1", bracketState.finalMatch.homeId, bracketState.finalMatch.awayId, "center")}
-                    </div>
-                  </div>
-                </div>
-
-                {/* COL 6: 1/2 RIGHT */}
-                <div className="flex flex-col h-full justify-center relative z-10 py-32 space-y-4">
-                  <div className="text-[10px] text-gray-400 font-black tracking-widest uppercase text-center mb-2">Demi-finale (D)</div>
-                  {r4Right.map(m => (
-                    <div key={m.id} className="relative">
-                      {renderTreeMatchNode("r4", m.id, m.homeId, m.awayId, "right")}
-                    </div>
-                  ))}
-                </div>
-
-                {/* COL 7: 1/4 RIGHT */}
-                <div className="flex flex-col h-full justify-around relative z-10 py-24">
-                  <div className="text-[10px] text-gray-400 font-black tracking-widest uppercase text-center mb-2">Quarts (D)</div>
-                  {r8Right.map(m => (
-                    <div key={m.id} className="relative">
-                      {renderTreeMatchNode("r8", m.id, m.homeId, m.awayId, "right")}
-                    </div>
-                  ))}
-                </div>
-
-                {/* COL 8: 1/8 RIGHT */}
-                <div className="flex flex-col h-full justify-around relative z-10 py-12">
-                  <div className="text-[10px] text-gray-400 font-black tracking-widest uppercase text-center mb-2">Huitièmes (D)</div>
-                  {r16Right.map(m => (
-                    <div key={m.id} className="relative">
-                      {renderTreeMatchNode("r16", m.id, m.homeId, m.awayId, "right")}
-                    </div>
-                  ))}
-                </div>
-
-                {/* COL 9: 1/16 RIGHT */}
-                <div className="flex flex-col h-full justify-between relative z-10 py-4">
-                  <div className="text-[10px] text-gray-400 font-black tracking-widest uppercase text-center mb-2">1/16 Finales (D)</div>
-                  {r32Right.map(m => (
-                    <div key={m.id} className="relative">
-                      {renderTreeMatchNode("r32", m.id, m.homeId, m.awayId, "right")}
-                    </div>
-                  ))}
-                </div>
-              </div>
+              ))}
             </div>
-          )}
+
+            {/* COL 7: 1/4 RIGHT */}
+            <div className="flex flex-col h-full justify-around relative z-10 py-24">
+              <div className="text-[10px] text-gray-400 font-black tracking-widest uppercase text-center mb-2">Quarts (D)</div>
+              {r8Right.map(m => (
+                <div key={m.id} className="relative">
+                  {renderTreeMatchNode("r8", m.id, m.homeId, m.awayId, "right")}
+                </div>
+              ))}
+            </div>
+
+            {/* COL 8: 1/8 RIGHT */}
+            <div className="flex flex-col h-full justify-around relative z-10 py-12">
+              <div className="text-[10px] text-gray-400 font-black tracking-widest uppercase text-center mb-2">Huitièmes (D)</div>
+              {r16Right.map(m => (
+                <div key={m.id} className="relative">
+                  {renderTreeMatchNode("r16", m.id, m.homeId, m.awayId, "right")}
+                </div>
+              ))}
+            </div>
+
+            {/* COL 9: 1/16 RIGHT */}
+            <div className="flex flex-col h-full justify-between relative z-10 py-4">
+              <div className="text-[10px] text-gray-400 font-black tracking-widest uppercase text-center mb-2">1/16 Finales (D)</div>
+              {r32Right.map(m => (
+                <div key={m.id} className="relative">
+                  {renderTreeMatchNode("r32", m.id, m.homeId, m.awayId, "right")}
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -930,178 +790,8 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
         </div>
       </div>
 
-      {/* View Style Switcher */}
-      <div className="flex bg-gray-150 p-1 rounded-2xl gap-1 max-w-sm mx-auto">
-        <button
-          type="button"
-          onClick={() => setViewStyle("tree")}
-          className={`flex-1 py-2 rounded-xl text-center text-xs font-black transition cursor-pointer flex items-center justify-center gap-1 ${
-            viewStyle === "tree" 
-              ? "bg-emerald-600 text-white shadow-sm font-black" 
-              : "text-gray-500 hover:text-gray-850"
-          }`}
-        >
-          🌿 Vue Arborescence
-        </button>
-        <button
-          type="button"
-          onClick={() => setViewStyle("tabs")}
-          className={`flex-1 py-2 rounded-xl text-center text-xs font-black transition cursor-pointer flex items-center justify-center gap-1 ${
-            viewStyle === "tabs" 
-              ? "bg-emerald-600 text-white shadow-sm font-black" 
-              : "text-gray-500 hover:text-gray-850"
-          }`}
-        >
-          📋 Vue par Étapes
-        </button>
-      </div>
-
-      {viewStyle === "tree" ? (
-        renderBracketTree()
-      ) : (
-        <>
-          {/* Tab Selectors for Rounds */}
-          <div className="flex bg-gray-100 p-1 rounded-2xl gap-1">
-            {(["r32", "r16", "r8", "r4", "r2"] as const).map((round) => {
-              const labels = {
-                r32: "1/16 Finales",
-                r16: "Huitièmes",
-                r8: "Quarts",
-                r4: "Demi-finales",
-                r2: "Finale"
-              };
-              const counts = {
-                r32: "16 Matchs",
-                r16: `${r16Progress}/8 Qualifiés`,
-                r8: `${r8Progress}/4 Qualifiés`,
-                r4: `${r4Progress}/2 Qualifiés`,
-                r2: `${r2Progress}/1 Champion`
-              };
-
-              return (
-                <button
-                  key={round}
-                  type="button"
-                  onClick={() => setActiveTab(round)}
-                  className={`flex-1 py-3 px-2 rounded-xl text-center transition cursor-pointer ${
-                    activeTab === round 
-                      ? "bg-white text-emerald-950 font-black shadow-sm" 
-                      : "text-gray-500 hover:text-gray-800 font-bold"
-                  }`}
-                >
-                  <div className="text-xs">{labels[round]}</div>
-                  <div className="text-[9px] text-gray-400 mt-0.5 font-semibold">{counts[round]}</div>
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Tab Content Matches */}
-          <div className="py-2">
-            {activeTab === "r32" && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {STARTING_R32_MATCHES.map((m) => (
-              <div key={m.id} className="space-y-1">
-                <div className="text-[10px] text-gray-400 font-bold flex justify-between px-1">
-                  <span>Match {m.id.replace("R32_", "")}</span>
-                  <span>{new Date(BRACKET_MATCH_TIMES[m.id]).toLocaleDateString("fr-FR", {day: "numeric", month: "short", hour: "2-digit", minute: "2-digit"})}</span>
-                </div>
-                {renderMatchCard("r32", m.id, m.homeId, m.awayId)}
-              </div>
-            ))}
-          </div>
-        )}
-
-        {activeTab === "r16" && (
-          <div className="space-y-4">
-            {r16Progress < 16 && (
-              <div className="bg-amber-50 border border-amber-100 text-amber-900 rounded-xl p-3 flex items-start gap-2.5 text-xs font-semibold">
-                <AlertTriangle className="w-4 h-4 shrink-0 text-amber-600 mt-0.5" />
-                <span>Veuillez d'abord qualifier les équipes dans l'onglet "1/16 Finales" pour remplir les huitièmes de finale. ({r16Progress}/16 équipes qualifiées)</span>
-              </div>
-            )}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              {bracketState.r16Matches.map((m) => (
-                <div key={m.id} className="space-y-1">
-                  <div className="text-[10px] text-gray-400 font-bold px-1">Match {m.id.replace("R16_", "")}</div>
-                  {renderMatchCard("r16", m.id, m.homeId, m.awayId)}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {activeTab === "r8" && (
-          <div className="space-y-4">
-            {r8Progress < 8 && (
-              <div className="bg-amber-50 border border-amber-100 text-amber-900 rounded-xl p-3 flex items-start gap-2.5 text-xs font-semibold">
-                <AlertTriangle className="w-4 h-4 shrink-0 text-amber-600 mt-0.5" />
-                <span>Veuillez qualifier les équipes dans l'onglet "Huitièmes" pour remplir les quarts de finale. ({r8Progress}/8 équipes qualifiées)</span>
-              </div>
-            )}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              {bracketState.r8Matches.map((m) => (
-                <div key={m.id} className="space-y-1">
-                  <div className="text-[10px] text-gray-400 font-bold px-1">Quart {m.id.replace("R8_", "")}</div>
-                  {renderMatchCard("r8", m.id, m.homeId, m.awayId)}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {activeTab === "r4" && (
-          <div className="space-y-4">
-            {r4Progress < 4 && (
-              <div className="bg-amber-50 border border-amber-100 text-amber-900 rounded-xl p-3 flex items-start gap-2.5 text-xs font-semibold">
-                <AlertTriangle className="w-4 h-4 shrink-0 text-amber-600 mt-0.5" />
-                <span>Veuillez qualifier les équipes dans l'onglet "Quarts" pour remplir les demi-finales. ({r4Progress}/4 équipes qualifiées)</span>
-              </div>
-            )}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl mx-auto">
-              {bracketState.r4Matches.map((m) => (
-                <div key={m.id} className="space-y-1">
-                  <div className="text-[10px] text-gray-400 font-bold px-1">Demi {m.id.replace("R4_", "")}</div>
-                  {renderMatchCard("r4", m.id, m.homeId, m.awayId)}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {activeTab === "r2" && (
-          <div className="space-y-6 max-w-md mx-auto">
-            {r2Progress < 2 && (
-              <div className="bg-amber-50 border border-amber-100 text-amber-900 rounded-xl p-3 flex items-start gap-2.5 text-xs font-semibold">
-                <AlertTriangle className="w-4 h-4 shrink-0 text-amber-600 mt-0.5" />
-                <span>Veuillez qualifier les équipes dans l'onglet "Demi-finales" pour remplir la Finale. ({r2Progress}/2 équipes qualifiées)</span>
-              </div>
-            )}
-            
-            <div className="space-y-1.5">
-              <div className="text-[10px] text-gray-400 font-bold text-center">🏆 Grande Finale 🏆</div>
-              {renderMatchCard("r2", "R2_F1", bracketState.finalMatch.homeId, bracketState.finalMatch.awayId)}
-            </div>
-
-            {isWinnerPicked && (
-              <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-5 text-center space-y-3 shadow-xs">
-                <div className="w-14 h-14 bg-emerald-600 rounded-full flex items-center justify-center mx-auto shadow-md">
-                  <Trophy className="w-7 h-7 text-white" />
-                </div>
-                <div>
-                  <div className="text-xs text-emerald-800 font-extrabold uppercase tracking-widest">Votre Champion Prédit</div>
-                  <div className="text-2xl font-black text-gray-900 flex items-center justify-center gap-2 mt-1">
-                    <span>{BRACKET_TEAMS[picks.winner]?.flag}</span>
-                    <span>{BRACKET_TEAMS[picks.winner]?.name}</span>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-    </>
-  )}
+      {/* Tableau Phase Éliminatoire */}
+      {renderBracketTree()}
 
       {/* Messages */}
       {message && (
