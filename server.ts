@@ -45,6 +45,30 @@ function setActiveApiProvider(provider: string) {
   }
 }
 
+// Persistent file-based caching helper to prevent 0 scores during API rate limits or down-times
+const persistentCachePath = (key: string) => path.join(process.cwd(), `cached_${key.replace(/[^a-zA-Z0-9_]/g, "_")}.json`);
+
+function savePersistentCache(key: string, data: any) {
+  try {
+    fs.writeFileSync(persistentCachePath(key), JSON.stringify(data), "utf-8");
+  } catch (err) {
+    console.error(`Failed to save persistent cache for ${key}:`, err);
+  }
+}
+
+function loadPersistentCache(key: string): any | null {
+  try {
+    const p = persistentCachePath(key);
+    if (fs.existsSync(p)) {
+      console.log(`Loading persistent cache for ${key}`);
+      return JSON.parse(fs.readFileSync(p, "utf-8"));
+    }
+  } catch (err) {
+    console.error(`Failed to load persistent cache for ${key}:`, err);
+  }
+  return null;
+}
+
 // In-memory API Cache Layer to protect free tier rate limits (100 requests / day)
 interface CacheEntry {
   data: any;
@@ -278,12 +302,12 @@ async function startServer() {
   });
 
   app.get("/api/matches/today", async (req, res) => {
-    try {
-      const activeProvider = getActiveApiProvider();
-      const targetDate = req.query.date ? String(req.query.date) : new Date().toISOString().split("T")[0];
+    const activeProvider = getActiveApiProvider();
+    const targetDate = req.query.date ? String(req.query.date) : new Date().toISOString().split("T")[0];
+    const cacheKey = `today_${activeProvider}_${targetDate}`;
+    const now = Date.now();
 
-      const cacheKey = `today_${activeProvider}_${targetDate}`;
-      const now = Date.now();
+    try {
       if (apiCache[cacheKey] && (now - apiCache[cacheKey].timestamp < TODAY_CACHE_TTL)) {
         return res.json(apiCache[cacheKey].data);
       }
@@ -298,35 +322,70 @@ async function startServer() {
             });
         }
 
-        const response = await fetch(
-          `https://v3.football.api-sports.io/fixtures?date=${targetDate}`,
-          {
-            headers: { "x-apisports-key": apiKey },
-          },
-        );
+        try {
+          const response = await fetch(
+            `https://v3.football.api-sports.io/fixtures?date=${targetDate}`,
+            {
+              headers: { "x-apisports-key": apiKey },
+            },
+          );
 
-        if (!response.ok) throw new Error("API-Football Error");
-        const data = await response.json();
+          if (!response.ok) throw new Error("API-Football Error");
+          const data = await response.json();
 
-        const fixtures = data.response || [];
-        
-        // Debugging status:
-        fixtures.forEach((f: any) => {
-            console.log(`DEBUG Match ${f.fixture.id}: ${f.teams.home.name} vs ${f.teams.away.name}, status code: ${f.fixture.status.short}, status full: ${JSON.stringify(f.fixture.status)}`);
-        });
+          // Handle API-Football rate limits gracefully
+          if (data && data.errors && Object.keys(data.errors).length > 0) {
+            console.error("API-Football returned errors in /api/matches/today:", data.errors);
+            if (data.errors.requests || data.errors.token || data.errors.apiKey) {
+              throw new Error(`API-Football error: ${JSON.stringify(data.errors)}`);
+            }
+          }
 
-        const supportedLeagues = Object.values(COMPETITION_ID_MAP);
-        const filteredFixtures = fixtures.filter(
-          (f: any) => f.league && supportedLeagues.includes(f.league.id),
-        );
+          const fixtures = data.response || [];
+          
+          fixtures.forEach((f: any) => {
+              console.log(`DEBUG Match ${f.fixture.id}: ${f.teams.home.name} vs ${f.teams.away.name}, status code: ${f.fixture.status.short}`);
+          });
 
-        const mappedMatches = filteredFixtures
-          .map(translateApiFootballMatchToFootballData)
-          .filter(Boolean);
-        
-        const cachedResult = { matches: mappedMatches };
-        apiCache[cacheKey] = { data: cachedResult, timestamp: now };
-        return res.json(cachedResult);
+          const supportedLeagues = Object.values(COMPETITION_ID_MAP);
+          const filteredFixtures = fixtures.filter(
+            (f: any) => f.league && supportedLeagues.includes(f.league.id),
+          );
+
+          const mappedMatches = filteredFixtures
+            .map(translateApiFootballMatchToFootballData)
+            .filter(Boolean);
+          
+          const cachedResult = { matches: mappedMatches };
+          apiCache[cacheKey] = { data: cachedResult, timestamp: now };
+          savePersistentCache(cacheKey, cachedResult);
+          return res.json(cachedResult);
+        } catch (apiErr) {
+          console.error("API-Football error in today's matches, attempting fallback:", apiErr);
+          
+          const persistentCache = loadPersistentCache(cacheKey);
+          if (persistentCache) {
+            apiCache[cacheKey] = { data: persistentCache, timestamp: now };
+            return res.json(persistentCache);
+          }
+
+          // Try loading from World Cup fallback matches for today
+          try {
+            const fallbackData = JSON.parse(fs.readFileSync('./world_cup_fallback.json', 'utf-8'));
+            const matches = fallbackData.matches || [];
+            const matchesToday = matches.filter((m: any) => m.utcDate.startsWith(targetDate));
+            if (matchesToday.length > 0) {
+              console.log(`Loaded ${matchesToday.length} fallback World Cup matches for date ${targetDate}`);
+              const fallbackResult = { matches: matchesToday };
+              apiCache[cacheKey] = { data: fallbackResult, timestamp: now };
+              return res.json(fallbackResult);
+            }
+          } catch (fallbackErr) {
+            console.error("Failed to load today's fallback World Cup matches:", fallbackErr);
+          }
+
+          throw apiErr;
+        }
       }
 
       // If activeProvider is football-data, we also fetch today's friendly matches (league 10) from api-football.com if available
@@ -344,14 +403,12 @@ async function startServer() {
             const data = await response.json();
             if (data.errors && data.errors.requests) {
               console.error("API-football ratelimit hit for friendly matches");
-              // Rate limit hit - already initialized with mocks, so nothing to do
             } else {
               const fixtures = data.response || [];
               const friendlyFixtures = fixtures.filter((f: any) => f.league && f.league.id === 10);
               const mapped = friendlyFixtures
                 .map(translateApiFootballMatchToFootballData)
                 .filter(Boolean);
-              // Merge real friendly matches, ensuring no duplicates by ID
               const existingIds = new Set(friendlyMatches.map(m => m.id));
               mapped.forEach((m: any) => {
                 if (!existingIds.has(m.id)) {
@@ -368,37 +425,65 @@ async function startServer() {
       const apiKey = process.env.FOOTBALL_DATA_API_KEY;
       if (!apiKey) return res.status(401).json({ error: "Clé API manquante" });
 
-      // football-data.org /matches endpoint returns matches for today by default
-      const response = await fetch(`https://api.football-data.org/v4/matches?dateFrom=${targetDate}&dateTo=${targetDate}`, {
-        headers: { "X-Auth-Token": apiKey },
-      });
+      try {
+        const response = await fetch(`https://api.football-data.org/v4/matches?dateFrom=${targetDate}&dateTo=${targetDate}`, {
+          headers: { "X-Auth-Token": apiKey },
+        });
 
-      if (!response.ok) throw new Error("API Error");
-      const data = await response.json();
+        if (!response.ok) throw new Error(`API Error status ${response.status}`);
+        const data = await response.json();
 
-      // Append friendly matches if any found
-      if (friendlyMatches.length > 0 && data && Array.isArray(data.matches)) {
-        data.matches = [...data.matches, ...friendlyMatches];
+        if (friendlyMatches.length > 0 && data && Array.isArray(data.matches)) {
+          data.matches = [...data.matches, ...friendlyMatches];
+        }
+        
+        apiCache[cacheKey] = { data: data, timestamp: now };
+        savePersistentCache(cacheKey, data);
+        res.json(data);
+      } catch (fdErr) {
+        console.error("Football-Data fetch error in today endpoint, trying fallback:", fdErr);
+
+        const persistentCache = loadPersistentCache(cacheKey);
+        if (persistentCache) {
+          apiCache[cacheKey] = { data: persistentCache, timestamp: now };
+          return res.json(persistentCache);
+        }
+
+        // Try loading from World Cup fallback matches for today
+        try {
+          const fallbackData = JSON.parse(fs.readFileSync('./world_cup_fallback.json', 'utf-8'));
+          const matches = fallbackData.matches || [];
+          const matchesToday = matches.filter((m: any) => m.utcDate.startsWith(targetDate));
+          if (matchesToday.length > 0) {
+            console.log(`Loaded ${matchesToday.length} fallback World Cup matches for date ${targetDate} (FD fallback)`);
+            const fallbackResult = { matches: matchesToday };
+            apiCache[cacheKey] = { data: fallbackResult, timestamp: now };
+            return res.json(fallbackResult);
+          }
+        } catch (fallbackErr) {
+          console.error("Failed to load today's fallback World Cup matches (FD fallback):", fallbackErr);
+        }
+
+        throw fdErr;
       }
-      
-      apiCache[cacheKey] = { data: data, timestamp: now };
-      res.json(data);
     } catch (err) {
-      console.error(err);
-      res.status(500).json({ error: "Erreur réseau" });
+      console.error("All today's matches fetch strategies failed:", err);
+      // Return empty matches array gracefully so front-end does not crash, but logs are clean
+      res.json({ matches: [] });
     }
   });
 
   app.get("/api/matches/:competitionId", async (req, res) => {
     // Non-blocking trigger to resolve challenges automatically when requests come in
     runChallengeResolution().catch(err => console.error("Auto-resolve during match request error:", err));
-    try {
-      const activeProvider = getActiveApiProvider();
-      const fdCompId = Number(req.params.competitionId);
-      const reqSeason = req.query.season ? Number(req.query.season) : null;
+    const activeProvider = getActiveApiProvider();
+    const fdCompId = Number(req.params.competitionId);
+    const reqSeason = req.query.season ? Number(req.query.season) : null;
 
-      const cacheKey = `comp_${fdCompId}_${activeProvider}_${reqSeason || "current"}`;
-      const now = Date.now();
+    const cacheKey = `comp_${fdCompId}_${activeProvider}_${reqSeason || "current"}`;
+    const now = Date.now();
+
+    try {
       if (apiCache[cacheKey] && (now - apiCache[cacheKey].timestamp < COMP_CACHE_TTL)) {
         return res.json(apiCache[cacheKey].data);
       }
@@ -444,67 +529,76 @@ async function startServer() {
           todayFriendlies = getMockFriendlyMatchesForDate(todayStr);
         }
 
-        let season = reqSeason || getSeasonYearForLeague(10);
-        let response = await fetch(
-          `https://v3.football.api-sports.io/fixtures?league=10&season=${season}`,
-          {
-            headers: { "x-apisports-key": apiKey },
-          },
-        );
-
-        if (!response.ok) throw new Error("API-Football Error");
-        let data = await response.json();
-
-        // Write diagnostics log
         try {
-          fs.writeFileSync("./last_api_response.json", JSON.stringify({ attemptedSeason: season, data }, null, 2), "utf-8");
-        } catch (e) {}
+          let season = reqSeason || getSeasonYearForLeague(10);
+          let response = await fetch(
+            `https://v3.football.api-sports.io/fixtures?league=10&season=${season}`,
+            {
+              headers: { "x-apisports-key": apiKey },
+            },
+          );
 
-        // Handle Free Plan restrictions gracefully (only if the user did NOT explicitly request a custom successful season)
-        if (data && data.errors && Object.keys(data.errors).length > 0) {
-          if (data.errors.requests) {
-             const cachedErr = { error: "Limite API-Football atteinte pour la journée.", matches: todayFriendlies.length > 0 ? todayFriendlies : [] };
-             apiCache[cacheKey] = { data: cachedErr, timestamp: now - (COMP_CACHE_TTL - 30 * 1000) }; // Cache for 30s only on rate-limit so it's retryable
-             return res.json(cachedErr);
-          }
-          const hasPlanError = JSON.stringify(data.errors).toLowerCase().includes("plan");
-          if (hasPlanError) {
-            console.log("Free plan restriction detected for season", season, "- Falling back to season 2024.");
-            season = 2024;
-            response = await fetch(
-              `https://v3.football.api-sports.io/fixtures?league=10&season=${season}`,
-              {
-                headers: { "x-apisports-key": apiKey },
-              },
-            );
-            if (response.ok) {
-              data = await response.json();
-              try {
-                fs.writeFileSync("./last_api_response.json", JSON.stringify({ fallbackSeason: season, data }, null, 2), "utf-8");
-              } catch (e) {}
+          if (!response.ok) throw new Error("API-Football Error");
+          let data = await response.json();
+
+          // Write diagnostics log
+          try {
+            fs.writeFileSync("./last_api_response.json", JSON.stringify({ attemptedSeason: season, data }, null, 2), "utf-8");
+          } catch (e) {}
+
+          // Handle Free Plan restrictions or rate limits gracefully
+          if (data && data.errors && Object.keys(data.errors).length > 0) {
+            if (data.errors.requests || data.errors.token || data.errors.apiKey) {
+              throw new Error(`API-Football error: ${JSON.stringify(data.errors)}`);
+            }
+            const hasPlanError = JSON.stringify(data.errors).toLowerCase().includes("plan");
+            if (hasPlanError) {
+              console.log("Free plan restriction detected for season", season, "- Falling back to season 2024.");
+              season = 2024;
+              response = await fetch(
+                `https://v3.football.api-sports.io/fixtures?league=10&season=${season}`,
+                {
+                  headers: { "x-apisports-key": apiKey },
+                },
+              );
+              if (response.ok) {
+                data = await response.json();
+                try {
+                  fs.writeFileSync("./last_api_response.json", JSON.stringify({ fallbackSeason: season, data }, null, 2), "utf-8");
+                } catch (e) {}
+              }
             }
           }
+
+          const fixtures = data.response || [];
+
+          let mappedMatches = fixtures
+            .map(translateApiFootballMatchToFootballData)
+            .filter(Boolean);
+
+          // Merge today's friendly matches, ensuring no duplicates by ID
+          if (todayFriendlies.length > 0) {
+            const existingIds = new Set(mappedMatches.map((m: any) => m.id));
+            todayFriendlies.forEach((m: any) => {
+              if (!existingIds.has(m.id)) {
+                mappedMatches.unshift(m);
+              }
+            });
+          }
+
+          const cachedResult = { matches: mappedMatches };
+          apiCache[cacheKey] = { data: cachedResult, timestamp: now };
+          savePersistentCache(cacheKey, cachedResult);
+          return res.json(cachedResult);
+        } catch (apiErr) {
+          console.error("API-Football error in 679 endpoint, trying fallback:", apiErr);
+          const persistentCache = loadPersistentCache(cacheKey);
+          if (persistentCache) {
+            apiCache[cacheKey] = { data: persistentCache, timestamp: now };
+            return res.json(persistentCache);
+          }
+          throw apiErr;
         }
-
-        const fixtures = data.response || [];
-
-        let mappedMatches = fixtures
-          .map(translateApiFootballMatchToFootballData)
-          .filter(Boolean);
-
-        // Merge today's friendly matches, ensuring no duplicates by ID
-        if (todayFriendlies.length > 0) {
-          const existingIds = new Set(mappedMatches.map((m: any) => m.id));
-          todayFriendlies.forEach((m: any) => {
-            if (!existingIds.has(m.id)) {
-              mappedMatches.unshift(m);
-            }
-          });
-        }
-
-        const cachedResult = { matches: mappedMatches };
-        apiCache[cacheKey] = { data: cachedResult, timestamp: now };
-        return res.json(cachedResult);
       }
 
       if (activeProvider === "api-football") {
@@ -533,6 +627,14 @@ async function startServer() {
 
           if (!response.ok) throw new Error("API-Football Error");
           let data = await response.json();
+
+          // Handle rate-limits or other API errors:
+          if (data && data.errors && Object.keys(data.errors).length > 0) {
+            console.error(`API-Football returned errors in /api/matches/${fdCompId}:`, data.errors);
+            if (data.errors.requests || data.errors.token || data.errors.apiKey) {
+              throw new Error(`API-Football error: ${JSON.stringify(data.errors)}`);
+            }
+          }
 
           // Handle Free Plan restrictions gracefully
           if (data && data.errors && Object.keys(data.errors).length > 0) {
@@ -564,9 +666,17 @@ async function startServer() {
 
           const cachedResult = { matches: mappedMatches };
           apiCache[cacheKey] = { data: cachedResult, timestamp: now };
+          savePersistentCache(cacheKey, cachedResult);
           return res.json(cachedResult);
         } catch (apiErr) {
           console.error("API-Football error, trying fallback:", apiErr);
+          
+          const persistentCache = loadPersistentCache(cacheKey);
+          if (persistentCache) {
+            apiCache[cacheKey] = { data: persistentCache, timestamp: now };
+            return res.json(persistentCache);
+          }
+
           if (fdCompId === 2000) {
             console.log("Using local fallback for World Cup (competition 2000) on API-Football error");
             const fallbackData = JSON.parse(fs.readFileSync('./world_cup_fallback.json', 'utf-8'));
@@ -592,9 +702,17 @@ async function startServer() {
         const data = await response.json();
 
         apiCache[cacheKey] = { data, timestamp: now };
+        savePersistentCache(cacheKey, data);
         res.json(data);
       } catch (apiErr) {
         console.error("Football-Data API error, trying fallback:", apiErr);
+
+        const persistentCache = loadPersistentCache(cacheKey);
+        if (persistentCache) {
+          apiCache[cacheKey] = { data: persistentCache, timestamp: now };
+          return res.json(persistentCache);
+        }
+
         if (fdCompId === 2000) {
           console.log("Using local fallback for World Cup (competition 2000) on Football-Data error");
           const fallbackData = JSON.parse(fs.readFileSync('./world_cup_fallback.json', 'utf-8'));
@@ -604,7 +722,7 @@ async function startServer() {
         throw apiErr;
       }
     } catch (err) {
-      console.error(err);
+      console.error("All fetch strategies failed for competition:", err);
       res.status(500).json({ error: "Erreur réseau" });
     }
   });
