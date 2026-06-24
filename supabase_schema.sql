@@ -11,7 +11,7 @@ drop table if exists public.profiles;
 
 -- 1. Create a table for public user profiles
 create table public.profiles (
-  id uuid references auth.users not null primary key,
+  id uuid not null primary key,
   username text unique not null,
   first_name text,
   last_name text,
@@ -36,7 +36,7 @@ create table public.challenges (
   match_home_team text,
   match_away_team text,
   match_date timestamp with time zone,
-  creator_id uuid references auth.users(id),
+  creator_id uuid references public.profiles(id),
   title text not null,
   rules text,
   point_rules jsonb not null default '{"exact_score": 5, "good_result": 3, "close_score": 1, "first_to_score": 0, "extra_time": 0, "penalties": 0}',
@@ -49,7 +49,7 @@ create table public.challenges (
 create table public.challenge_invitations (
   id uuid default gen_random_uuid() primary key,
   challenge_id uuid references public.challenges(id) not null,
-  user_id uuid references auth.users(id) not null,
+  user_id uuid references public.profiles(id) not null,
   accepted boolean default false,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null,
   unique(challenge_id, user_id)
@@ -77,7 +77,7 @@ create policy "Users can insert their own invitations." on public.challenge_invi
 -- 3. Create a table for user bets/pronostics
 create table public.bets (
   id uuid default gen_random_uuid() primary key,
-  user_id uuid references auth.users(id) not null,
+  user_id uuid references public.profiles(id) not null,
   challenge_id uuid references public.challenges(id) not null,
   predictions jsonb not null default '{}',
   points_awarded integer default null,
