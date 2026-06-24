@@ -14,7 +14,7 @@ export interface PointRules {
 
 export interface Challenge {
   id: string;
-  type?: 'match' | 'custom';
+  type?: 'match' | 'custom' | 'bracket';
   competitionId?: number;
   matchId?: number;
   matchHomeTeam?: string;

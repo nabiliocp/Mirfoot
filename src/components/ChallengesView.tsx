@@ -29,6 +29,7 @@ import {
 } from "lucide-react";
 import { supabase } from "../lib/supabase";
 import { calculateMatchPoints } from "../lib/pointCalculation";
+import { BracketChallenge } from "./BracketChallenge";
 
 const isTeamsNotDefinedYet = (homeTeam?: { name?: string; shortName?: string }, awayTeam?: { name?: string; shortName?: string }) => {
   if (!homeTeam || !awayTeam) return true;
@@ -499,6 +500,7 @@ export default function ChallengesView({
   const [isTournamentSelected, setIsTournamentSelected] = useState(false);
   const [matches, setMatches] = useState<Match[]>([]);
   const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
+  const [createType, setCreateType] = useState<"match" | "bracket">("match");
   const [newTitle, setNewTitle] = useState("");
   const [newBonusRules, setNewBonusRules] = useState(false);
   const [creating, setCreating] = useState(false);
@@ -942,6 +944,7 @@ export default function ChallengesView({
             : c.point_rules,
         locked: c.locked,
         resolved: c.resolved,
+        type: c.type,
       }));
       setChallenges(mapped);
 
@@ -1149,6 +1152,73 @@ export default function ChallengesView({
 
   const handleCreateChallenge = async (e: FormEvent) => {
     e.preventDefault();
+    if (createType === "bracket") {
+      setCreating(true);
+      const { data: { user } } = await supabase.auth.getUser();
+      const currentUserId = user?.id || userId;
+      if (!currentUserId) {
+        alert("Session expirée. Veuillez vous reconnecter.");
+        setCreating(false);
+        return;
+      }
+      const title = newTitle.trim() ? newTitle.trim() : "Mon Tableau Éliminatoire - Phase Finale";
+      const savedRules = {
+        exact_score: 100,
+        close_score: 200,
+        correct_winner: 300,
+        qualification: 400,
+        actualBracketPicks: null
+      };
+      const generatedCode = "BRK-" + Math.random().toString(36).substring(2, 8).toUpperCase();
+
+      const { data, error } = await supabase
+        .from("challenges")
+        .insert({
+          competition_id: 9999,
+          match_id: 999999,
+          match_home_team: "Tableau",
+          match_away_team: "Éliminatoire",
+          match_date: "2026-06-26T18:00:00Z",
+          creator_id: currentUserId,
+          title: title,
+          point_rules: savedRules,
+          locked: false,
+          resolved: false,
+          type: 'bracket',
+          rules: generatedCode,
+        })
+        .select();
+
+      if (!error && data) {
+        const newCard: Challenge = {
+          id: data[0].id,
+          competitionId: data[0].competition_id,
+          matchId: data[0].match_id,
+          matchHomeTeam: data[0].match_home_team,
+          matchAwayTeam: data[0].match_away_team,
+          matchDate: data[0].match_date,
+          creatorId: data[0].creator_id,
+          creatorUsername: currentUsername,
+          title: data[0].title,
+          pointRules: data[0].point_rules,
+          rules: data[0].rules,
+          code: data[0].rules || data[0].id.substring(0, 8).toUpperCase(),
+          locked: data[0].locked,
+          resolved: data[0].resolved,
+          type: 'bracket',
+        };
+        setChallenges((prev) => [newCard, ...prev]);
+        setViewMode("list");
+        setNewTitle("");
+        setCreateType("match");
+      } else if (error) {
+        console.error("Erreur de création:", error);
+        alert("Erreur lors de la création du défi : " + error.message);
+      }
+      setCreating(false);
+      return;
+    }
+
     if (!supabase || !selectedMatch) {
       alert("Veuillez sélectionner un match d'abord.");
       return;
@@ -1747,9 +1817,83 @@ export default function ChallengesView({
         onSubmit={handleCreateChallenge}
         className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 space-y-6"
       >
-        <h3 className="font-bold text-lg text-emerald-800 border-b border-gray-100 pb-2">
-          1. Choisir le Match
-        </h3>
+        <div className="flex bg-gray-50 p-1 rounded-2xl gap-1">
+          <button
+            type="button"
+            onClick={() => {
+              setCreateType("match");
+              setSelectedCompId(null);
+              setSelectedMatch(null);
+            }}
+            className={`flex-1 py-3 text-center text-xs font-black rounded-xl transition cursor-pointer ${
+              createType === "match" 
+                ? "bg-white text-emerald-950 shadow-xs border border-gray-100" 
+                : "text-gray-500 hover:text-gray-850"
+            }`}
+          >
+            🎯 Défi Match Réel
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setCreateType("bracket");
+            }}
+            className={`flex-1 py-3 text-center text-xs font-black rounded-xl transition cursor-pointer ${
+              createType === "bracket" 
+                ? "bg-white text-emerald-950 shadow-xs border border-gray-100" 
+                : "text-gray-500 hover:text-gray-850"
+            }`}
+          >
+            🏆 Défi Tableau Éliminatoire
+          </button>
+        </div>
+
+        {createType === "bracket" ? (
+          <div className="space-y-6">
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">
+                Titre du défi (Optionnel)
+              </label>
+              <input
+                value={newTitle}
+                onChange={(e) => setNewTitle(e.target.value)}
+                placeholder="Mon Tableau Éliminatoire - Phase Finale"
+                className="w-full border border-gray-200 p-3 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none placeholder-gray-400 text-sm font-bold text-gray-850"
+              />
+            </div>
+
+            <div className="bg-emerald-50/50 border border-emerald-100 p-4 rounded-xl text-xs space-y-2 text-emerald-950">
+              <p className="font-extrabold text-sm text-emerald-800">📊 Barème & Règles du Tableau :</p>
+              <p>• <strong>Phase de 32 :</strong> +100 points par qualification trouvée</p>
+              <p>• <strong>Huitièmes :</strong> +200 points par qualification trouvée</p>
+              <p>• <strong>Quarts :</strong> +300 points par qualification trouvée</p>
+              <p>• <strong>Demi-finales :</strong> +400 points par qualification trouvée</p>
+              <p>• <strong>Super Bonus 4 Demis :</strong> +1000 points si les 4 demi-finalistes sont exacts</p>
+              <p>• <strong>Super Bonus 2 Finalistes :</strong> +2000 points si les 2 finalistes sont exacts</p>
+              <p>• <strong>Super Bonus Vainqueur :</strong> +2000 points si le champion est exact</p>
+              <p className="text-[11px] text-emerald-700 font-bold mt-2">🛡️ Les pronostics se clôturent automatiquement pour chaque match individuel au moment de son coup d'envoi réel.</p>
+            </div>
+
+            <button
+              type="submit"
+              disabled={creating}
+              className="w-full bg-emerald-600 text-white font-black p-3.5 rounded-2xl cursor-pointer hover:bg-emerald-700 transition flex items-center justify-center gap-2"
+            >
+              {creating ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  Création en cours...
+                </>
+              ) : (
+                "🏆 Créer le défi Tableau Éliminatoire"
+              )}
+            </button>
+          </div>
+        ) : (
+          <>
+            <h3 className="font-bold text-lg text-emerald-800 border-b border-gray-100 pb-2">
+              1. Choisir le Match
+            </h3>
 
         {loadingComps ? (
           <div className="flex justify-center p-4">
@@ -2018,6 +2162,8 @@ export default function ChallengesView({
             </button>
           </div>
           ) : null
+        )}
+          </>
         )}
       </form>
     );
@@ -3194,7 +3340,18 @@ export default function ChallengesView({
         <div className="bg-white border border-gray-100 rounded-3xl p-5 shadow-sm min-h-[300px]">
           {detailTab === "matches" && (
             <div className="space-y-4">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-gray-100 pb-3 mb-3">
+              {challenge.type === "bracket" ? (
+                <BracketChallenge
+                  challenge={challenge}
+                  userId={userId || ""}
+                  mode="prediction"
+                  onSaveSuccess={() => {
+                    refreshChallengeBets();
+                  }}
+                />
+              ) : (
+                <>
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-gray-100 pb-3 mb-3">
                 <h3 className="font-bold text-gray-800 text-sm">Veuillez entrer vos pronostics</h3>
                 {challenge.matchId === 0 && (
                   <span className="text-[10px] bg-indigo-50 text-indigo-700 px-2.5 py-1 rounded font-extrabold uppercase">
@@ -3759,6 +3916,8 @@ export default function ChallengesView({
                 })()}
                 </>
               )}
+                </>
+              )}
             </div>
           )}
 
@@ -3943,7 +4102,36 @@ export default function ChallengesView({
 
           {detailTab === "results" && (
             <div className="space-y-4">
-              <h3 className="font-bold text-gray-800 text-sm border-b border-gray-100 pb-3 mb-3 flex items-center gap-2">
+              {challenge.type === "bracket" ? (
+                challenge.creatorId === userId && !challenge.resolved ? (
+                  <BracketChallenge
+                    challenge={challenge}
+                    userId={userId || ""}
+                    mode="results"
+                    onSaveSuccess={() => {
+                      refreshChallengeBets();
+                      loadData();
+                    }}
+                  />
+                ) : (
+                  <div>
+                    <div className="mb-4 bg-emerald-50 border border-emerald-100 p-4 rounded-2xl flex items-center gap-2.5">
+                      <Trophy className="w-5 h-5 text-emerald-600 animate-bounce" />
+                      <div>
+                        <p className="text-xs font-black text-emerald-950">Tableau Officiel Clôturé / Résolu</p>
+                        <p className="text-[10px] text-gray-500 font-semibold mt-0.5">Voici le tableau final validé par le créateur du défi.</p>
+                      </div>
+                    </div>
+                    <BracketChallenge
+                      challenge={challenge}
+                      userId={userId || ""}
+                      mode="prediction"
+                    />
+                  </div>
+                )
+              ) : (
+                <>
+                  <h3 className="font-bold text-gray-800 text-sm border-b border-gray-100 pb-3 mb-3 flex items-center gap-2">
                 <Calendar className="w-4 h-4 text-emerald-600" />
                 Résultats réels en direct
               </h3>
@@ -3993,6 +4181,8 @@ export default function ChallengesView({
                     );
                   })}
                 </div>
+              )}
+                </>
               )}
             </div>
           )}

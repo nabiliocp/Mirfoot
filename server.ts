@@ -867,6 +867,155 @@ async function startServer() {
     }
   });
 
+  // Dedicated endpoint to resolve tournament bracket challenges and calculate points
+  app.post("/api/challenges/resolve-bracket", async (req, res) => {
+    if (!supabase) {
+      return res.status(500).json({ error: "Configuration Supabase manquante." });
+    }
+    try {
+      const { challengeId, actualBracketPicks, userId } = req.body;
+      if (!challengeId || !actualBracketPicks || !userId) {
+        return res.status(400).json({ error: "Données requises manquantes." });
+      }
+
+      // 1. Fetch challenge and verify creator ownership
+      const { data: challenge, error: challengeError } = await supabase
+        .from("challenges")
+        .select("*")
+        .eq("id", challengeId)
+        .single();
+
+      if (challengeError || !challenge) {
+        return res.status(404).json({ error: "Défi non trouvé." });
+      }
+
+      if (challenge.creator_id !== userId) {
+        return res.status(403).json({ error: "Seul le créateur du défi peut le résoudre." });
+      }
+
+      // Helper function to calculate points
+      const calculatePoints = (userPicksObj: any, actualResultsObj: any) => {
+        if (!actualResultsObj || !userPicksObj) return 0;
+        let points = 0;
+
+        // Round of 16
+        const actualR16 = Object.values(actualResultsObj.r16 || {}).filter(Boolean);
+        const userR16 = Object.values(userPicksObj.r16 || {}).filter(Boolean);
+        actualR16.forEach(teamId => {
+          if (userR16.includes(teamId)) points += 100;
+        });
+
+        // Quarter-finals
+        const actualR8 = Object.values(actualResultsObj.r8 || {}).filter(Boolean);
+        const userR8 = Object.values(userPicksObj.r8 || {}).filter(Boolean);
+        actualR8.forEach(teamId => {
+          if (userR8.includes(teamId)) points += 200;
+        });
+
+        // Semi-finals
+        const actualR4 = Object.values(actualResultsObj.r4 || {}).filter(Boolean);
+        const userR4 = Object.values(userPicksObj.r4 || {}).filter(Boolean);
+        actualR4.forEach(teamId => {
+          if (userR4.includes(teamId)) points += 300;
+        });
+
+        // Finalists
+        const actualR2 = Object.values(actualResultsObj.r2 || {}).filter(Boolean);
+        const userR2 = Object.values(userPicksObj.r2 || {}).filter(Boolean);
+        actualR2.forEach(teamId => {
+          if (userR2.includes(teamId)) points += 400;
+        });
+
+        // Semis bonus (guess all 4 correct)
+        const correctR4 = actualR4.filter(teamId => userR4.includes(teamId)).length;
+        if (correctR4 === 4 && actualR4.length === 4) points += 1000;
+
+        // Final bonus (guess 2 correct)
+        const correctR2 = actualR2.filter(teamId => userR2.includes(teamId)).length;
+        if (correctR2 === 2 && actualR2.length === 2) points += 2000;
+
+        // Winner bonus
+        if (actualResultsObj.winner && userPicksObj.winner === actualResultsObj.winner) {
+          points += 2000;
+        }
+
+        return points;
+      };
+
+      // 2. Fetch all bets for this challenge
+      const { data: bets, error: betsError } = await supabase
+        .from("bets")
+        .select("*")
+        .eq("challenge_id", challengeId);
+
+      if (betsError) {
+        throw betsError;
+      }
+
+      // 3. Process each bet and update points
+      if (bets && bets.length > 0) {
+        for (const bet of bets) {
+          const userPicks = typeof bet.predictions === "string" 
+            ? JSON.parse(bet.predictions) 
+            : bet.predictions;
+          
+          // Calculate new points
+          const points = calculatePoints(userPicks, actualBracketPicks);
+
+          // Get previous points awarded to calculate the delta (guarantees idempotence)
+          const previousPoints = bet.points_awarded || 0;
+          const delta = points - previousPoints;
+
+          // Update the bet with points_awarded
+          await supabase
+            .from("bets")
+            .update({ points_awarded: points })
+            .eq("id", bet.id);
+
+          // Update user profile total points
+          if (delta !== 0) {
+            const { data: profile } = await supabase
+              .from("profiles")
+              .select("points")
+              .eq("id", bet.user_id)
+              .single();
+            
+            if (profile) {
+              const newPoints = (profile.points || 0) + delta;
+              await supabase
+                .from("profiles")
+                .update({ points: newPoints })
+                .eq("id", bet.user_id);
+            }
+          }
+        }
+      }
+
+      // 4. Update challenge point_rules with actual bracket picks and set resolved to true
+      const currentPointRules = typeof challenge.point_rules === "string"
+        ? JSON.parse(challenge.point_rules)
+        : challenge.point_rules || {};
+
+      const updatedPointRules = {
+        ...currentPointRules,
+        actualBracketPicks,
+      };
+
+      await supabase
+        .from("challenges")
+        .update({
+          resolved: true,
+          point_rules: updatedPointRules
+        })
+        .eq("id", challengeId);
+
+      res.json({ success: true, message: "Défi bracket résolu avec succès." });
+    } catch (err) {
+      console.error("Error resolving bracket challenge:", err);
+      res.status(500).json({ error: "Erreur serveur lors de la résolution du défi." });
+    }
+  });
+
   // Search challenge by code (bypasses RLS utilizing the service role key)
   app.delete("/api/challenges/:challengeId", async (req, res) => {
     if (!supabase)
