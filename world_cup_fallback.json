@@ -3,7 +3,7 @@
     {
       "id": 537327,
       "utcDate": "2026-06-11T18:00:00Z",
-      "status": "FINISHED",
+      "status": "TIMED",
       "matchday": 1,
       "stage": "GROUP_STAGE",
       "group": "GROUP_A",
@@ -19,22 +19,22 @@
         "crest": "https://crests.football-data.org/usa.png"
       },
       "score": {
-        "winner": "AWAY_TEAM",
+        "winner": null,
         "duration": "REGULAR",
         "fullTime": {
-          "home": 1,
-          "away": 2
+          "home": null,
+          "away": null
         },
         "halfTime": {
-          "home": 0,
-          "away": 1
+          "home": null,
+          "away": null
         }
       }
     },
     {
       "id": 537328,
       "utcDate": "2026-06-11T18:00:00Z",
-      "status": "FINISHED",
+      "status": "TIMED",
       "matchday": 1,
       "stage": "GROUP_STAGE",
       "group": "GROUP_A",
@@ -50,22 +50,22 @@
         "crest": "https://crests.football-data.org/hon.png"
       },
       "score": {
-        "winner": "AWAY_TEAM",
+        "winner": null,
         "duration": "REGULAR",
         "fullTime": {
-          "home": 1,
-          "away": 2
+          "home": null,
+          "away": null
         },
         "halfTime": {
-          "home": 0,
-          "away": 1
+          "home": null,
+          "away": null
         }
       }
     },
     {
       "id": 537329,
       "utcDate": "2026-06-12T18:00:00Z",
-      "status": "FINISHED",
+      "status": "TIMED",
       "matchday": 1,
       "stage": "GROUP_STAGE",
       "group": "GROUP_A",
@@ -81,22 +81,22 @@
         "crest": "https://crests.football-data.org/can.png"
       },
       "score": {
-        "winner": "HOME_TEAM",
+        "winner": null,
         "duration": "REGULAR",
         "fullTime": {
-          "home": 2,
-          "away": 0
+          "home": null,
+          "away": null
         },
         "halfTime": {
-          "home": 1,
-          "away": 0
+          "home": null,
+          "away": null
         }
       }
     },
     {
       "id": 537330,
       "utcDate": "2026-06-12T18:00:00Z",
-      "status": "FINISHED",
+      "status": "TIMED",
       "matchday": 1,
       "stage": "GROUP_STAGE",
       "group": "GROUP_A",
@@ -112,22 +112,22 @@
         "crest": "https://crests.football-data.org/hon.png"
       },
       "score": {
-        "winner": "HOME_TEAM",
+        "winner": null,
         "duration": "REGULAR",
         "fullTime": {
-          "home": 2,
-          "away": 0
+          "home": null,
+          "away": null
         },
         "halfTime": {
-          "home": 1,
-          "away": 0
+          "home": null,
+          "away": null
         }
       }
     },
     {
       "id": 537331,
       "utcDate": "2026-06-13T18:00:00Z",
-      "status": "FINISHED",
+      "status": "TIMED",
       "matchday": 1,
       "stage": "GROUP_STAGE",
       "group": "GROUP_A",
@@ -143,22 +143,22 @@
         "crest": "https://crests.football-data.org/hon.png"
       },
       "score": {
-        "winner": "DRAW",
+        "winner": null,
         "duration": "REGULAR",
         "fullTime": {
-          "home": 0,
-          "away": 0
+          "home": null,
+          "away": null
         },
         "halfTime": {
-          "home": 0,
-          "away": 0
+          "home": null,
+          "away": null
         }
       }
     },
     {
       "id": 537332,
       "utcDate": "2026-06-13T18:00:00Z",
-      "status": "FINISHED",
+      "status": "TIMED",
       "matchday": 1,
       "stage": "GROUP_STAGE",
       "group": "GROUP_A",
@@ -174,22 +174,22 @@
         "crest": "https://crests.football-data.org/can.png"
       },
       "score": {
-        "winner": "DRAW",
+        "winner": null,
         "duration": "REGULAR",
         "fullTime": {
-          "home": 0,
-          "away": 0
+          "home": null,
+          "away": null
         },
         "halfTime": {
-          "home": 0,
-          "away": 0
+          "home": null,
+          "away": null
         }
       }
     },
     {
       "id": 537333,
       "utcDate": "2026-06-12T18:00:00Z",
-      "status": "FINISHED",
+      "status": "TIMED",
       "matchday": 2,
       "stage": "GROUP_STAGE",
       "group": "GROUP_B",
@@ -205,22 +205,22 @@
         "crest": "https://crests.football-data.org/eng.png"
       },
       "score": {
-        "winner": "AWAY_TEAM",
+        "winner": null,
         "duration": "REGULAR",
         "fullTime": {
-          "home": 0,
-          "away": 2
+          "home": null,
+          "away": null
         },
         "halfTime": {
-          "home": 0,
-          "away": 1
+          "home": null,
+          "away": null
         }
       }
     },
     {
       "id": 537334,
       "utcDate": "2026-06-12T18:00:00Z",
-      "status": "FINISHED",
+      "status": "TIMED",
       "matchday": 2,
       "stage": "GROUP_STAGE",
       "group": "GROUP_B",
@@ -236,22 +236,22 @@
         "crest": "https://crests.football-data.org/ita.png"
       },
       "score": {
-        "winner": "HOME_TEAM",
+        "winner": null,
         "duration": "REGULAR",
         "fullTime": {
-          "home": 1,
-          "away": 0
+          "home": null,
+          "away": null
         },
         "halfTime": {
-          "home": 0,
-          "away": 0
+          "home": null,
+          "away": null
         }
       }
     },
     {
       "id": 537335,
       "utcDate": "2026-06-13T18:00:00Z",
-      "status": "FINISHED",
+      "status": "TIMED",
       "matchday": 2,
       "stage": "GROUP_STAGE",
       "group": "GROUP_B",
@@ -267,22 +267,22 @@
         "crest": "https://crests.football-data.org/ger.png"
       },
       "score": {
-        "winner": "HOME_TEAM",
+        "winner": null,
         "duration": "REGULAR",
         "fullTime": {
-          "home": 1,
-          "away": 0
+          "home": null,
+          "away": null
         },
         "halfTime": {
-          "home": 0,
-          "away": 0
+          "home": null,
+          "away": null
         }
       }
     },
     {
       "id": 537336,
       "utcDate": "2026-06-13T18:00:00Z",
-      "status": "FINISHED",
+      "status": "TIMED",
       "matchday": 2,
       "stage": "GROUP_STAGE",
       "group": "GROUP_B",
@@ -298,22 +298,22 @@
         "crest": "https://crests.football-data.org/ita.png"
       },
       "score": {
-        "winner": "HOME_TEAM",
+        "winner": null,
         "duration": "REGULAR",
         "fullTime": {
-          "home": 1,
-          "away": 0
+          "home": null,
+          "away": null
         },
         "halfTime": {
-          "home": 0,
-          "away": 0
+          "home": null,
+          "away": null
         }
       }
     },
     {
       "id": 537337,
       "utcDate": "2026-06-14T18:00:00Z",
-      "status": "FINISHED",
+      "status": "TIMED",
       "matchday": 2,
       "stage": "GROUP_STAGE",
       "group": "GROUP_B",
@@ -329,22 +329,22 @@
         "crest": "https://crests.football-data.org/ita.png"
       },
       "score": {
-        "winner": "HOME_TEAM",
+        "winner": null,
         "duration": "REGULAR",
         "fullTime": {
-          "home": 1,
-          "away": 0
+          "home": null,
+          "away": null
         },
         "halfTime": {
-          "home": 0,
-          "away": 0
+          "home": null,
+          "away": null
         }
       }
     },
     {
       "id": 537338,
       "utcDate": "2026-06-14T18:00:00Z",
-      "status": "FINISHED",
+      "status": "TIMED",
       "matchday": 2,
       "stage": "GROUP_STAGE",
       "group": "GROUP_B",
@@ -360,22 +360,22 @@
         "crest": "https://crests.football-data.org/ger.png"
       },
       "score": {
-        "winner": "HOME_TEAM",
+        "winner": null,
         "duration": "REGULAR",
         "fullTime": {
-          "home": 1,
-          "away": 0
+          "home": null,
+          "away": null
         },
         "halfTime": {
-          "home": 0,
-          "away": 0
+          "home": null,
+          "away": null
         }
       }
     },
     {
       "id": 537339,
       "utcDate": "2026-06-13T18:00:00Z",
-      "status": "FINISHED",
+      "status": "TIMED",
       "matchday": 3,
       "stage": "GROUP_STAGE",
       "group": "GROUP_C",
@@ -391,22 +391,22 @@
         "crest": "https://crests.football-data.org/bra.png"
       },
       "score": {
-        "winner": "HOME_TEAM",
+        "winner": null,
         "duration": "REGULAR",
         "fullTime": {
-          "home": 2,
-          "away": 1
+          "home": null,
+          "away": null
         },
         "halfTime": {
-          "home": 1,
-          "away": 0
+          "home": null,
+          "away": null
         }
       }
     },
     {
       "id": 537340,
       "utcDate": "2026-06-13T18:00:00Z",
-      "status": "FINISHED",
+      "status": "TIMED",
       "matchday": 3,
       "stage": "GROUP_STAGE",
       "group": "GROUP_C",
@@ -422,22 +422,22 @@
         "crest": "https://crests.football-data.org/col.png"
       },
       "score": {
-        "winner": "HOME_TEAM",
+        "winner": null,
         "duration": "REGULAR",
         "fullTime": {
-          "home": 2,
-          "away": 1
+          "home": null,
+          "away": null
         },
         "halfTime": {
-          "home": 1,
-          "away": 0
+          "home": null,
+          "away": null
         }
       }
     },
     {
       "id": 537341,
       "utcDate": "2026-06-14T18:00:00Z",
-      "status": "FINISHED",
+      "status": "TIMED",
       "matchday": 3,
       "stage": "GROUP_STAGE",
       "group": "GROUP_C",
@@ -453,22 +453,22 @@
         "crest": "https://crests.football-data.org/uru.png"
       },
       "score": {
-        "winner": "HOME_TEAM",
+        "winner": null,
         "duration": "REGULAR",
         "fullTime": {
-          "home": 2,
-          "away": 1
+          "home": null,
+          "away": null
         },
         "halfTime": {
-          "home": 1,
-          "away": 0
+          "home": null,
+          "away": null
         }
       }
     },
     {
       "id": 537342,
       "utcDate": "2026-06-14T18:00:00Z",
-      "status": "FINISHED",
+      "status": "TIMED",
       "matchday": 3,
       "stage": "GROUP_STAGE",
       "group": "GROUP_C",
@@ -484,22 +484,22 @@
         "crest": "https://crests.football-data.org/col.png"
       },
       "score": {
-        "winner": "HOME_TEAM",
+        "winner": null,
         "duration": "REGULAR",
         "fullTime": {
-          "home": 2,
-          "away": 1
+          "home": null,
+          "away": null
         },
         "halfTime": {
-          "home": 1,
-          "away": 0
+          "home": null,
+          "away": null
         }
       }
     },
     {
       "id": 537343,
       "utcDate": "2026-06-15T18:00:00Z",
-      "status": "FINISHED",
+      "status": "TIMED",
       "matchday": 3,
       "stage": "GROUP_STAGE",
       "group": "GROUP_C",
@@ -515,22 +515,22 @@
         "crest": "https://crests.football-data.org/col.png"
       },
       "score": {
-        "winner": "HOME_TEAM",
+        "winner": null,
         "duration": "REGULAR",
         "fullTime": {
-          "home": 2,
-          "away": 1
+          "home": null,
+          "away": null
         },
         "halfTime": {
-          "home": 1,
-          "away": 0
+          "home": null,
+          "away": null
         }
       }
     },
     {
       "id": 537344,
       "utcDate": "2026-06-15T18:00:00Z",
-      "status": "FINISHED",
+      "status": "TIMED",
       "matchday": 3,
       "stage": "GROUP_STAGE",
       "group": "GROUP_C",
@@ -546,22 +546,22 @@
         "crest": "https://crests.football-data.org/uru.png"
       },
       "score": {
-        "winner": "DRAW",
+        "winner": null,
         "duration": "REGULAR",
         "fullTime": {
-          "home": 1,
-          "away": 1
+          "home": null,
+          "away": null
         },
         "halfTime": {
-          "home": 0,
-          "away": 0
+          "home": null,
+          "away": null
         }
       }
     },
     {
       "id": 537345,
       "utcDate": "2026-06-14T18:00:00Z",
-      "status": "FINISHED",
+      "status": "TIMED",
       "matchday": 4,
       "stage": "GROUP_STAGE",
       "group": "GROUP_D",
@@ -577,22 +577,22 @@
         "crest": "https://crests.football-data.org/por.png"
       },
       "score": {
-        "winner": "DRAW",
+        "winner": null,
         "duration": "REGULAR",
         "fullTime": {
-          "home": 1,
-          "away": 1
+          "home": null,
+          "away": null
         },
         "halfTime": {
-          "home": 0,
-          "away": 0
+          "home": null,
+          "away": null
         }
       }
     },
     {
       "id": 537346,
       "utcDate": "2026-06-14T18:00:00Z",
-      "status": "FINISHED",
+      "status": "TIMED",
       "matchday": 4,
       "stage": "GROUP_STAGE",
       "group": "GROUP_D",
@@ -608,22 +608,22 @@
         "crest": "https://crests.football-data.org/ned.png"
       },
       "score": {
-        "winner": "DRAW",
+        "winner": null,
         "duration": "REGULAR",
         "fullTime": {
-          "home": 1,
-          "away": 1
+          "home": null,
+          "away": null
         },
         "halfTime": {
-          "home": 0,
-          "away": 0
+          "home": null,
+          "away": null
         }
       }
     },
     {
       "id": 537347,
       "utcDate": "2026-06-15T18:00:00Z",
-      "status": "FINISHED",
+      "status": "TIMED",
       "matchday": 4,
       "stage": "GROUP_STAGE",
       "group": "GROUP_D",
@@ -639,22 +639,22 @@
         "crest": "https://crests.football-data.org/bel.png"
       },
       "score": {
-        "winner": "DRAW",
+        "winner": null,
         "duration": "REGULAR",
         "fullTime": {
-          "home": 1,
-          "away": 1
+          "home": null,
+          "away": null
         },
         "halfTime": {
-          "home": 0,
-          "away": 0
+          "home": null,
+          "away": null
         }
       }
     },
     {
       "id": 537348,
       "utcDate": "2026-06-15T18:00:00Z",
-      "status": "FINISHED",
+      "status": "TIMED",
       "matchday": 4,
       "stage": "GROUP_STAGE",
       "group": "GROUP_D",
@@ -670,22 +670,22 @@
         "crest": "https://crests.football-data.org/ned.png"
       },
       "score": {
-        "winner": "AWAY_TEAM",
+        "winner": null,
         "duration": "REGULAR",
         "fullTime": {
-          "home": 0,
-          "away": 1
+          "home": null,
+          "away": null
         },
         "halfTime": {
-          "home": 0,
-          "away": 0
+          "home": null,
+          "away": null
         }
       }
     },
     {
       "id": 537349,
       "utcDate": "2026-06-16T18:00:00Z",
-      "status": "FINISHED",
+      "status": "TIMED",
       "matchday": 4,
       "stage": "GROUP_STAGE",
       "group": "GROUP_D",
@@ -701,22 +701,22 @@
         "crest": "https://crests.football-data.org/ned.png"
       },
       "score": {
-        "winner": "AWAY_TEAM",
+        "winner": null,
         "duration": "REGULAR",
         "fullTime": {
-          "home": 0,
-          "away": 1
+          "home": null,
+          "away": null
         },
         "halfTime": {
-          "home": 0,
-          "away": 0
+          "home": null,
+          "away": null
         }
       }
     },
     {
       "id": 537350,
       "utcDate": "2026-06-16T18:00:00Z",
-      "status": "FINISHED",
+      "status": "TIMED",
       "matchday": 4,
       "stage": "GROUP_STAGE",
       "group": "GROUP_D",
@@ -732,22 +732,22 @@
         "crest": "https://crests.football-data.org/bel.png"
       },
       "score": {
-        "winner": "AWAY_TEAM",
+        "winner": null,
         "duration": "REGULAR",
         "fullTime": {
-          "home": 0,
-          "away": 1
+          "home": null,
+          "away": null
         },
         "halfTime": {
-          "home": 0,
-          "away": 0
+          "home": null,
+          "away": null
         }
       }
     },
     {
       "id": 537351,
       "utcDate": "2026-06-15T18:00:00Z",
-      "status": "FINISHED",
+      "status": "TIMED",
       "matchday": 5,
       "stage": "GROUP_STAGE",
       "group": "GROUP_E",
@@ -763,22 +763,22 @@
         "crest": "https://crests.football-data.org/sen.png"
       },
       "score": {
-        "winner": "AWAY_TEAM",
+        "winner": null,
         "duration": "REGULAR",
         "fullTime": {
-          "home": 0,
-          "away": 1
+          "home": null,
+          "away": null
         },
         "halfTime": {
-          "home": 0,
-          "away": 0
+          "home": null,
+          "away": null
         }
       }
     },
     {
       "id": 537352,
       "utcDate": "2026-06-15T18:00:00Z",
-      "status": "FINISHED",
+      "status": "TIMED",
       "matchday": 5,
       "stage": "GROUP_STAGE",
       "group": "GROUP_E",
@@ -794,22 +794,22 @@
         "crest": "https://crests.football-data.org/alg.png"
       },
       "score": {
-        "winner": "AWAY_TEAM",
+        "winner": null,
         "duration": "REGULAR",
         "fullTime": {
-          "home": 1,
-          "away": 2
+          "home": null,
+          "away": null
         },
         "halfTime": {
-          "home": 0,
-          "away": 1
+          "home": null,
+          "away": null
         }
       }
     },
     {
       "id": 537353,
       "utcDate": "2026-06-16T18:00:00Z",
-      "status": "FINISHED",
+      "status": "TIMED",
       "matchday": 5,
       "stage": "GROUP_STAGE",
       "group": "GROUP_E",
@@ -825,22 +825,22 @@
         "crest": "https://crests.football-data.org/egy.png"
       },
       "score": {
-        "winner": "AWAY_TEAM",
+        "winner": null,
         "duration": "REGULAR",
         "fullTime": {
-          "home": 1,
-          "away": 2
+          "home": null,
+          "away": null
         },
         "halfTime": {
-          "home": 0,
-          "away": 1
+          "home": null,
+          "away": null
         }
       }
     },
     {
       "id": 537354,
       "utcDate": "2026-06-16T18:00:00Z",
-      "status": "FINISHED",
+      "status": "TIMED",
       "matchday": 5,
       "stage": "GROUP_STAGE",
       "group": "GROUP_E",
@@ -856,22 +856,22 @@
         "crest": "https://crests.football-data.org/alg.png"
       },
       "score": {
-        "winner": "HOME_TEAM",
+        "winner": null,
         "duration": "REGULAR",
         "fullTime": {
-          "home": 2,
-          "away": 0
+          "home": null,
+          "away": null
         },
         "halfTime": {
-          "home": 1,
-          "away": 0
+          "home": null,
+          "away": null
         }
       }
     },
     {
       "id": 537355,
       "utcDate": "2026-06-17T18:00:00Z",
-      "status": "FINISHED",
+      "status": "TIMED",
       "matchday": 5,
       "stage": "GROUP_STAGE",
       "group": "GROUP_E",
@@ -887,22 +887,22 @@
         "crest": "https://crests.football-data.org/alg.png"
       },
       "score": {
-        "winner": "HOME_TEAM",
+        "winner": null,
         "duration": "REGULAR",
         "fullTime": {
-          "home": 2,
-          "away": 0
+          "home": null,
+          "away": null
         },
         "halfTime": {
-          "home": 1,
-          "away": 0
+          "home": null,
+          "away": null
         }
       }
     },
     {
       "id": 537356,
       "utcDate": "2026-06-17T18:00:00Z",
-      "status": "FINISHED",
+      "status": "TIMED",
       "matchday": 5,
       "stage": "GROUP_STAGE",
       "group": "GROUP_E",
@@ -918,22 +918,22 @@
         "crest": "https://crests.football-data.org/egy.png"
       },
       "score": {
-        "winner": "DRAW",
+        "winner": null,
         "duration": "REGULAR",
         "fullTime": {
-          "home": 0,
-          "away": 0
+          "home": null,
+          "away": null
         },
         "halfTime": {
-          "home": 0,
-          "away": 0
+          "home": null,
+          "away": null
         }
       }
     },
     {
       "id": 537357,
       "utcDate": "2026-06-16T18:00:00Z",
-      "status": "FINISHED",
+      "status": "TIMED",
       "matchday": 6,
       "stage": "GROUP_STAGE",
       "group": "GROUP_F",
@@ -949,22 +949,22 @@
         "crest": "https://crests.football-data.org/kor.png"
       },
       "score": {
-        "winner": "DRAW",
+        "winner": null,
         "duration": "REGULAR",
         "fullTime": {
-          "home": 0,
-          "away": 0
+          "home": null,
+          "away": null
         },
         "halfTime": {
-          "home": 0,
-          "away": 0
+          "home": null,
+          "away": null
         }
       }
     },
     {
       "id": 537358,
       "utcDate": "2026-06-16T18:00:00Z",
-      "status": "FINISHED",
+      "status": "TIMED",
       "matchday": 6,
       "stage": "GROUP_STAGE",
       "group": "GROUP_F",
@@ -980,22 +980,22 @@
         "crest": "https://crests.football-data.org/irn.png"
       },
       "score": {
-        "winner": "AWAY_TEAM",
+        "winner": null,
         "duration": "REGULAR",
         "fullTime": {
-          "home": 0,
-          "away": 2
+          "home": null,
+          "away": null
         },
         "halfTime": {
-          "home": 0,
-          "away": 1
+          "home": null,
+          "away": null
         }
       }
     },
     {
       "id": 537359,
       "utcDate": "2026-06-17T18:00:00Z",
-      "status": "FINISHED",
+      "status": "TIMED",
       "matchday": 6,
       "stage": "GROUP_STAGE",
       "group": "GROUP_F",
@@ -1011,22 +1011,22 @@
         "crest": "https://crests.football-data.org/aus.png"
       },
       "score": {
-        "winner": "HOME_TEAM",
+        "winner": null,
         "duration": "REGULAR",
         "fullTime": {
-          "home": 1,
-          "away": 0
+          "home": null,
+          "away": null
         },
         "halfTime": {
-          "home": 0,
-          "away": 0
+          "home": null,
+          "away": null
         }
       }
     },
     {
       "id": 537360,
       "utcDate": "2026-06-17T18:00:00Z",
-      "status": "FINISHED",
+      "status": "TIMED",
       "matchday": 6,
       "stage": "GROUP_STAGE",
       "group": "GROUP_F",
@@ -1042,22 +1042,22 @@
         "crest": "https://crests.football-data.org/irn.png"
       },
       "score": {
-        "winner": "HOME_TEAM",
+        "winner": null,
         "duration": "REGULAR",
         "fullTime": {
-          "home": 1,
-          "away": 0
+          "home": null,
+          "away": null
         },
         "halfTime": {
-          "home": 0,
-          "away": 0
+          "home": null,
+          "away": null
         }
       }
     },
     {
       "id": 537361,
       "utcDate": "2026-06-18T18:00:00Z",
-      "status": "FINISHED",
+      "status": "TIMED",
       "matchday": 6,
       "stage": "GROUP_STAGE",
       "group": "GROUP_F",
@@ -1073,22 +1073,22 @@
         "crest": "https://crests.football-data.org/irn.png"
       },
       "score": {
-        "winner": "HOME_TEAM",
+        "winner": null,
         "duration": "REGULAR",
         "fullTime": {
-          "home": 1,
-          "away": 0
+          "home": null,
+          "away": null
         },
         "halfTime": {
-          "home": 0,
-          "away": 0
+          "home": null,
+          "away": null
         }
       }
     },
     {
       "id": 537362,
       "utcDate": "2026-06-18T18:00:00Z",
-      "status": "FINISHED",
+      "status": "TIMED",
       "matchday": 6,
       "stage": "GROUP_STAGE",
       "group": "GROUP_F",
@@ -1104,22 +1104,22 @@
         "crest": "https://crests.football-data.org/aus.png"
       },
       "score": {
-        "winner": "HOME_TEAM",
+        "winner": null,
         "duration": "REGULAR",
         "fullTime": {
-          "home": 1,
-          "away": 0
+          "home": null,
+          "away": null
         },
         "halfTime": {
-          "home": 0,
-          "away": 0
+          "home": null,
+          "away": null
         }
       }
     },
     {
       "id": 537363,
       "utcDate": "2026-06-17T18:00:00Z",
-      "status": "FINISHED",
+      "status": "TIMED",
       "matchday": 7,
       "stage": "GROUP_STAGE",
       "group": "GROUP_G",
@@ -1135,22 +1135,22 @@
         "crest": "https://crests.football-data.org/aut.png"
       },
       "score": {
-        "winner": "HOME_TEAM",
+        "winner": null,
         "duration": "REGULAR",
         "fullTime": {
-          "home": 1,
-          "away": 0
+          "home": null,
+          "away": null
         },
         "halfTime": {
-          "home": 0,
-          "away": 0
+          "home": null,
+          "away": null
         }
       }
     },
     {
       "id": 537364,
       "utcDate": "2026-06-17T18:00:00Z",
-      "status": "FINISHED",
+      "status": "TIMED",
       "matchday": 7,
       "stage": "GROUP_STAGE",
       "group": "GROUP_G",
@@ -1166,22 +1166,22 @@
         "crest": "https://crests.football-data.org/pol.png"
       },
       "score": {
-        "winner": "HOME_TEAM",
+        "winner": null,
         "duration": "REGULAR",
         "fullTime": {
-          "home": 2,
-          "away": 1
+          "home": null,
+          "away": null
         },
         "halfTime": {
-          "home": 1,
-          "away": 0
+          "home": null,
+          "away": null
         }
       }
     },
     {
       "id": 537365,
       "utcDate": "2026-06-18T18:00:00Z",
-      "status": "FINISHED",
+      "status": "TIMED",
       "matchday": 7,
       "stage": "GROUP_STAGE",
       "group": "GROUP_G",
@@ -1197,22 +1197,22 @@
         "crest": "https://crests.football-data.org/cze.png"
       },
       "score": {
-        "winner": "HOME_TEAM",
+        "winner": null,
         "duration": "REGULAR",
         "fullTime": {
-          "home": 2,
-          "away": 1
+          "home": null,
+          "away": null
         },
         "halfTime": {
-          "home": 1,
-          "away": 0
+          "home": null,
+          "away": null
         }
       }
     },
     {
       "id": 537366,
       "utcDate": "2026-06-18T18:00:00Z",
-      "status": "FINISHED",
+      "status": "TIMED",
       "matchday": 7,
       "stage": "GROUP_STAGE",
       "group": "GROUP_G",
@@ -1228,22 +1228,22 @@
         "crest": "https://crests.football-data.org/pol.png"
       },
       "score": {
-        "winner": "HOME_TEAM",
+        "winner": null,
         "duration": "REGULAR",
         "fullTime": {
-          "home": 2,
-          "away": 1
+          "home": null,
+          "away": null
         },
         "halfTime": {
-          "home": 1,
-          "away": 0
+          "home": null,
+          "away": null
         }
       }
     },
     {
       "id": 537367,
       "utcDate": "2026-06-19T18:00:00Z",
-      "status": "FINISHED",
+      "status": "TIMED",
       "matchday": 7,
       "stage": "GROUP_STAGE",
       "group": "GROUP_G",
@@ -1259,22 +1259,22 @@
         "crest": "https://crests.football-data.org/pol.png"
       },
       "score": {
-        "winner": "HOME_TEAM",
+        "winner": null,
         "duration": "REGULAR",
         "fullTime": {
-          "home": 2,
-          "away": 1
+          "home": null,
+          "away": null
         },
         "halfTime": {
-          "home": 1,
-          "away": 0
+          "home": null,
+          "away": null
         }
       }
     },
     {
       "id": 537368,
       "utcDate": "2026-06-19T18:00:00Z",
-      "status": "FINISHED",
+      "status": "TIMED",
       "matchday": 7,
       "stage": "GROUP_STAGE",
       "group": "GROUP_G",
@@ -1290,22 +1290,22 @@
         "crest": "https://crests.football-data.org/cze.png"
       },
       "score": {
-        "winner": "HOME_TEAM",
+        "winner": null,
         "duration": "REGULAR",
         "fullTime": {
-          "home": 2,
-          "away": 1
+          "home": null,
+          "away": null
         },
         "halfTime": {
-          "home": 1,
-          "away": 0
+          "home": null,
+          "away": null
         }
       }
     },
     {
       "id": 537369,
       "utcDate": "2026-06-18T18:00:00Z",
-      "status": "FINISHED",
+      "status": "TIMED",
       "matchday": 8,
       "stage": "GROUP_STAGE",
       "group": "GROUP_H",
@@ -1321,22 +1321,22 @@
         "crest": "https://crests.football-data.org/den.png"
       },
       "score": {
-        "winner": "DRAW",
+        "winner": null,
         "duration": "REGULAR",
         "fullTime": {
-          "home": 1,
-          "away": 1
+          "home": null,
+          "away": null
         },
         "halfTime": {
-          "home": 0,
-          "away": 0
+          "home": null,
+          "away": null
         }
       }
     },
     {
       "id": 537370,
       "utcDate": "2026-06-18T18:00:00Z",
-      "status": "FINISHED",
+      "status": "TIMED",
       "matchday": 8,
       "stage": "GROUP_STAGE",
       "group": "GROUP_H",
@@ -1352,22 +1352,22 @@
         "crest": "https://crests.football-data.org/ukr.png"
       },
       "score": {
-        "winner": "DRAW",
+        "winner": null,
         "duration": "REGULAR",
         "fullTime": {
-          "home": 1,
-          "away": 1
+          "home": null,
+          "away": null
         },
         "halfTime": {
-          "home": 0,
-          "away": 0
+          "home": null,
+          "away": null
         }
       }
     },
     {
       "id": 537371,
       "utcDate": "2026-06-19T18:00:00Z",
-      "status": "FINISHED",
+      "status": "TIMED",
       "matchday": 8,
       "stage": "GROUP_STAGE",
       "group": "GROUP_H",
@@ -1383,22 +1383,22 @@
         "crest": "https://crests.football-data.org/tur.png"
       },
       "score": {
-        "winner": "DRAW",
+        "winner": null,
         "duration": "REGULAR",
         "fullTime": {
-          "home": 1,
-          "away": 1
+          "home": null,
+          "away": null
         },
         "halfTime": {
-          "home": 0,
-          "away": 0
+          "home": null,
+          "away": null
         }
       }
     },
     {
       "id": 537372,
       "utcDate": "2026-06-19T18:00:00Z",
-      "status": "FINISHED",
+      "status": "TIMED",
       "matchday": 8,
       "stage": "GROUP_STAGE",
       "group": "GROUP_H",
@@ -1414,22 +1414,22 @@
         "crest": "https://crests.football-data.org/ukr.png"
       },
       "score": {
-        "winner": "DRAW",
+        "winner": null,
         "duration": "REGULAR",
         "fullTime": {
-          "home": 1,
-          "away": 1
+          "home": null,
+          "away": null
         },
         "halfTime": {
-          "home": 0,
-          "away": 0
+          "home": null,
+          "away": null
         }
       }
     },
     {
       "id": 537373,
       "utcDate": "2026-06-20T18:00:00Z",
-      "status": "FINISHED",
+      "status": "TIMED",
       "matchday": 8,
       "stage": "GROUP_STAGE",
       "group": "GROUP_H",
@@ -1445,22 +1445,22 @@
         "crest": "https://crests.football-data.org/ukr.png"
       },
       "score": {
-        "winner": "AWAY_TEAM",
+        "winner": null,
         "duration": "REGULAR",
         "fullTime": {
-          "home": 0,
-          "away": 1
+          "home": null,
+          "away": null
         },
         "halfTime": {
-          "home": 0,
-          "away": 0
+          "home": null,
+          "away": null
         }
       }
     },
     {
       "id": 537374,
       "utcDate": "2026-06-20T18:00:00Z",
-      "status": "FINISHED",
+      "status": "TIMED",
       "matchday": 8,
       "stage": "GROUP_STAGE",
       "group": "GROUP_H",
@@ -1476,22 +1476,22 @@
         "crest": "https://crests.football-data.org/tur.png"
       },
       "score": {
-        "winner": "AWAY_TEAM",
+        "winner": null,
         "duration": "REGULAR",
         "fullTime": {
-          "home": 0,
-          "away": 1
+          "home": null,
+          "away": null
         },
         "halfTime": {
-          "home": 0,
-          "away": 0
+          "home": null,
+          "away": null
         }
       }
     },
     {
       "id": 537391,
       "utcDate": "2026-06-19T18:00:00Z",
-      "status": "FINISHED",
+      "status": "TIMED",
       "matchday": 9,
       "stage": "GROUP_STAGE",
       "group": "GROUP_I",
@@ -1507,22 +1507,22 @@
         "crest": "https://crests.football-data.org/nor.png"
       },
       "score": {
-        "winner": "HOME_TEAM",
+        "winner": null,
         "duration": "REGULAR",
         "fullTime": {
-          "home": 2,
-          "away": 1
+          "home": null,
+          "away": null
         },
         "halfTime": {
-          "home": 1,
-          "away": 0
+          "home": null,
+          "away": null
         }
       }
     },
     {
       "id": 537392,
       "utcDate": "2026-06-19T18:00:00Z",
-      "status": "FINISHED",
+      "status": "TIMED",
       "matchday": 9,
       "stage": "GROUP_STAGE",
       "group": "GROUP_I",
@@ -1538,22 +1538,22 @@
         "crest": "https://crests.football-data.org/gha.png"
       },
       "score": {
-        "winner": "HOME_TEAM",
+        "winner": null,
         "duration": "REGULAR",
         "fullTime": {
-          "home": 2,
-          "away": 1
+          "home": null,
+          "away": null
         },
         "halfTime": {
-          "home": 1,
-          "away": 0
+          "home": null,
+          "away": null
         }
       }
     },
     {
       "id": 537393,
       "utcDate": "2026-06-20T18:00:00Z",
-      "status": "FINISHED",
+      "status": "TIMED",
       "matchday": 9,
       "stage": "GROUP_STAGE",
       "group": "GROUP_I",
@@ -1569,22 +1569,22 @@
         "crest": "https://crests.football-data.org/cpv.png"
       },
       "score": {
-        "winner": "HOME_TEAM",
+        "winner": null,
         "duration": "REGULAR",
         "fullTime": {
-          "home": 2,
-          "away": 1
+          "home": null,
+          "away": null
         },
         "halfTime": {
-          "home": 1,
-          "away": 0
+          "home": null,
+          "away": null
         }
       }
     },
     {
       "id": 537394,
       "utcDate": "2026-06-20T18:00:00Z",
-      "status": "FINISHED",
+      "status": "TIMED",
       "matchday": 9,
       "stage": "GROUP_STAGE",
       "group": "GROUP_I",
@@ -1600,22 +1600,22 @@
         "crest": "https://crests.football-data.org/gha.png"
       },
       "score": {
-        "winner": "DRAW",
+        "winner": null,
         "duration": "REGULAR",
         "fullTime": {
-          "home": 1,
-          "away": 1
+          "home": null,
+          "away": null
         },
         "halfTime": {
-          "home": 0,
-          "away": 0
+          "home": null,
+          "away": null
         }
       }
     },
     {
       "id": 537395,
       "utcDate": "2026-06-21T18:00:00Z",
-      "status": "FINISHED",
+      "status": "TIMED",
       "matchday": 9,
       "stage": "GROUP_STAGE",
       "group": "GROUP_I",
@@ -1631,22 +1631,22 @@
         "crest": "https://crests.football-data.org/gha.png"
       },
       "score": {
-        "winner": "DRAW",
+        "winner": null,
         "duration": "REGULAR",
         "fullTime": {
-          "home": 1,
-          "away": 1
+          "home": null,
+          "away": null
         },
         "halfTime": {
-          "home": 0,
-          "away": 0
+          "home": null,
+          "away": null
         }
       }
     },
     {
       "id": 537396,
       "utcDate": "2026-06-21T18:00:00Z",
-      "status": "FINISHED",
+      "status": "TIMED",
       "matchday": 9,
       "stage": "GROUP_STAGE",
       "group": "GROUP_I",
@@ -1662,22 +1662,22 @@
         "crest": "https://crests.football-data.org/cpv.png"
       },
       "score": {
-        "winner": "DRAW",
+        "winner": null,
         "duration": "REGULAR",
         "fullTime": {
-          "home": 1,
-          "away": 1
+          "home": null,
+          "away": null
         },
         "halfTime": {
-          "home": 0,
-          "away": 0
+          "home": null,
+          "away": null
         }
       }
     },
     {
       "id": 537397,
       "utcDate": "2026-06-20T18:00:00Z",
-      "status": "FINISHED",
+      "status": "TIMED",
       "matchday": 10,
       "stage": "GROUP_STAGE",
       "group": "GROUP_J",
@@ -1693,22 +1693,22 @@
         "crest": "https://crests.football-data.org/cod.png"
       },
       "score": {
-        "winner": "DRAW",
+        "winner": null,
         "duration": "REGULAR",
         "fullTime": {
-          "home": 1,
-          "away": 1
+          "home": null,
+          "away": null
         },
         "halfTime": {
-          "home": 0,
-          "away": 0
+          "home": null,
+          "away": null
         }
       }
     },
     {
       "id": 537398,
       "utcDate": "2026-06-20T18:00:00Z",
-      "status": "FINISHED",
+      "status": "TIMED",
       "matchday": 10,
       "stage": "GROUP_STAGE",
       "group": "GROUP_J",
@@ -1724,22 +1724,22 @@
         "crest": "https://crests.football-data.org/cmr.png"
       },
       "score": {
-        "winner": "AWAY_TEAM",
+        "winner": null,
         "duration": "REGULAR",
         "fullTime": {
-          "home": 0,
-          "away": 1
+          "home": null,
+          "away": null
         },
         "halfTime": {
-          "home": 0,
-          "away": 0
+          "home": null,
+          "away": null
         }
       }
     },
     {
       "id": 537399,
       "utcDate": "2026-06-21T18:00:00Z",
-      "status": "FINISHED",
+      "status": "TIMED",
       "matchday": 10,
       "stage": "GROUP_STAGE",
       "group": "GROUP_J",
@@ -1755,22 +1755,22 @@
         "crest": "https://crests.football-data.org/tun.png"
       },
       "score": {
-        "winner": "AWAY_TEAM",
+        "winner": null,
         "duration": "REGULAR",
         "fullTime": {
-          "home": 0,
-          "away": 1
+          "home": null,
+          "away": null
         },
         "halfTime": {
-          "home": 0,
-          "away": 0
+          "home": null,
+          "away": null
         }
       }
     },
     {
       "id": 537400,
       "utcDate": "2026-06-21T18:00:00Z",
-      "status": "FINISHED",
+      "status": "TIMED",
       "matchday": 10,
       "stage": "GROUP_STAGE",
       "group": "GROUP_J",
@@ -1786,22 +1786,22 @@
         "crest": "https://crests.football-data.org/cmr.png"
       },
       "score": {
-        "winner": "AWAY_TEAM",
+        "winner": null,
         "duration": "REGULAR",
         "fullTime": {
-          "home": 0,
-          "away": 1
+          "home": null,
+          "away": null
         },
         "halfTime": {
-          "home": 0,
-          "away": 0
+          "home": null,
+          "away": null
         }
       }
     },
     {
       "id": 537401,
       "utcDate": "2026-06-22T18:00:00Z",
-      "status": "FINISHED",
+      "status": "TIMED",
       "matchday": 10,
       "stage": "GROUP_STAGE",
       "group": "GROUP_J",
@@ -1817,22 +1817,22 @@
         "crest": "https://crests.football-data.org/cmr.png"
       },
       "score": {
-        "winner": "AWAY_TEAM",
+        "winner": null,
         "duration": "REGULAR",
         "fullTime": {
-          "home": 0,
-          "away": 1
+          "home": null,
+          "away": null
         },
         "halfTime": {
-          "home": 0,
-          "away": 0
+          "home": null,
+          "away": null
         }
       }
     },
     {
       "id": 537402,
       "utcDate": "2026-06-22T18:00:00Z",
-      "status": "FINISHED",
+      "status": "TIMED",
       "matchday": 10,
       "stage": "GROUP_STAGE",
       "group": "GROUP_J",
@@ -1848,22 +1848,22 @@
         "crest": "https://crests.football-data.org/tun.png"
       },
       "score": {
-        "winner": "AWAY_TEAM",
+        "winner": null,
         "duration": "REGULAR",
         "fullTime": {
-          "home": 1,
-          "away": 2
+          "home": null,
+          "away": null
         },
         "halfTime": {
-          "home": 0,
-          "away": 1
+          "home": null,
+          "away": null
         }
       }
     },
     {
       "id": 537403,
       "utcDate": "2026-06-21T18:00:00Z",
-      "status": "FINISHED",
+      "status": "TIMED",
       "matchday": 11,
       "stage": "GROUP_STAGE",
       "group": "GROUP_K",
@@ -1879,22 +1879,22 @@
         "crest": "https://crests.football-data.org/ksa.png"
       },
       "score": {
-        "winner": "AWAY_TEAM",
+        "winner": null,
         "duration": "REGULAR",
         "fullTime": {
-          "home": 1,
-          "away": 2
+          "home": null,
+          "away": null
         },
         "halfTime": {
-          "home": 0,
-          "away": 1
+          "home": null,
+          "away": null
         }
       }
     },
     {
       "id": 537404,
       "utcDate": "2026-06-21T18:00:00Z",
-      "status": "FINISHED",
+      "status": "TIMED",
       "matchday": 11,
       "stage": "GROUP_STAGE",
       "group": "GROUP_K",
@@ -1910,22 +1910,22 @@
         "crest": "https://crests.football-data.org/per.png"
       },
       "score": {
-        "winner": "AWAY_TEAM",
+        "winner": null,
         "duration": "REGULAR",
         "fullTime": {
-          "home": 1,
-          "away": 2
+          "home": null,
+          "away": null
         },
         "halfTime": {
-          "home": 0,
-          "away": 1
+          "home": null,
+          "away": null
         }
       }
     },
     {
       "id": 537405,
       "utcDate": "2026-06-22T18:00:00Z",
-      "status": "FINISHED",
+      "status": "TIMED",
       "matchday": 11,
       "stage": "GROUP_STAGE",
       "group": "GROUP_K",
@@ -1941,22 +1941,22 @@
         "crest": "https://crests.football-data.org/wal.png"
       },
       "score": {
-        "winner": "HOME_TEAM",
+        "winner": null,
         "duration": "REGULAR",
         "fullTime": {
-          "home": 2,
-          "away": 0
+          "home": null,
+          "away": null
         },
         "halfTime": {
-          "home": 1,
-          "away": 0
+          "home": null,
+          "away": null
         }
       }
     },
     {
       "id": 537406,
       "utcDate": "2026-06-22T18:00:00Z",
-      "status": "FINISHED",
+      "status": "TIMED",
       "matchday": 11,
       "stage": "GROUP_STAGE",
       "group": "GROUP_K",
@@ -1972,22 +1972,22 @@
         "crest": "https://crests.football-data.org/per.png"
       },
       "score": {
-        "winner": "HOME_TEAM",
+        "winner": null,
         "duration": "REGULAR",
         "fullTime": {
-          "home": 2,
-          "away": 0
+          "home": null,
+          "away": null
         },
         "halfTime": {
-          "home": 1,
-          "away": 0
+          "home": null,
+          "away": null
         }
       }
     },
     {
       "id": 537407,
       "utcDate": "2026-06-23T18:00:00Z",
-      "status": "FINISHED",
+      "status": "TIMED",
       "matchday": 11,
       "stage": "GROUP_STAGE",
       "group": "GROUP_K",
@@ -2003,22 +2003,22 @@
         "crest": "https://crests.football-data.org/per.png"
       },
       "score": {
-        "winner": "DRAW",
+        "winner": null,
         "duration": "REGULAR",
         "fullTime": {
-          "home": 0,
-          "away": 0
+          "home": null,
+          "away": null
         },
         "halfTime": {
-          "home": 0,
-          "away": 0
+          "home": null,
+          "away": null
         }
       }
     },
     {
       "id": 537408,
       "utcDate": "2026-06-23T18:00:00Z",
-      "status": "FINISHED",
+      "status": "TIMED",
       "matchday": 11,
       "stage": "GROUP_STAGE",
       "group": "GROUP_K",
@@ -2034,22 +2034,22 @@
         "crest": "https://crests.football-data.org/wal.png"
       },
       "score": {
-        "winner": "AWAY_TEAM",
+        "winner": null,
         "duration": "REGULAR",
         "fullTime": {
-          "home": 0,
-          "away": 2
+          "home": null,
+          "away": null
         },
         "halfTime": {
-          "home": 0,
-          "away": 1
+          "home": null,
+          "away": null
         }
       }
     },
     {
       "id": 537409,
       "utcDate": "2026-06-22T18:00:00Z",
-      "status": "FINISHED",
+      "status": "TIMED",
       "matchday": 12,
       "stage": "GROUP_STAGE",
       "group": "GROUP_L",
@@ -2065,22 +2065,22 @@
         "crest": "https://crests.football-data.org/ecu.png"
       },
       "score": {
-        "winner": "AWAY_TEAM",
+        "winner": null,
         "duration": "REGULAR",
         "fullTime": {
-          "home": 0,
-          "away": 2
+          "home": null,
+          "away": null
         },
         "halfTime": {
-          "home": 0,
-          "away": 1
+          "home": null,
+          "away": null
         }
       }
     },
     {
       "id": 537410,
       "utcDate": "2026-06-22T18:00:00Z",
-      "status": "FINISHED",
+      "status": "TIMED",
       "matchday": 12,
       "stage": "GROUP_STAGE",
       "group": "GROUP_L",
@@ -2096,22 +2096,22 @@
         "crest": "https://crests.football-data.org/ven.png"
       },
       "score": {
-        "winner": "HOME_TEAM",
+        "winner": null,
         "duration": "REGULAR",
         "fullTime": {
-          "home": 1,
-          "away": 0
+          "home": null,
+          "away": null
         },
         "halfTime": {
-          "home": 0,
-          "away": 0
+          "home": null,
+          "away": null
         }
       }
     },
     {
       "id": 537411,
       "utcDate": "2026-06-23T18:00:00Z",
-      "status": "FINISHED",
+      "status": "TIMED",
       "matchday": 12,
       "stage": "GROUP_STAGE",
       "group": "GROUP_L",
@@ -2127,22 +2127,22 @@
         "crest": "https://crests.football-data.org/par.png"
       },
       "score": {
-        "winner": "HOME_TEAM",
+        "winner": null,
         "duration": "REGULAR",
         "fullTime": {
-          "home": 1,
-          "away": 0
+          "home": null,
+          "away": null
         },
         "halfTime": {
-          "home": 0,
-          "away": 0
+          "home": null,
+          "away": null
         }
       }
     },
     {
       "id": 537412,
       "utcDate": "2026-06-23T18:00:00Z",
-      "status": "FINISHED",
+      "status": "TIMED",
       "matchday": 12,
       "stage": "GROUP_STAGE",
       "group": "GROUP_L",
@@ -2158,15 +2158,15 @@
         "crest": "https://crests.football-data.org/ven.png"
       },
       "score": {
-        "winner": "HOME_TEAM",
+        "winner": null,
         "duration": "REGULAR",
         "fullTime": {
-          "home": 1,
-          "away": 0
+          "home": null,
+          "away": null
         },
         "halfTime": {
-          "home": 0,
-          "away": 0
+          "home": null,
+          "away": null
         }
       }
     },
