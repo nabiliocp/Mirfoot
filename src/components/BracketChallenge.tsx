@@ -5,6 +5,7 @@ import {
   computeBracketState, 
   isBracketMatchStarted,
   BracketPredictions,
+  BracketMatch,
   createEmptyBracketPredictions,
   BRACKET_MATCH_TIMES,
   generateRandomBracketPicks,
@@ -286,6 +287,196 @@ function getOfficialQualifiedTeams(matches: any[]): Set<string> {
   return qualified;
 }
 
+export interface RobustBracketState {
+  r16Matches: Array<{ id: string; homeId: string; awayId: string; winnerId: string }>;
+  r8Matches: Array<{ id: string; homeId: string; awayId: string; winnerId: string }>;
+  r4Matches: Array<{ id: string; homeId: string; awayId: string; winnerId: string }>;
+  finalMatch: { id: string; homeId: string; awayId: string; winnerId: string };
+  winner: string;
+}
+
+export function computeRobustBracketState(picks: BracketPredictions, r32Matches: BracketMatch[]): RobustBracketState {
+  const r32Winners: Record<string, string> = {};
+  
+  const r32Mapping: Record<string, string> = {
+    R32_L1: "R16_L1_H", R32_L2: "R16_L1_A",
+    R32_L3: "R16_L2_H", R32_L4: "R16_L2_A",
+    R32_L5: "R16_L3_H", R32_L6: "R16_L3_A",
+    R32_L7: "R16_L4_H", R32_L8: "R16_L4_A",
+    R32_R1: "R16_R1_H", R32_R2: "R16_R1_A",
+    R32_R3: "R16_R2_H", R32_R4: "R16_R2_A",
+    R32_R5: "R16_R3_H", R32_R6: "R16_R3_A",
+    R32_R7: "R16_R4_H", R32_R8: "R16_R4_A",
+  };
+
+  r32Matches.forEach(m => {
+    const hasBothOpponents = m.homeId !== "" && m.awayId !== "";
+    let winner = "";
+    if (hasBothOpponents) {
+      const slotKey = r32Mapping[m.id];
+      const pickedWinner = picks.r16?.[slotKey] || "";
+      if (pickedWinner === m.homeId || pickedWinner === m.awayId) {
+        winner = pickedWinner;
+      }
+    }
+    r32Winners[m.id] = winner;
+  });
+
+  const r16Matches = [
+    { id: "R16_L1", homeId: r32Winners["R32_L1"] || "", awayId: r32Winners["R32_L2"] || "", winnerId: "" },
+    { id: "R16_L2", homeId: r32Winners["R32_L3"] || "", awayId: r32Winners["R32_L4"] || "", winnerId: "" },
+    { id: "R16_L3", homeId: r32Winners["R32_L5"] || "", awayId: r32Winners["R32_L6"] || "", winnerId: "" },
+    { id: "R16_L4", homeId: r32Winners["R32_L7"] || "", awayId: r32Winners["R32_L8"] || "", winnerId: "" },
+    { id: "R16_R1", homeId: r32Winners["R32_R1"] || "", awayId: r32Winners["R32_R2"] || "", winnerId: "" },
+    { id: "R16_R2", homeId: r32Winners["R32_R3"] || "", awayId: r32Winners["R32_R4"] || "", winnerId: "" },
+    { id: "R16_R3", homeId: r32Winners["R32_R5"] || "", awayId: r32Winners["R32_R6"] || "", winnerId: "" },
+    { id: "R16_R4", homeId: r32Winners["R32_R7"] || "", awayId: r32Winners["R32_R8"] || "", winnerId: "" },
+  ];
+
+  const r16Winners: Record<string, string> = {};
+  const r16Mapping: Record<string, string> = {
+    R16_L1: "R8_L1_H", R16_L2: "R8_L1_A",
+    R16_L3: "R8_L2_H", R16_L4: "R8_L2_A",
+    R16_R1: "R8_R1_H", R16_R2: "R8_R1_A",
+    R16_R3: "R8_R2_H", R16_R4: "R8_R2_A",
+  };
+
+  r16Matches.forEach(m => {
+    const hasBothOpponents = m.homeId !== "" && m.awayId !== "";
+    let winner = "";
+    if (hasBothOpponents) {
+      const slotKey = r16Mapping[m.id];
+      const pickedWinner = picks.r8?.[slotKey] || "";
+      if (pickedWinner === m.homeId || pickedWinner === m.awayId) {
+        winner = pickedWinner;
+      }
+    }
+    r16Winners[m.id] = winner;
+    m.winnerId = winner;
+  });
+
+  const r8Matches = [
+    { id: "R8_L1", homeId: r16Winners["R16_L1"] || "", awayId: r16Winners["R16_L2"] || "", winnerId: "" },
+    { id: "R8_L2", homeId: r16Winners["R16_L3"] || "", awayId: r16Winners["R16_L4"] || "", winnerId: "" },
+    { id: "R8_R1", homeId: r16Winners["R16_R1"] || "", awayId: r16Winners["R16_R2"] || "", winnerId: "" },
+    { id: "R8_R2", homeId: r16Winners["R16_R3"] || "", awayId: r16Winners["R16_R4"] || "", winnerId: "" },
+  ];
+
+  const r8Winners: Record<string, string> = {};
+  const r8Mapping: Record<string, string> = {
+    R8_L1: "R4_L1_H", R8_L2: "R4_L1_A",
+    R8_R1: "R4_R1_H", R8_R2: "R4_R1_A",
+  };
+
+  r8Matches.forEach(m => {
+    const hasBothOpponents = m.homeId !== "" && m.awayId !== "";
+    let winner = "";
+    if (hasBothOpponents) {
+      const slotKey = r8Mapping[m.id];
+      const pickedWinner = picks.r4?.[slotKey] || "";
+      if (pickedWinner === m.homeId || pickedWinner === m.awayId) {
+        winner = pickedWinner;
+      }
+    }
+    r8Winners[m.id] = winner;
+    m.winnerId = winner;
+  });
+
+  const r4Matches = [
+    { id: "R4_L1", homeId: r8Winners["R8_L1"] || "", awayId: r8Winners["R8_L2"] || "", winnerId: "" },
+    { id: "R4_R1", homeId: r8Winners["R8_R1"] || "", awayId: r8Winners["R8_R2"] || "", winnerId: "" },
+  ];
+
+  const r4Winners: Record<string, string> = {};
+  const r4Mapping: Record<string, string> = {
+    R4_L1: "R2_L1_H", R4_R1: "R2_L1_A",
+  };
+
+  r4Matches.forEach(m => {
+    const hasBothOpponents = m.homeId !== "" && m.awayId !== "";
+    let winner = "";
+    if (hasBothOpponents) {
+      const slotKey = r4Mapping[m.id];
+      const pickedWinner = picks.r2?.[slotKey] || "";
+      if (pickedWinner === m.homeId || pickedWinner === m.awayId) {
+        winner = pickedWinner;
+      }
+    }
+    r4Winners[m.id] = winner;
+    m.winnerId = winner;
+  });
+
+  const finalMatch = {
+    id: "R2_F1",
+    homeId: r4Winners["R4_L1"] || "",
+    awayId: r4Winners["R4_R1"] || "",
+    winnerId: "",
+  };
+
+  let winner = "";
+  const hasBothFinalOpponents = finalMatch.homeId !== "" && finalMatch.awayId !== "";
+  if (hasBothFinalOpponents) {
+    const pickedWinner = picks.winner || "";
+    if (pickedWinner === finalMatch.homeId || pickedWinner === finalMatch.awayId) {
+      winner = pickedWinner;
+    }
+  }
+  finalMatch.winnerId = winner;
+
+  return {
+    r16Matches,
+    r8Matches,
+    r4Matches,
+    finalMatch,
+    winner,
+  };
+}
+
+export function sanitizePredictions(picks: BracketPredictions, r32Matches: BracketMatch[]): BracketPredictions {
+  const robustState = computeRobustBracketState(picks, r32Matches);
+  return {
+    r16: {
+      R16_L1_H: robustState.r16Matches[0].homeId,
+      R16_L1_A: robustState.r16Matches[0].awayId,
+      R16_L2_H: robustState.r16Matches[1].homeId,
+      R16_L2_A: robustState.r16Matches[1].awayId,
+      R16_L3_H: robustState.r16Matches[2].homeId,
+      R16_L3_A: robustState.r16Matches[2].awayId,
+      R16_L4_H: robustState.r16Matches[3].homeId,
+      R16_L4_A: robustState.r16Matches[3].awayId,
+      R16_R1_H: robustState.r16Matches[4].homeId,
+      R16_R1_A: robustState.r16Matches[4].awayId,
+      R16_R2_H: robustState.r16Matches[5].homeId,
+      R16_R2_A: robustState.r16Matches[5].awayId,
+      R16_R3_H: robustState.r16Matches[6].homeId,
+      R16_R3_A: robustState.r16Matches[6].awayId,
+      R16_R4_H: robustState.r16Matches[7].homeId,
+      R16_R4_A: robustState.r16Matches[7].awayId,
+    },
+    r8: {
+      R8_L1_H: robustState.r8Matches[0].homeId,
+      R8_L1_A: robustState.r8Matches[0].awayId,
+      R8_L2_H: robustState.r8Matches[1].homeId,
+      R8_L2_A: robustState.r8Matches[1].awayId,
+      R8_R1_H: robustState.r8Matches[2].homeId,
+      R8_R1_A: robustState.r8Matches[2].awayId,
+      R8_R2_H: robustState.r8Matches[3].homeId,
+      R8_R2_A: robustState.r8Matches[3].awayId,
+    },
+    r4: {
+      R4_L1_H: robustState.r4Matches[0].homeId,
+      R4_L1_A: robustState.r4Matches[0].awayId,
+      R4_R1_H: robustState.r4Matches[1].homeId,
+      R4_R1_A: robustState.r4Matches[1].awayId,
+    },
+    r2: {
+      R2_L1_H: robustState.finalMatch.homeId,
+      R2_L1_A: robustState.finalMatch.awayId,
+    },
+    winner: robustState.winner,
+  };
+}
+
 export const BracketChallenge: React.FC<BracketChallengeProps> = ({
   challenge,
   userId,
@@ -551,7 +742,7 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
     : (selectedParticipant ? selectedParticipant.predictions : picks);
 
   // Compute the current state of matches in later rounds based on active predictions
-  const bracketState = computeBracketState(activePicks);
+  const bracketState = computeRobustBracketState(activePicks, dynamicR32Matches);
 
   // Determine slot progression mapping
   // maps previous round winner to subsequent round position key
@@ -683,13 +874,14 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
     setSaving(true);
     setMessage(null);
     try {
+      const sanitized = sanitizePredictions(picks, dynamicR32Matches);
       const response = await fetch("/api/bets/upsert", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           user_id: userId,
           challenge_id: challenge.id,
-          predictions: picks,
+          predictions: sanitized,
         }),
       });
 
@@ -1243,7 +1435,7 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
                 const startMatch = dynamicR32Matches.find(m => m.id === mId);
                 return { homeId: startMatch?.homeId || "", awayId: startMatch?.awayId || "" };
               }
-              const simState = computeBracketState(simulatedResults);
+              const simState = computeRobustBracketState(simulatedResults, dynamicR32Matches);
               if (mId.startsWith("R16_")) {
                 const match = simState.r16Matches.find(m => m.id === mId);
                 return { homeId: match?.homeId || "", awayId: match?.awayId || "" };
@@ -1424,7 +1616,7 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
     const r4Left = bracketState.r4Matches.filter(m => m.id.includes("_L"));
     const r4Right = bracketState.r4Matches.filter(m => m.id.includes("_R"));
 
-    const liveScore = testMode && simulatedResults ? calculateBracketPoints(picks, simulatedResults) : 0;
+    const liveScore = testMode && simulatedResults ? calculateBracketPoints(sanitizePredictions(picks, dynamicR32Matches), sanitizePredictions(simulatedResults, dynamicR32Matches)) : 0;
 
     return (
       <div className="space-y-4">
@@ -1933,10 +2125,10 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
                     const predictionsA = a.user_id === userId ? picks : (a.predictions || {});
                     const predictionsB = b.user_id === userId ? picks : (b.predictions || {});
                     const ptsA = (testMode && simulatedResults)
-                      ? calculateBracketPoints(predictionsA, simulatedResults)
+                      ? calculateBracketPoints(sanitizePredictions(predictionsA, dynamicR32Matches), sanitizePredictions(simulatedResults, dynamicR32Matches))
                       : (a.points_awarded || 0);
                     const ptsB = (testMode && simulatedResults)
-                      ? calculateBracketPoints(predictionsB, simulatedResults)
+                      ? calculateBracketPoints(sanitizePredictions(predictionsB, dynamicR32Matches), sanitizePredictions(simulatedResults, dynamicR32Matches))
                       : (b.points_awarded || 0);
                     if (ptsA !== ptsB) return ptsB - ptsA;
                     return (b.profile_points || 0) - (a.profile_points || 0);
@@ -1955,7 +2147,7 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
                     const totalC = r16C + r8C + r4C + r2C + winC;
 
                     const displayPoints = (testMode && simulatedResults)
-                      ? calculateBracketPoints(pPicks, simulatedResults)
+                      ? calculateBracketPoints(sanitizePredictions(pPicks, dynamicR32Matches), sanitizePredictions(simulatedResults, dynamicR32Matches))
                       : (p.points_awarded || 0);
                     
                     return (
