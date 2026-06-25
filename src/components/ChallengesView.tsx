@@ -3352,6 +3352,7 @@ export default function ChallengesView({
                   challenge={challenge}
                   userId={userId || ""}
                   mode="prediction"
+                  onShowRules={() => setActiveModal({ type: 'rules', challenge })}
                   onSaveSuccess={() => {
                     refreshChallengeBets();
                   }}
@@ -4115,6 +4116,7 @@ export default function ChallengesView({
                     challenge={challenge}
                     userId={userId || ""}
                     mode="results"
+                    onShowRules={() => setActiveModal({ type: 'rules', challenge })}
                     onSaveSuccess={() => {
                       refreshChallengeBets();
                       loadData();
@@ -4133,6 +4135,7 @@ export default function ChallengesView({
                       challenge={challenge}
                       userId={userId || ""}
                       mode="prediction"
+                      onShowRules={() => setActiveModal({ type: 'rules', challenge })}
                     />
                   </div>
                 )
@@ -4493,7 +4496,22 @@ export default function ChallengesView({
             </h3>
             <div className="text-sm text-gray-600 bg-gray-50 p-4 rounded-xl border border-gray-100">
              {activeModal.type === "rules" ? (
-                 activeModal.challenge.pointRules ? (
+                 activeModal.challenge.type === "bracket" ? (
+                   <div className="space-y-4">
+                     <p className="font-extrabold text-sm text-emerald-800">📊 Barème & Règles du Tableau :</p>
+                     <p>• <strong>Phase de 32 :</strong> +100 points par qualification</p>
+                     <p>• <strong>Huitièmes :</strong> +200 points par qualification</p>
+                     <p>• <strong>Quarts :</strong> +300 points par qualification</p>
+                     <p>• <strong>Demi-finales :</strong> +400 points par qualification</p>
+                     
+                     <div className="bg-pink-50 border border-pink-200 p-3 rounded-xl mt-4">
+                       <p className="font-extrabold text-xs text-pink-900 mb-2">🏆 Méga Bonus Spéciaux :</p>
+                       <p className="text-xs text-pink-800">⭐ <strong>4 Demis Exacts:</strong> +1000 pts</p>
+                       <p className="text-xs text-pink-800">⭐ <strong>2 Finalistes Exacts:</strong> +2000 pts</p>
+                       <p className="text-xs text-pink-800">⭐ <strong>Vainqueur Exact:</strong> +2000 pts</p>
+                     </div>
+                   </div>
+                 ) : activeModal.challenge.pointRules ? (
                    renderReadableRules(activeModal.challenge.pointRules)
                  ) : (
                    <p className="text-center italic py-4">Aucune règle définie</p>

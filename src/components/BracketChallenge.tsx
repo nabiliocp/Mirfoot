@@ -17,6 +17,7 @@ interface BracketChallengeProps {
   userId: string;
   mode: "prediction" | "results"; // prediction for users, results for creator resolution
   onSaveSuccess?: () => void;
+  onShowRules?: () => void;
 }
 
 export const BracketChallenge: React.FC<BracketChallengeProps> = ({
@@ -730,15 +731,15 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
             
             {currentPhase === "r32" && (
               <>
-                <div className="flex-1 min-w-0 space-y-4">
-                  <div className="text-[10px] text-gray-400 font-black tracking-widest uppercase text-center mb-4 leading-tight">1/16 Finales (G)</div>
+                <div className="flex-1 min-w-0 space-y-4 bg-gray-50/80 border border-gray-150 rounded-2xl p-2 sm:p-4 shadow-sm">
+                  <div className="text-[10px] text-gray-500 font-black tracking-widest uppercase text-center mb-4 leading-tight">1/16 Finales (G)</div>
                   <div className="grid grid-cols-1 gap-4">
                     {r32Left.map(m => <div key={m.id} className="relative">{renderTreeMatchNode("r32", m.id, m.homeId, m.awayId, "center")}</div>)}
                   </div>
                 </div>
                 <div className="hidden md:block w-px bg-gray-200"></div>
-                <div className="flex-1 min-w-0 space-y-4">
-                  <div className="text-[10px] text-gray-400 font-black tracking-widest uppercase text-center mb-4 leading-tight">1/16 Finales (D)</div>
+                <div className="flex-1 min-w-0 space-y-4 bg-gray-50/80 border border-gray-150 rounded-2xl p-2 sm:p-4 shadow-sm">
+                  <div className="text-[10px] text-gray-500 font-black tracking-widest uppercase text-center mb-4 leading-tight">1/16 Finales (D)</div>
                   <div className="grid grid-cols-1 gap-4">
                     {r32Right.map(m => <div key={m.id} className="relative">{renderTreeMatchNode("r32", m.id, m.homeId, m.awayId, "center")}</div>)}
                   </div>
@@ -748,15 +749,15 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
 
             {currentPhase === "r16" && (
               <>
-                <div className="flex-1 min-w-0 space-y-4">
-                  <div className="text-[10px] text-gray-400 font-black tracking-widest uppercase text-center mb-4 leading-tight">Huitièmes (G)</div>
+                <div className="flex-1 min-w-0 space-y-4 bg-gray-50/80 border border-gray-150 rounded-2xl p-2 sm:p-4 shadow-sm">
+                  <div className="text-[10px] text-gray-500 font-black tracking-widest uppercase text-center mb-4 leading-tight">Huitièmes (G)</div>
                   <div className="grid grid-cols-1 gap-4">
                     {r16Left.map(m => <div key={m.id} className="relative">{renderTreeMatchNode("r16", m.id, m.homeId, m.awayId, "center")}</div>)}
                   </div>
                 </div>
                 <div className="hidden md:block w-px bg-gray-200"></div>
-                <div className="flex-1 min-w-0 space-y-4">
-                  <div className="text-[10px] text-gray-400 font-black tracking-widest uppercase text-center mb-4 leading-tight">Huitièmes (D)</div>
+                <div className="flex-1 min-w-0 space-y-4 bg-gray-50/80 border border-gray-150 rounded-2xl p-2 sm:p-4 shadow-sm">
+                  <div className="text-[10px] text-gray-500 font-black tracking-widest uppercase text-center mb-4 leading-tight">Huitièmes (D)</div>
                   <div className="grid grid-cols-1 gap-4">
                     {r16Right.map(m => <div key={m.id} className="relative">{renderTreeMatchNode("r16", m.id, m.homeId, m.awayId, "center")}</div>)}
                   </div>
@@ -766,15 +767,15 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
 
             {currentPhase === "r8" && (
               <>
-                <div className="flex-1 min-w-0 space-y-4">
-                  <div className="text-[10px] text-gray-400 font-black tracking-widest uppercase text-center mb-4 leading-tight">Quarts (G)</div>
+                <div className="flex-1 min-w-0 space-y-4 bg-gray-50/80 border border-gray-150 rounded-2xl p-2 sm:p-4 shadow-sm">
+                  <div className="text-[10px] text-gray-500 font-black tracking-widest uppercase text-center mb-4 leading-tight">Quarts (G)</div>
                   <div className="grid grid-cols-1 gap-4">
                     {r8Left.map(m => <div key={m.id} className="relative">{renderTreeMatchNode("r8", m.id, m.homeId, m.awayId, "center")}</div>)}
                   </div>
                 </div>
                 <div className="hidden md:block w-px bg-gray-200"></div>
-                <div className="flex-1 min-w-0 space-y-4">
-                  <div className="text-[10px] text-gray-400 font-black tracking-widest uppercase text-center mb-4 leading-tight">Quarts (D)</div>
+                <div className="flex-1 min-w-0 space-y-4 bg-gray-50/80 border border-gray-150 rounded-2xl p-2 sm:p-4 shadow-sm">
+                  <div className="text-[10px] text-gray-500 font-black tracking-widest uppercase text-center mb-4 leading-tight">Quarts (D)</div>
                   <div className="grid grid-cols-1 gap-4">
                     {r8Right.map(m => <div key={m.id} className="relative">{renderTreeMatchNode("r8", m.id, m.homeId, m.awayId, "center")}</div>)}
                   </div>
@@ -784,15 +785,15 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
 
             {currentPhase === "r4" && (
               <>
-                <div className="flex-1 min-w-0 space-y-4">
-                  <div className="text-[10px] text-gray-400 font-black tracking-widest uppercase text-center mb-4 leading-tight">Demi-finale (G)</div>
+                <div className="flex-1 min-w-0 space-y-4 bg-gray-50/80 border border-gray-150 rounded-2xl p-2 sm:p-4 shadow-sm">
+                  <div className="text-[10px] text-gray-500 font-black tracking-widest uppercase text-center mb-4 leading-tight">Demi-finale (G)</div>
                   <div className="grid grid-cols-1 gap-6 md:gap-12 md:py-8">
                     {r4Left.map(m => <div key={m.id} className="relative">{renderTreeMatchNode("r4", m.id, m.homeId, m.awayId, "center")}</div>)}
                   </div>
                 </div>
                 <div className="hidden md:block w-px bg-gray-200"></div>
-                <div className="flex-1 min-w-0 space-y-4">
-                  <div className="text-[10px] text-gray-400 font-black tracking-widest uppercase text-center mb-4 leading-tight">Demi-finale (D)</div>
+                <div className="flex-1 min-w-0 space-y-4 bg-gray-50/80 border border-gray-150 rounded-2xl p-2 sm:p-4 shadow-sm">
+                  <div className="text-[10px] text-gray-500 font-black tracking-widest uppercase text-center mb-4 leading-tight">Demi-finale (D)</div>
                   <div className="grid grid-cols-1 gap-6 md:gap-12 md:py-8">
                     {r4Right.map(m => <div key={m.id} className="relative">{renderTreeMatchNode("r4", m.id, m.homeId, m.awayId, "center")}</div>)}
                   </div>
@@ -1082,25 +1083,32 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
               <Trophy className="w-48 h-48 text-white" />
             </div>
             
-            <div className="relative z-10 space-y-3">
-              <div className="flex items-center gap-2">
-                <span className="bg-emerald-500 text-emerald-950 text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider flex items-center gap-1">
-                  <Sparkles className="w-3 h-3" />
-                  {mode === "results" ? "Administration" : "Pronostic Spécial"}
-                </span>
-                <span className="text-xs text-emerald-200 font-bold">🎯 Tableau Phase Éliminatoire</span>
+            <div className="relative z-10 flex flex-col gap-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="bg-emerald-500 text-emerald-950 text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider flex items-center gap-1">
+                      <Sparkles className="w-3 h-3" />
+                      {mode === "results" ? "Administration" : "Pronostic Spécial"}
+                    </span>
+                  </div>
+                  <h2 className="text-xl md:text-2xl font-black tracking-tight mt-1">
+                    {mode === "results" ? "Saisie des Résultats Officiels" : (challenge.title || "Remplir le Tableau de Championnat")}
+                  </h2>
+                </div>
+                
+                {onShowRules && (
+                  <button
+                    type="button"
+                    onClick={onShowRules}
+                    className="bg-emerald-800/80 hover:bg-emerald-700 border border-emerald-600 text-emerald-100 font-bold py-2 px-4 rounded-xl text-xs transition-all flex items-center justify-center gap-1.5 shrink-0"
+                  >
+                    <HelpCircle className="w-4 h-4 text-emerald-300" />
+                    Barème
+                  </button>
+                )}
               </div>
               
-              <h2 className="text-2xl font-black tracking-tight">
-                {mode === "results" ? "Saisie des Résultats Officiels" : "Remplir le Tableau de Championnat"}
-              </h2>
-              
-              <p className="text-xs text-emerald-100 max-w-xl leading-relaxed">
-                {mode === "results" 
-                  ? "Sélectionnez les pays qui se sont réellement qualifiés à chaque étape du tournoi. En validant, les scores de tous les participants seront recalculés immédiatement."
-                  : "Cliquez sur l'équipe de votre choix dans chaque match pour la qualifier au tour de suivant. Complétez tout le tableau pour tenter de décrocher le bonus maximal de points !"}
-              </p>
-
               {/* Progress bar */}
               <div className="pt-2">
                 <div className="flex justify-between items-center text-xs font-bold text-emerald-100 mb-1">
@@ -1113,39 +1121,6 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
                     style={{ width: `${progressPercent}%` }}
                   ></div>
                 </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Point Barème Overview */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 bg-gray-50 p-4 rounded-2xl border border-gray-150">
-            <div className="text-center p-2">
-              <div className="text-xs text-gray-500 font-bold">Phase de 32</div>
-              <div className="text-base font-black text-emerald-800">+100 pts <span className="text-xs font-medium text-gray-400">/qualif</span></div>
-            </div>
-            <div className="text-center p-2 border-l border-gray-200">
-              <div className="text-xs text-gray-500 font-bold">Huitièmes (16)</div>
-              <div className="text-base font-black text-emerald-800">+200 pts <span className="text-xs font-medium text-gray-400">/qualif</span></div>
-            </div>
-            <div className="text-center p-2 border-l border-gray-200">
-              <div className="text-xs text-gray-500 font-bold">Quarts (8)</div>
-              <div className="text-base font-black text-emerald-800">+300 pts <span className="text-xs font-medium text-gray-400">/qualif</span></div>
-            </div>
-            <div className="text-center p-2 border-l border-gray-200">
-              <div className="text-xs text-gray-500 font-bold">Demis (4)</div>
-              <div className="text-base font-black text-emerald-800">+400 pts <span className="text-xs font-medium text-gray-400">/qualif</span></div>
-            </div>
-          </div>
-
-          {/* Bonus Box */}
-          <div className="bg-pink-50/50 border border-pink-100/70 rounded-2xl p-3 px-4 flex items-start gap-3">
-            <Sparkles className="w-5 h-5 text-pink-600 shrink-0 mt-0.5" />
-            <div className="text-xs space-y-1">
-              <p className="font-extrabold text-pink-950">🏆 Méga Bonus Spéciaux :</p>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-pink-900 font-medium">
-                <p>⭐ <strong>4 Demis Exacts:</strong> +1000 pts</p>
-                <p>⭐ <strong>2 Finalistes Exacts:</strong> +2000 pts</p>
-                <p>⭐ <strong>Vainqueur Exact:</strong> +2000 pts</p>
               </div>
             </div>
           </div>
