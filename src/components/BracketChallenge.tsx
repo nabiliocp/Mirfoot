@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import { 
   BRACKET_TEAMS, 
   STARTING_R32_MATCHES, 
@@ -80,6 +80,184 @@ const getFlagUrl = (teamName: string) => {
   return null;
 };
 
+interface StandingTeam {
+  id: string;
+  points: number;
+  goalDiff: number;
+  goalsFor: number;
+  played: number;
+}
+
+function getOfficialQualifiedTeams(matches: any[]): Set<string> {
+  const qualified = new Set<string>();
+  
+  // 1. Group matches by group
+  const groupMatches: Record<string, any[]> = {};
+  matches.forEach(m => {
+    if (m.stage === "GROUP_STAGE" && m.group) {
+      if (!groupMatches[m.group]) groupMatches[m.group] = [];
+      groupMatches[m.group].push(m);
+    }
+  });
+
+  // For each group, compute current standings and verify qualification
+  Object.entries(groupMatches).forEach(([groupName, matchesInGroup]) => {
+    const teamsInGroup = new Set<string>();
+    matchesInGroup.forEach(m => {
+      if (m.homeTeam?.id) teamsInGroup.add(m.homeTeam.id);
+      if (m.awayTeam?.id) teamsInGroup.add(m.awayTeam.id);
+    });
+
+    const teamStats: Record<string, StandingTeam> = {};
+    teamsInGroup.forEach(tid => {
+      teamStats[tid] = { id: tid, points: 0, goalDiff: 0, goalsFor: 0, played: 0 };
+    });
+
+    // Compute stats from finished matches
+    let finishedCount = 0;
+    matchesInGroup.forEach(m => {
+      if (m.status === "FINISHED") {
+        finishedCount++;
+        const homeId = m.homeTeam?.id;
+        const awayId = m.awayTeam?.id;
+        const hGoal = m.score?.fullTime?.home ?? 0;
+        const aGoal = m.score?.fullTime?.away ?? 0;
+
+        if (homeId && teamStats[homeId]) {
+          teamStats[homeId].played++;
+          teamStats[homeId].goalsFor += hGoal;
+          teamStats[homeId].goalDiff += (hGoal - aGoal);
+        }
+        if (awayId && teamStats[awayId]) {
+          teamStats[awayId].played++;
+          teamStats[awayId].goalsFor += aGoal;
+          teamStats[awayId].goalDiff += (aGoal - hGoal);
+        }
+
+        if (homeId && awayId && teamStats[homeId] && teamStats[awayId]) {
+          if (hGoal > aGoal) {
+            teamStats[homeId].points += 3;
+          } else if (aGoal > hGoal) {
+            teamStats[awayId].points += 3;
+          } else {
+            teamStats[homeId].points += 1;
+            teamStats[awayId].points += 1;
+          }
+        }
+      }
+    });
+
+    const totalGroupMatchesExpected = 6;
+    const isGroupFullyFinished = finishedCount === totalGroupMatchesExpected;
+
+    if (isGroupFullyFinished) {
+      // Sort teams to find 1st and 2nd
+      const sorted = Object.values(teamStats).sort((a, b) => {
+        if (b.points !== a.points) return b.points - a.points;
+        if (b.goalDiff !== a.goalDiff) return b.goalDiff - a.goalDiff;
+        return b.goalsFor - a.goalsFor;
+      });
+      if (sorted[0]) qualified.add(sorted[0].id);
+      if (sorted[1]) qualified.add(sorted[1].id);
+    } else {
+      // Group is not fully finished. Use mathematical guarantee!
+      // A team is guaranteed top 2 if their minPoints > second highest maxPoints of other teams
+      Object.entries(teamStats).forEach(([tid, stats]) => {
+        const minPoints = stats.points;
+        const remainingMatches = 3 - stats.played;
+        const maxPoints = stats.points + (remainingMatches > 0 ? remainingMatches * 3 : 0);
+
+        const otherTeamsMaxPoints: number[] = [];
+        Object.entries(teamStats).forEach(([oid, ostats]) => {
+          if (oid !== tid) {
+            const oRemaining = 3 - ostats.played;
+            const oMax = ostats.points + (oRemaining > 0 ? oRemaining * 3 : 0);
+            otherTeamsMaxPoints.push(oMax);
+          }
+        });
+
+        // Sort other teams max points in ascending order
+        otherTeamsMaxPoints.sort((a, b) => a - b);
+        const secondHighestOtherMax = otherTeamsMaxPoints[1]; // Index 1 is mid in [min, mid, max] (3 items)
+
+        if (minPoints > secondHighestOtherMax) {
+          qualified.add(tid);
+        }
+      });
+    }
+  });
+
+  // Also handle 3rd placed teams qualification if ALL groups are finished!
+  const allGroups = Object.keys(groupMatches);
+  const finishedGroupsCount = allGroups.filter(gName => {
+    return groupMatches[gName].filter(m => m.status === "FINISHED").length === 6;
+  }).length;
+
+  if (allGroups.length > 0 && finishedGroupsCount === allGroups.length) {
+    const thirdPlacedTeams: StandingTeam[] = [];
+    allGroups.forEach(gName => {
+      const matchesInGroup = groupMatches[gName];
+      const teamsInGroup = new Set<string>();
+      matchesInGroup.forEach(m => {
+        if (m.homeTeam?.id) teamsInGroup.add(m.homeTeam.id);
+        if (m.awayTeam?.id) teamsInGroup.add(m.awayTeam.id);
+      });
+
+      const teamStats: Record<string, StandingTeam> = {};
+      teamsInGroup.forEach(tid => {
+        teamStats[tid] = { id: tid, points: 0, goalDiff: 0, goalsFor: 0, played: 3 };
+      });
+
+      matchesInGroup.forEach(m => {
+        const homeId = m.homeTeam?.id;
+        const awayId = m.awayTeam?.id;
+        const hGoal = m.score?.fullTime?.home ?? 0;
+        const aGoal = m.score?.fullTime?.away ?? 0;
+
+        if (homeId && teamStats[homeId]) {
+          teamStats[homeId].goalsFor += hGoal;
+          teamStats[homeId].goalDiff += (hGoal - aGoal);
+        }
+        if (awayId && teamStats[awayId]) {
+          teamStats[awayId].goalsFor += aGoal;
+          teamStats[awayId].goalDiff += (aGoal - hGoal);
+        }
+
+        if (homeId && awayId) {
+          if (hGoal > aGoal) {
+            teamStats[homeId].points += 3;
+          } else if (aGoal > hGoal) {
+            teamStats[awayId].points += 3;
+          } else {
+            teamStats[homeId].points += 1;
+            teamStats[awayId].points += 1;
+          }
+        }
+      });
+
+      const sorted = Object.values(teamStats).sort((a, b) => {
+        if (b.points !== a.points) return b.points - a.points;
+        if (b.goalDiff !== a.goalDiff) return b.goalDiff - a.goalDiff;
+        return b.goalsFor - a.goalsFor;
+      });
+
+      if (sorted[2]) {
+        thirdPlacedTeams.push(sorted[2]);
+      }
+    });
+
+    thirdPlacedTeams.sort((a, b) => {
+      if (b.points !== a.points) return b.points - a.points;
+      if (b.goalDiff !== a.goalDiff) return b.goalDiff - a.goalDiff;
+      return b.goalsFor - a.goalsFor;
+    });
+
+    thirdPlacedTeams.slice(0, 8).forEach(t => qualified.add(t.id));
+  }
+
+  return qualified;
+}
+
 export const BracketChallenge: React.FC<BracketChallengeProps> = ({
   challenge,
   userId,
@@ -127,6 +305,54 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
     return saved !== null ? saved === "true" : true;
   });
   const [activeSimPhase, setActiveSimPhase] = useState<string>("all");
+
+  const [qualifiedTeams, setQualifiedTeams] = useState<Set<string>>(new Set());
+  const [loadingQualifications, setLoadingQualifications] = useState<boolean>(false);
+
+  useEffect(() => {
+    let active = true;
+    const fetchMatchesAndComputeQualifications = async () => {
+      setLoadingQualifications(true);
+      try {
+        const res = await fetch("/api/matches/2000");
+        if (res.ok) {
+          const data = await res.json();
+          if (active && data && data.matches) {
+            const qualified = getOfficialQualifiedTeams(data.matches);
+            setQualifiedTeams(qualified);
+          }
+        }
+      } catch (err) {
+        console.error("Error fetching matches for bracket qualifications:", err);
+      } finally {
+        if (active) {
+          setLoadingQualifications(false);
+        }
+      }
+    };
+
+    fetchMatchesAndComputeQualifications();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const dynamicR32Matches = useMemo(() => {
+    // If we haven't loaded qualifications, or if they are empty (e.g. failed fetch or offline),
+    // we fallback to treating all preset teams as qualified to keep the challenge completely playable.
+    if (!qualifiedTeams || qualifiedTeams.size === 0) {
+      return STARTING_R32_MATCHES;
+    }
+    return STARTING_R32_MATCHES.map(m => {
+      const homeQualified = qualifiedTeams.has(m.homeId);
+      const awayQualified = qualifiedTeams.has(m.awayId);
+      return {
+        ...m,
+        homeId: homeQualified ? m.homeId : "",
+        awayId: awayQualified ? m.awayId : "",
+      };
+    });
+  }, [qualifiedTeams]);
 
   // State update helpers with localStorage persistence
   const updateTestMode = (val: boolean) => {
@@ -530,7 +756,7 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
       // 1. R32
       if (phase === "all" || phase === "r32" || !Object.keys(targetPicks.r16 || {}).length) {
         if (!targetPicks.r16) targetPicks.r16 = {};
-        STARTING_R32_MATCHES.forEach(m => {
+        dynamicR32Matches.forEach(m => {
           const slotKey = r32Mapping[m.id];
           if (slotKey) {
             targetPicks.r16[slotKey] = pickRandom(m.homeId, m.awayId);
@@ -986,7 +1212,7 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
             const getSimTeamsForMatch = (mId: string) => {
               if (!simulatedResults) return { homeId: "", awayId: "" };
               if (mId.startsWith("R32_")) {
-                const startMatch = STARTING_R32_MATCHES.find(m => m.id === mId);
+                const startMatch = dynamicR32Matches.find(m => m.id === mId);
                 return { homeId: startMatch?.homeId || "", awayId: startMatch?.awayId || "" };
               }
               const simState = computeBracketState(simulatedResults);
@@ -1158,8 +1384,8 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
   };
 
   const renderBracketTree = () => {
-    const r32Left = STARTING_R32_MATCHES.filter(m => m.id.includes("_L"));
-    const r32Right = STARTING_R32_MATCHES.filter(m => m.id.includes("_R"));
+    const r32Left = dynamicR32Matches.filter(m => m.id.includes("_L"));
+    const r32Right = dynamicR32Matches.filter(m => m.id.includes("_R"));
 
     const r16Left = bracketState.r16Matches.filter(m => m.id.includes("_L"));
     const r16Right = bracketState.r16Matches.filter(m => m.id.includes("_R"));
@@ -1193,6 +1419,19 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
             </div>
           </div>
         )}
+
+        {/* Info banner for dynamic qualifications */}
+        <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3 flex items-start gap-2.5 shadow-2xs">
+          <Sparkles className="w-4 h-4 text-emerald-600 mt-0.5 shrink-0 animate-pulse" />
+          <div className="text-left">
+            <span className="text-[10px] font-black text-slate-800 uppercase tracking-wide block mb-0.5">
+              🏆 Qualifications Dynamiques & Officielles (1/16 de finale)
+            </span>
+            <p className="text-[9.5px] text-slate-600 leading-relaxed font-medium">
+              Afin de garantir l'équité et le réalisme, seules les équipes de la phase de groupes dont la qualification est <strong className="text-emerald-700 font-bold">officiellement et mathématiquement confirmée</strong> par les résultats réels de l'API sont affichées dans les emplacements du tableau. Les équipes non encore assurées de se qualifier restent masquées sous la mention <span className="italic text-amber-600 font-bold">"À déterminer"</span> jusqu'à ce que leurs derniers matchs soient joués.
+            </p>
+          </div>
+        </div>
 
         {/* Phase navigation timeline */}
         <div className="flex bg-gray-100 rounded-xl p-1 overflow-x-auto scrollbar-none snap-x border border-gray-200 shadow-inner">
