@@ -839,11 +839,16 @@ export default function ChallengesView({
   useEffect(() => {
     setVisibleMatchesCount(4);
     setActiveTooltipId(null);
+    const targetChallenge = selectedChallenge || (activeModal && activeModal.type === "details" ? activeModal.challenge : null);
+    
+    // Immediately clear previous matches and show loader when switching challenges
+    if (targetChallenge) {
+      setModalMatches([]);
+      setLoadingModalMatches(true);
+    }
+
     const fetchMatches = async () => {
-      const targetChallenge = selectedChallenge || (activeModal && activeModal.type === "details" ? activeModal.challenge : null);
       if (targetChallenge && targetChallenge.competitionId) {
-        // Only show loading indicator on first fetch
-        // setLoadingModalMatches(true); // Commented to prevent UI flicker on polls
         setModalMatchesError(null);
         try {
           const res = await fetch(`/api/matches/${targetChallenge.competitionId}`);
@@ -867,6 +872,7 @@ export default function ChallengesView({
       } else {
         setModalMatches([]);
         setModalMatchesError(null);
+        setLoadingModalMatches(false);
       }
     };
 

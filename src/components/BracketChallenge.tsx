@@ -131,12 +131,14 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
             setPicks(createEmptyBracketPredictions());
           }
         }
-        await loadParticipants();
       } catch (err) {
         console.error("Error initializing bracket picks:", err);
       } finally {
         setLoading(false);
       }
+      
+      // Load participants without blocking the UI
+      loadParticipants();
     };
 
     loadData();
