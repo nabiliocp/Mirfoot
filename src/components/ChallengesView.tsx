@@ -1279,6 +1279,15 @@ export default function ChallengesView({
         .select();
 
       if (!error && data) {
+        // Auto-join the challenge for the creator so they are listed as a participant
+        await supabase
+          .from("challenge_invitations")
+          .insert({
+            challenge_id: data[0].id,
+            user_id: currentUserId,
+            accepted: true,
+          });
+
         const newCard: Challenge = {
           id: data[0].id,
           competitionId: data[0].competition_id,
@@ -1383,6 +1392,15 @@ export default function ChallengesView({
       .select();
 
     if (!error && data) {
+      // Auto-join the challenge for the creator so they are listed as a participant
+      await supabase
+        .from("challenge_invitations")
+        .insert({
+          challenge_id: data[0].id,
+          user_id: currentUserId,
+          accepted: true,
+        });
+
       const newCard: Challenge = {
         id: data[0].id,
         competitionId: data[0].competition_id,

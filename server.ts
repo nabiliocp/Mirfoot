@@ -1591,10 +1591,24 @@ async function startServer() {
         console.error("Error fetching invitations for challenge:", invitesError);
       }
 
+      // 1c. Fetch challenge creator to ensure they are always included in the participant list
+      const { data: challenge, error: challengeError } = await supabase
+        .from("challenges")
+        .select("creator_id")
+        .eq("id", challengeId)
+        .maybeSingle();
+
+      if (challengeError) {
+        console.error("Error fetching challenge creator:", challengeError);
+      }
+
       // Combine user IDs
       const allUserIds = new Set<string>();
       if (bets) bets.forEach(b => { if (b.user_id) allUserIds.add(b.user_id); });
       if (invites) invites.forEach(i => { if (i.user_id) allUserIds.add(i.user_id); });
+      if (challenge && challenge.creator_id) {
+        allUserIds.add(challenge.creator_id);
+      }
 
       const userIds = Array.from(allUserIds).filter(id => id && typeof id === "string" && id.trim() !== "");
       let profiles: any[] = [];
