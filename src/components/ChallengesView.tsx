@@ -4353,7 +4353,9 @@ export default function ChallengesView({
                 <p className="text-center py-12 text-gray-400 text-sm italic">Aucune information de match disponible.</p>
               ) : (
                 <div className="space-y-4 max-h-[550px] overflow-y-auto pr-1">
-                  {activeMatches.map(m => {
+                  {[...activeMatches]
+                    .sort((a, b) => new Date(b.utcDate).getTime() - new Date(a.utcDate).getTime())
+                    .map(m => {
                     const isFinished = m.status === "FINISHED";
                     const isLive = ["IN_PLAY", "LIVE", "PAUSED"].includes(m.status);
                     return (

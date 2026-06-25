@@ -41,12 +41,83 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
   const [activeSubTab, setActiveSubTab] = useState<"myBracket" | "leaderboard">("myBracket");
 
   // Test mode options
-  const [testMode, setTestMode] = useState(false);
-  const [activeSimulationTab, setActiveSimulationTab] = useState<"picks" | "simulation">("picks");
-  const [simulatedResults, setSimulatedResults] = useState<BracketPredictions | null>(null);
+  const [testMode, setTestMode] = useState<boolean>(() => {
+    const saved = localStorage.getItem(`bracket_test_mode_${challenge.id}`);
+    if (saved !== null) {
+      return saved === "true";
+    }
+    return isSimulationMode;
+  });
+  const [activeSimulationTab, setActiveSimulationTab] = useState<"picks" | "simulation">(() => {
+    return (localStorage.getItem(`bracket_active_sim_tab_${challenge.id}`) as "picks" | "simulation") || "picks";
+  });
+  const [simulatedResults, setSimulatedResults] = useState<BracketPredictions | null>(() => {
+    const saved = localStorage.getItem(`bracket_simulated_results_${challenge.id}`);
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    return null;
+  });
   const [seeding, setSeeding] = useState(false);
   const [forceLockMatches, setForceLockMatches] = useState(false);
-  const [isSimulationPanelExpanded, setIsSimulationPanelExpanded] = useState(true);
+  const [isSimulationPanelExpanded, setIsSimulationPanelExpanded] = useState<boolean>(() => {
+    const saved = localStorage.getItem(`bracket_sim_expanded_${challenge.id}`);
+    return saved !== null ? saved === "true" : true;
+  });
+
+  // State update helpers with localStorage persistence
+  const updateTestMode = (val: boolean) => {
+    setTestMode(val);
+    localStorage.setItem(`bracket_test_mode_${challenge.id}`, String(val));
+    if (val) {
+      const savedSim = localStorage.getItem(`bracket_simulated_results_${challenge.id}`);
+      if (savedSim) {
+        try {
+          setSimulatedResults(JSON.parse(savedSim));
+        } catch (e) {
+          const empty = createEmptyBracketPredictions();
+          setSimulatedResults(empty);
+          localStorage.setItem(`bracket_simulated_results_${challenge.id}`, JSON.stringify(empty));
+        }
+      } else {
+        const actual = typeof challenge.pointRules === "string"
+          ? JSON.parse(challenge.pointRules)
+          : (challenge.pointRules || {});
+        const results = actual.actualBracketPicks || createEmptyBracketPredictions();
+        setSimulatedResults(results);
+        localStorage.setItem(`bracket_simulated_results_${challenge.id}`, JSON.stringify(results));
+      }
+    } else {
+      setSimulatedResults(null);
+    }
+  };
+
+  const updateSimulatedResults = (res: BracketPredictions | null) => {
+    setSimulatedResults(res);
+    if (res) {
+      localStorage.setItem(`bracket_simulated_results_${challenge.id}`, JSON.stringify(res));
+    } else {
+      localStorage.removeItem(`bracket_simulated_results_${challenge.id}`);
+    }
+  };
+
+  const updateActiveSimulationTab = (tab: "picks" | "simulation") => {
+    setActiveSimulationTab(tab);
+    localStorage.setItem(`bracket_active_sim_tab_${challenge.id}`, tab);
+  };
+
+  const updateSimulationPanelExpanded = (expanded: boolean) => {
+    setIsSimulationPanelExpanded(expanded);
+    localStorage.setItem(`bracket_sim_expanded_${challenge.id}`, String(expanded));
+  };
+
+  const handleToggleTestMode = () => {
+    updateTestMode(!testMode);
+  };
 
   // Phase timeline state
   const [currentPhase, setCurrentPhase] = useState<"r32" | "r16" | "r8" | "r4" | "r2" | "winner">("r32");
@@ -54,23 +125,9 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
   // Synchronize with parent app's simulation mode state
   useEffect(() => {
     if (isSimulationMode) {
-      setTestMode(true);
-    } else {
-      setTestMode(false);
+      updateTestMode(true);
     }
   }, [isSimulationMode]);
-
-  // Handle local simulatedResults state lifecycle
-  useEffect(() => {
-    if (testMode) {
-      const actual = typeof challenge.pointRules === "string"
-        ? JSON.parse(challenge.pointRules)
-        : (challenge.pointRules || {});
-      setSimulatedResults(actual.actualBracketPicks || createEmptyBracketPredictions());
-    } else {
-      setSimulatedResults(null);
-    }
-  }, [testMode, challenge.pointRules]);
 
   // Drag-to-scroll implementation for full-size view on both desktop/laptop and mobile (kept to avoid removing refs)
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -285,7 +342,7 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
     }
 
     if (testMode && activeSimulationTab === "simulation") {
-      setSimulatedResults(updatedPicks);
+      updateSimulatedResults(updatedPicks);
     } else {
       setPicks(updatedPicks);
     }
@@ -377,13 +434,9 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
 
   const handleSimulatePhase = (phase: "all" | "r32" | "r16" | "r8" | "r4" | "r2") => {
     try {
-      const targetPicks = JSON.parse(
-        JSON.stringify(
-          (testMode && activeSimulationTab === "simulation" && simulatedResults)
-            ? simulatedResults
-            : (activeSimulationTab === "simulation" ? (simulatedResults || createEmptyBracketPredictions()) : picks)
-        )
-      );
+      // We always simulate results into simulatedResults (mock real outcomes)
+      const currentSim = simulatedResults || createEmptyBracketPredictions();
+      const targetPicks = JSON.parse(JSON.stringify(currentSim));
 
       const r32Mapping: Record<string, string> = {
         R32_L1: "R16_L1_H", R32_L2: "R16_L1_A", R32_L3: "R16_L2_H", R32_L4: "R16_L2_A",
@@ -507,12 +560,7 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
         targetPicks.winner = pickRandom(home, away);
       }
 
-      const isSim = (testMode && activeSimulationTab === "simulation");
-      if (isSim) {
-        setSimulatedResults(targetPicks);
-      } else {
-        setPicks(targetPicks);
-      }
+      updateSimulatedResults(targetPicks);
 
       let phaseLabel = "";
       if (phase === "all") phaseLabel = "Toutes les phases";
@@ -524,7 +572,7 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
 
       setMessage({
         type: "success",
-        text: `⚡ Résultats factis de [${phaseLabel}] générés avec succès pour [${isSim ? "Résultats Réels Simulés" : "Mes Pronostics"}]. N'oubliez pas de sauvegarder.`
+        text: `⚡ Résultats factices de [${phaseLabel}] générés avec succès pour les Résultats Réels Simulés. Vous pouvez voir l'évolution de votre score en direct !`
       });
     } catch (err: any) {
       console.error(err);
@@ -1094,7 +1142,7 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
         </div>
         <button
           type="button"
-          onClick={() => setTestMode(!testMode)}
+          onClick={handleToggleTestMode}
           className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${
             testMode 
               ? "bg-amber-600 text-white hover:bg-amber-700" 
@@ -1113,7 +1161,7 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
             </h4>
             <button
               type="button"
-              onClick={() => setIsSimulationPanelExpanded(!isSimulationPanelExpanded)}
+              onClick={() => updateSimulationPanelExpanded(!isSimulationPanelExpanded)}
               className="bg-amber-100 hover:bg-amber-200 text-amber-950 font-black text-[10px] px-2.5 py-1 rounded-lg transition"
             >
               {isSimulationPanelExpanded ? "[- Réduire]" : "[+ Déplier]"}
@@ -1185,7 +1233,7 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
                   <button
                     type="button"
                     onClick={() => {
-                      setActiveSimulationTab("picks");
+                      updateActiveSimulationTab("picks");
                       setSelectedParticipant(null);
                       setActiveSubTab("myBracket");
                     }}
@@ -1200,11 +1248,11 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
                   <button
                     type="button"
                     onClick={() => {
-                      setActiveSimulationTab("simulation");
+                      updateActiveSimulationTab("simulation");
                       setSelectedParticipant(null);
                       setActiveSubTab("myBracket");
                       if (!simulatedResults) {
-                        setSimulatedResults(createEmptyBracketPredictions());
+                        updateSimulatedResults(createEmptyBracketPredictions());
                       }
                     }}
                     className={`px-3 py-1.5 rounded-lg text-xs font-black transition cursor-pointer ${
