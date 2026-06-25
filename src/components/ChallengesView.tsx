@@ -2728,7 +2728,7 @@ export default function ChallengesView({
     const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareText)}`;
 
     // Authorized check and limited matches definition for test simulation
-    const isAuthorizedForSimulation = userEmail === "rouijel.nabil@gmail.com" || userEmail === "rouijel.nabil.cp@gmail.com";
+    const isAuthorizedForSimulation = challenge.creatorId === userId || userEmail === "rouijel.nabil@gmail.com" || userEmail === "rouijel.nabil.cp@gmail.com";
     
     // Filter proposed matches in test mode configuration: future or in-progress, and with known teams (not TBD)
     const testProposedMatchesRaw = modalMatches.filter(m => {
@@ -3594,6 +3594,7 @@ export default function ChallengesView({
 
                   const renderMatchCard = (m: Match) => {
                     const challengeId = challenge.id;
+                    const isAuthorizedForSimulation = challenge.creatorId === userId || userEmail === "rouijel.nabil@gmail.com" || userEmail === "rouijel.nabil.cp@gmail.com";
                     const userPredMap = userPredictions[challengeId]?.matches || {};
                     const userPredMatch = userPredMap[m.id];
                     
@@ -4774,9 +4775,15 @@ export default function ChallengesView({
                           </div>
 
                           {challenge.locked && (
-                            <div className="flex items-center gap-1 text-amber-600 text-xs font-bold uppercase tracking-wider mb-2 mt-2 border border-amber-200/50 bg-amber-50 rounded-lg p-2 w-max ml-2">
-                              <Lock className="w-3 h-3" /> Paris verrouillés
-                            </div>
+                            userPredictions[challenge.id] ? (
+                              <div className="flex items-center gap-1 text-emerald-700 text-xs font-bold uppercase tracking-wider mb-2 mt-2 border border-emerald-200/50 bg-emerald-50 rounded-lg p-2 w-max ml-2 shadow-3xs animate-in fade-in duration-300">
+                                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" /> Prono validé
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-1 text-amber-600 text-xs font-bold uppercase tracking-wider mb-2 mt-2 border border-amber-200/50 bg-amber-50 rounded-lg p-2 w-max ml-2 shadow-3xs">
+                                <Lock className="w-3 h-3" /> Paris verrouillés
+                              </div>
+                            )
                           )}
                         </div>
                       );
