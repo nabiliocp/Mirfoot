@@ -334,7 +334,7 @@ async function updateActiveCompetitionsCache() {
     const { data: challenges, error } = await supabase
       .from("challenges")
       .select("competition_id")
-      .neq("status", "resolved");
+      .eq("resolved", false);
 
     if (error) {
       console.error("[Background Sync] Error fetching active challenges:", error);
