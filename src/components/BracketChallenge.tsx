@@ -1187,15 +1187,24 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
       }
     }
 
+    if (!teamA || !teamB || teamAId === "" || teamBId === "") {
+      isSelectedA = false;
+      isSelectedB = false;
+    }
+
     const locked = mode === "prediction" && isMatchLocked(matchId);
 
     return (
       <div className="bg-white border border-gray-150 rounded-2xl p-3 shadow-xs hover:shadow-md transition-all duration-300 relative overflow-hidden">
-        {locked && (
+        {locked ? (
           <div className="absolute top-1.5 right-2 flex items-center gap-1 text-[9px] bg-red-50 text-red-600 font-bold px-1.5 py-0.5 rounded-full border border-red-100">
             <Lock className="w-2.5 h-2.5" /> Clôturé
           </div>
-        )}
+        ) : (!teamA || !teamB) ? (
+          <div className="absolute top-1.5 right-2 flex items-center gap-1 text-[9px] bg-slate-100 text-slate-500 font-bold px-1.5 py-0.5 rounded-full border border-slate-200">
+            <Lock className="w-2.5 h-2.5" /> Verrouillé
+          </div>
+        ) : null}
         
         <div className="space-y-1.5 mt-1">
           {/* Team A */}
@@ -1332,8 +1341,8 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
     const isStarted = isMatchLocked(matchId);
     const locked = mode === "prediction" && (isStarted || isViewingOther);
 
-    const isWinnerA = winnerId === teamAId && teamAId !== "";
-    const isWinnerB = winnerId === teamBId && teamBId !== "";
+    const isWinnerA = teamAId !== "" && teamBId !== "" && winnerId === teamAId;
+    const isWinnerB = teamAId !== "" && teamBId !== "" && winnerId === teamBId;
 
     // Mask predictions for other players if match has NOT started yet
     const maskPrediction = isViewingOther && !isStarted;
