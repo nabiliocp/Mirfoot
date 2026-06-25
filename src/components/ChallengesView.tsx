@@ -990,20 +990,27 @@ export default function ChallengesView({
       (a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
     );
     
-    // Bets and profiles as before
-    const [betsRes, profilesRes] = await Promise.all([
+    // Fetch user's own bets and their own profile instead of fetching all profiles
+    const [betsRes, profileRes] = await Promise.all([
       supabase.from("bets").select("*").eq("user_id", user.id),
-      supabase.from("profiles").select("*"),
+      supabase.from("profiles").select("id, username, avatar_type, avatar_value, points").eq("id", user.id).maybeSingle(),
     ]);
 
-    const profileMap: Record<string, string> = {};
-    if (profilesRes.data) {
-      setAllProfiles(profilesRes.data);
-      profilesRes.data.forEach((p: any) => {
-        profileMap[p.id] = p.username;
-        if (p.id === user.id) {
-          setCurrentUsername(p.username);
+    if (profileRes.data) {
+      setCurrentUsername(profileRes.data.username);
+      // Ensure the user's profile is in allProfiles so they are recognized
+      setAllProfiles(prev => {
+        const next = [...prev];
+        if (!next.some(p => p.id === user.id)) {
+          next.push({
+            id: user.id,
+            username: profileRes.data.username,
+            avatar_type: profileRes.data.avatar_type,
+            avatar_value: profileRes.data.avatar_value,
+            points: profileRes.data.points
+          });
         }
+        return next;
       });
     }
 
@@ -1016,7 +1023,7 @@ export default function ChallengesView({
         matchAwayTeam: c.match_away_team,
         matchDate: c.match_date,
         creatorId: c.creator_id,
-        creatorUsername: profileMap[c.creator_id] || "Inconnu",
+        creatorUsername: c.creator_username || "Inconnu",
         title: c.title,
         rules: c.rules,
         code: c.rules || c.id.substring(0, 8).toUpperCase(),

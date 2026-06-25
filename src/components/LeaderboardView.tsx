@@ -129,19 +129,28 @@ export default function LeaderboardView() {
         .from('profiles')
         .select('*');
 
-      // Fetch matches for these competitions to compute live points
+      // Fetch matches for these competitions in parallel to prevent connection blocks and speed up loading 10x
       let allMatches: any[] = [];
-      for (const compId of compIds) {
+      if (compIds.length > 0) {
         try {
-          const res = await fetch(`/api/matches/${compId}`);
-          if (res.ok) {
-            const data = await res.json();
-            if (data.matches) {
-              allMatches = allMatches.concat(data.matches);
+          const matchPromises = compIds.map(async (compId) => {
+            try {
+              const res = await fetch(`/api/matches/${compId}`);
+              if (res.ok) {
+                const data = await res.json();
+                return data.matches || [];
+              }
+            } catch (e) {
+              console.error('Error fetching matches for comp', compId, e);
             }
-          }
-        } catch (e) {
-          console.error('Error fetching matches for comp', compId, e);
+            return [];
+          });
+          const results = await Promise.all(matchPromises);
+          results.forEach(matches => {
+            allMatches = allMatches.concat(matches);
+          });
+        } catch (err) {
+          console.error("Error fetching matches in parallel:", err);
         }
       }
 

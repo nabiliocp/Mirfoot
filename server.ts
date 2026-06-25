@@ -1833,10 +1833,54 @@ async function startServer() {
       }
 
       const challengesList = Object.values(allUniqueChallengesMap);
+      
+      // Fetch creator usernames for these challenges to enrich them
+      const creatorIds = Array.from(new Set(challengesList.map((c: any) => c.creator_id).filter(Boolean)));
+      const creatorsMap: Record<string, string> = {};
+      
+      if (creatorIds.length > 0) {
+        const now = Date.now();
+        const missingCreatorIds = creatorIds.filter(id => {
+          const cached = profilesCache[id];
+          return !cached || (now - cached.timestamp > PROFILES_CACHE_TTL);
+        });
+
+        if (missingCreatorIds.length > 0) {
+          const { data: profs } = await supabase
+            .from("profiles")
+            .select("id, username")
+            .in("id", missingCreatorIds);
+          if (profs) {
+            profs.forEach(p => {
+              profilesCache[p.id] = { data: p, timestamp: now };
+            });
+            missingCreatorIds.forEach(id => {
+              if (!profilesCache[id]) {
+                profilesCache[id] = { data: null, timestamp: now };
+              }
+            });
+          }
+        }
+
+        creatorIds.forEach(id => {
+          const cached = profilesCache[id];
+          if (cached && cached.data) {
+            creatorsMap[id] = cached.data.username || "Joueur Anonyme";
+          } else {
+            creatorsMap[id] = "Joueur Anonyme";
+          }
+        });
+      }
+
+      const enrichedChallenges = challengesList.map((c: any) => ({
+        ...c,
+        creator_username: creatorsMap[c.creator_id] || "Joueur Anonyme"
+      }));
+
       console.log(
-        `Successfully combined ${challengesList.length} unique challenges for user ${userId}`,
+        `Successfully combined and enriched ${enrichedChallenges.length} unique challenges for user ${userId}`,
       );
-      return res.json({ challenges: challengesList });
+      return res.json({ challenges: enrichedChallenges });
     } catch (err: any) {
       console.error("CRITICAL error in challenges user endpoint:", err);
       return res.status(500).json({
