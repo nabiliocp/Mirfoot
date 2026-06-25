@@ -724,10 +724,9 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
         </div>
 
         {/* Phase content */}
-        <div className="bg-white border border-gray-200 rounded-3xl p-4 md:p-6 shadow-xs relative overflow-hidden min-h-[400px]">
-          <div className="absolute inset-0 bg-[radial-gradient(#e2e8f0_1.5px,transparent_1.5px)] [background-size:24px_24px] bg-slate-50/40 pointer-events-none rounded-3xl"></div>
+        <div className="relative overflow-hidden min-h-[400px]">
           
-          <div className="relative z-10 flex flex-col md:flex-row gap-6 md:gap-12">
+          <div className="relative z-10 flex flex-row gap-2 md:gap-12 justify-center">
             
             {currentPhase === "r32" && (
               <>

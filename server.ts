@@ -495,6 +495,10 @@ async function startServer() {
         if (!response.ok) throw new Error(`API Error status ${response.status}`);
         const data = await response.json();
 
+        if (data.errorCode || data.message || !data.matches) {
+          throw new Error(`API error or missing matches: ${data.errorCode || data.message}`);
+        }
+
         if (friendlyMatches.length > 0 && data && Array.isArray(data.matches)) {
           data.matches = [...data.matches, ...friendlyMatches];
         }
@@ -722,8 +726,8 @@ async function startServer() {
             .map(translateApiFootballMatchToFootballData)
             .filter(Boolean);
 
-          if (mappedMatches.length === 0 && fdCompId === 2000) {
-            throw new Error("No matches returned from API-Football for World Cup");
+          if (mappedMatches.length === 0) {
+            throw new Error(`No matches returned from API-Football for competition ${fdCompId}`);
           }
 
           const cachedResult = { matches: mappedMatches };
@@ -762,6 +766,15 @@ async function startServer() {
 
         if (!response.ok) throw new Error(`API Error status ${response.status}`);
         const data = await response.json();
+
+        if (data.errorCode || data.message || !data.matches) {
+          throw new Error(`API error or missing matches: ${data.errorCode || data.message}`);
+        }
+        // Additional sanity check: if the API somehow returned 0 matches but we expected a full competition,
+        // we might want to throw to trigger fallback.
+        if (Array.isArray(data.matches) && data.matches.length === 0) {
+           throw new Error(`API returned 0 matches for competition ${fdCompId}, triggering fallback`);
+        }
 
         apiCache[cacheKey] = { data, timestamp: now };
         savePersistentCache(cacheKey, data);
