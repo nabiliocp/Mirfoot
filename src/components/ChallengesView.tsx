@@ -364,6 +364,7 @@ export default function ChallengesView({
   const [isSimPanelCollapsed, setIsSimPanelCollapsed] = useState(false);
   const [simulatedScores, setSimulatedScores] = useState<Record<number, { home: number; away: number; status: string }>>({});
   const [userEmail, setUserEmail] = useState<string | null>(null);
+  const isAdmin = userEmail === "rouijel.nabil@gmail.com" || userEmail === "rouijel.nabil.cp@gmail.com";
 
   // Cloud sync states - prevent updating state while loading initial metadata values from cloud
   const [loadingCloudSim, setLoadingCloudSim] = useState(true);
@@ -434,6 +435,7 @@ export default function ChallengesView({
   const [editPointRules, setEditPointRules] = useState<PointRules | null>(null);
   const [updatingChallenge, setUpdatingChallenge] = useState(false);
   const [deletingChallenge, setDeletingChallenge] = useState(false);
+  const [kickingUserId, setKickingUserId] = useState<string | null>(null);
 
   const ruleLabels: Record<string, string> = {
     exact_score: "Score Exact",
@@ -1434,6 +1436,41 @@ export default function ChallengesView({
       alert("Erreur réseau: " + err.message);
     } finally {
       setDeletingChallenge(false);
+    }
+  };
+
+  const performKick = async (targetUserId: string, targetUsername: string) => {
+    if (!supabase || !userId || !selectedChallenge) return;
+    
+    if (!window.confirm(`Êtes-vous sûr de vouloir retirer ${targetUsername} de ce défi ? Ses pronostics seront également supprimés.`)) {
+      return;
+    }
+
+    setKickingUserId(targetUserId);
+    try {
+      const response = await fetch(`/api/challenges/${selectedChallenge.id}/kick`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          userId,
+          targetUserId
+        })
+      });
+
+      const data = await response.json();
+      if (response.ok && data.success) {
+        // Refresh local details and list
+        await loadChallengeData(selectedChallenge.id);
+        await loadData();
+      } else {
+        alert("Erreur: " + (data.error || "Impossible de retirer le participant"));
+      }
+    } catch (err: any) {
+      alert("Erreur réseau: " + err.message);
+    } finally {
+      setKickingUserId(null);
     }
   };
 
@@ -2981,12 +3018,12 @@ export default function ChallengesView({
               </div>
               <div className="flex items-center gap-2 flex-wrap">
                 <h2 className="text-2xl font-black tracking-tight capitalize">{challenge.title}</h2>
-                {challenge.creatorId === userId && (
+                {(challenge.creatorId === userId || isAdmin) && (
                   <button
                     type="button"
                     onClick={() => setActiveModal({ type: 'edit', challenge })}
                     className="p-1.5 text-emerald-100 hover:text-white hover:bg-white/10 rounded-xl transition-all cursor-pointer active:scale-90 flex items-center justify-center border border-white/5 shadow-sm"
-                    title="Modifier mon défi"
+                    title="Modifier le défi"
                   >
                     <Edit2 className="w-4 h-4" />
                   </button>
@@ -4142,16 +4179,16 @@ export default function ChallengesView({
                 <p className="text-center py-12 text-gray-400 text-sm italic">Aucun participant n'a encore rejoint ce défi.</p>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {participants.map(userId => {
-                    const profile = allProfiles.find(p => p.id === userId) || { username: "Joueur", first_name: "", last_name: "", points: 0, avatar_type: "emoji", avatar_value: "⚽" };
-                    const challengePlayer = leaderboard.find(l => l.userId === userId);
+                  {participants.map(participantId => {
+                    const profile = allProfiles.find(p => p.id === participantId) || { id: participantId, username: "Joueur", first_name: "", last_name: "", points: 0, avatar_type: "emoji", avatar_value: "⚽" };
+                    const challengePlayer = leaderboard.find(l => l.userId === participantId);
                     const challengePts = challengePlayer ? challengePlayer.points : 0;
                     return (
-                      <div key={userId} className="bg-gray-50/50 p-3 rounded-xl border border-gray-100 flex items-center gap-3 relative overflow-hidden">
+                      <div key={participantId} className="bg-gray-50/50 p-3 rounded-xl border border-gray-100 flex items-center gap-3 relative overflow-hidden">
                         <div className="w-9 h-9 flex items-center justify-center bg-white border border-gray-100 rounded-lg text-lg shrink-0">
                           {profile.avatar_type === "emoji" ? profile.avatar_value : "⚽"}
                         </div>
-                        <div className="min-w-0 flex-1">
+                        <div className="min-w-0 flex-1 pr-12">
                           <span className="block font-bold text-xs text-gray-800 truncate">{profile.username}</span>
                           <div className="flex flex-col gap-0.5 mt-0.5">
                             <span className="block text-[10px] text-emerald-600 font-extrabold truncate">
@@ -4182,57 +4219,76 @@ export default function ChallengesView({
                             )}
                           </div>
                         </div>
-                        {(() => {
-                          const pBet = challengeBets.find(b => b.user_id === userId);
-                          if (challenge.type === "bracket") {
-                            const pPicks = pBet?.predictions || {};
-                            const r16C = Object.keys(pPicks.r16 || {}).filter(k => pPicks.r16[k]).length;
-                            const r8C = Object.keys(pPicks.r8 || {}).filter(k => pPicks.r8[k]).length;
-                            const r4C = Object.keys(pPicks.r4 || {}).filter(k => pPicks.r4[k]).length;
-                            const r2C = Object.keys(pPicks.r2 || {}).filter(k => pPicks.r2[k]).length;
-                            const winC = pPicks.winner ? 1 : 0;
-                            const totalC = r16C + r8C + r4C + r2C + winC;
-                            
-                            if (totalC === 31) {
-                              return (
-                                <span className="text-[9px] bg-pink-100 text-pink-800 font-extrabold px-2 py-0.5 rounded-full uppercase shrink-0">
-                                  Prêt (31/31)
-                                </span>
-                              );
-                            } else if (totalC > 0) {
-                              return (
-                                <span className="text-[9px] bg-amber-100 text-amber-800 font-extrabold px-2 py-0.5 rounded-full uppercase shrink-0 animate-pulse">
-                                  En cours ({totalC}/31)
-                                </span>
-                              );
+                        <div className="flex items-center gap-2">
+                          {(() => {
+                            const pBet = challengeBets.find(b => b.user_id === participantId);
+                            if (challenge.type === "bracket") {
+                              const pPicks = pBet?.predictions || {};
+                              const r16C = Object.keys(pPicks.r16 || {}).filter(k => pPicks.r16[k]).length;
+                              const r8C = Object.keys(pPicks.r8 || {}).filter(k => pPicks.r8[k]).length;
+                              const r4C = Object.keys(pPicks.r4 || {}).filter(k => pPicks.r4[k]).length;
+                              const r2C = Object.keys(pPicks.r2 || {}).filter(k => pPicks.r2[k]).length;
+                              const winC = pPicks.winner ? 1 : 0;
+                              const totalC = r16C + r8C + r4C + r2C + winC;
+                              
+                              if (totalC === 31) {
+                                return (
+                                  <span className="text-[9px] bg-pink-100 text-pink-800 font-extrabold px-2 py-0.5 rounded-full uppercase shrink-0">
+                                    Prêt (31/31)
+                                  </span>
+                                );
+                              } else if (totalC > 0) {
+                                return (
+                                  <span className="text-[9px] bg-amber-100 text-amber-800 font-extrabold px-2 py-0.5 rounded-full uppercase shrink-0 animate-pulse">
+                                    En cours ({totalC}/31)
+                                  </span>
+                                );
+                              } else {
+                                return (
+                                  <span className="text-[9px] bg-gray-100 text-gray-500 font-extrabold px-2 py-0.5 rounded-full uppercase shrink-0">
+                                    Non rempli
+                                  </span>
+                                );
+                              }
                             } else {
-                              return (
-                                <span className="text-[9px] bg-gray-100 text-gray-500 font-extrabold px-2 py-0.5 rounded-full uppercase shrink-0">
-                                  Non rempli
-                                </span>
+                              // Standard match challenge
+                              const hasPicks = pBet && pBet.predictions && (
+                                (pBet.predictions.homeScore !== undefined) || 
+                                (pBet.predictions.matches && Object.keys(pBet.predictions.matches).length > 0)
                               );
+                              if (hasPicks) {
+                                return (
+                                  <span className="text-[9px] bg-emerald-100 text-emerald-800 font-extrabold px-2 py-0.5 rounded-full uppercase shrink-0">
+                                    A parié
+                                  </span>
+                                );
+                              } else {
+                                return (
+                                  <span className="text-[9px] bg-amber-50 text-amber-700 font-extrabold px-2 py-0.5 rounded-full uppercase shrink-0">
+                                    En attente
+                                  </span>
+                                );
+                              }
                             }
-                          } else {
-                            // Standard match challenge
-                            const hasPicks = pBet && pBet.predictions && (
-                              (pBet.predictions.homeScore !== undefined) || 
-                              (pBet.predictions.matches && Object.keys(pBet.predictions.matches).length > 0)
-                            );
-                            if (hasPicks) {
-                              return (
-                                <span className="text-[9px] bg-emerald-100 text-emerald-800 font-extrabold px-2 py-0.5 rounded-full uppercase shrink-0">
-                                  A parié
-                                </span>
-                              );
-                            } else {
-                              return (
-                                <span className="text-[9px] bg-amber-50 text-amber-700 font-extrabold px-2 py-0.5 rounded-full uppercase shrink-0">
-                                  En attente
-                                </span>
-                              );
-                            }
-                          }
-                        })()}
+                          })()}
+
+                          {/* Action de retrait pour le créateur ou administrateur */}
+                          {(challenge.creatorId === userId || isAdmin) && userId !== participantId && (
+                            <button
+                              type="button"
+                              onClick={() => performKick(participantId, profile.username)}
+                              disabled={kickingUserId === participantId}
+                              className="text-gray-400 hover:text-red-500 hover:bg-red-50 p-1.5 rounded-lg transition-all cursor-pointer active:scale-95 shrink-0"
+                              title="Retirer ce participant du défi"
+                            >
+                              {kickingUserId === participantId ? (
+                                <div className="w-3.5 h-3.5 border-2 border-red-500 border-t-transparent rounded-full animate-spin"></div>
+                              ) : (
+                                <Trash2 className="w-3.5 h-3.5" />
+                              )}
+                            </button>
+                          )}
+                        </div>
                       </div>
                     );
                   })}
@@ -5130,7 +5186,7 @@ export default function ChallengesView({
                       return isPast || isLiveOrFinished;
                     });
                     const hasCompetitionStarted = activeModal.challenge.matchId !== 0 ? isMatchStarted : isCompStarted;
-                    const canDelete = !hasCompetitionStarted;
+                    const canDelete = !hasCompetitionStarted || isAdmin;
 
                     return (
                       <form onSubmit={handleUpdateChallenge} className="space-y-4 text-left">

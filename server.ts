@@ -1571,7 +1571,7 @@ async function startServer() {
           .json({ error: "challengeId et userId sont requis." });
       }
 
-      // 1. Verify ownership
+      // 1. Verify ownership or admin access
       const { data: challenge, error: challengeError } = await supabase
         .from("challenges")
         .select("creator_id")
@@ -1584,7 +1584,23 @@ async function startServer() {
           .json({ error: "Erreur lors de la vérification du défi." });
       }
 
-      if (!challenge || challenge.creator_id !== userId) {
+      let userEmail = "";
+      try {
+        const { data: userData } = await supabase.auth.admin.getUserById(String(userId));
+        if (userData && userData.user) {
+          userEmail = userData.user.email || "";
+        }
+      } catch (e) {
+        console.error("Error fetching user email from auth admin:", e);
+      }
+
+      const allowedEmails = [
+        "rouijel.nabil@gmail.com",
+        "rouijel.nabil.cp@gmail.com",
+      ];
+      const isAdmin = userEmail && allowedEmails.includes(userEmail.toLowerCase());
+
+      if (!challenge || (challenge.creator_id !== userId && !isAdmin)) {
         return res
           .status(403)
           .json({
@@ -1860,6 +1876,89 @@ async function startServer() {
       res
         .status(500)
         .json({ error: "Erreur interne du serveur: " + err.message });
+    }
+  });
+
+  // Kick a participant from a challenge (Admin or Creator only)
+  app.post("/api/challenges/:challengeId/kick", async (req, res) => {
+    if (!supabase)
+      return res
+        .status(500)
+        .json({ error: "Configuration Supabase manquante." });
+    try {
+      const { challengeId } = req.params;
+      const { userId, targetUserId } = req.body;
+
+      if (!challengeId || !userId || !targetUserId) {
+        return res
+          .status(400)
+          .json({ error: "challengeId, userId, et targetUserId sont requis." });
+      }
+
+      // 1. Verify ownership or admin access
+      const { data: challenge, error: challengeError } = await supabase
+        .from("challenges")
+        .select("creator_id")
+        .eq("id", challengeId)
+        .single();
+
+      if (challengeError) {
+        return res
+          .status(500)
+          .json({ error: "Erreur lors de la vérification du défi." });
+      }
+
+      let userEmail = "";
+      try {
+        const { data: userData } = await supabase.auth.admin.getUserById(String(userId));
+        if (userData && userData.user) {
+          userEmail = userData.user.email || "";
+        }
+      } catch (e) {
+        console.error("Error fetching user email from auth admin:", e);
+      }
+
+      const allowedEmails = [
+        "rouijel.nabil@gmail.com",
+        "rouijel.nabil.cp@gmail.com",
+      ];
+      const isAdmin = userEmail && allowedEmails.includes(userEmail.toLowerCase());
+
+      if (!challenge || (challenge.creator_id !== userId && !isAdmin)) {
+        return res
+          .status(403)
+          .json({
+            error: "Non autorisé: vous devez être le créateur de ce défi ou un administrateur.",
+          });
+      }
+
+      // 2. Delete the user's invitation
+      const { error: inviteError } = await supabase
+        .from("challenge_invitations")
+        .delete()
+        .eq("challenge_id", challengeId)
+        .eq("user_id", targetUserId);
+
+      if (inviteError) {
+        console.error("Error deleting challenge invitation:", inviteError);
+        return res.status(500).json({ error: "Erreur lors de la suppression de la participation." });
+      }
+
+      // 3. Delete the user's bets for this challenge
+      const { error: betsError } = await supabase
+        .from("bets")
+        .delete()
+        .eq("challenge_id", challengeId)
+        .eq("user_id", targetUserId);
+
+      if (betsError) {
+        console.error("Error deleting user bets:", betsError);
+      }
+
+      return res.json({ success: true, message: "Participant retiré avec succès." });
+    } catch (err: any) {
+      console.error("Error in kick endpoint:", err);
+      res.status(500).json({ error: "Erreur interne du serveur: " + err.message });
     }
   });
 
