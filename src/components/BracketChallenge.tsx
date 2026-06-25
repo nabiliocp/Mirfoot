@@ -126,6 +126,7 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
     const saved = localStorage.getItem(`bracket_sim_expanded_${challenge.id}`);
     return saved !== null ? saved === "true" : true;
   });
+  const [activeSimPhase, setActiveSimPhase] = useState<string>("all");
 
   // State update helpers with localStorage persistence
   const updateTestMode = (val: boolean) => {
@@ -492,6 +493,7 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
 
   const handleSimulatePhase = (phase: "all" | "r32" | "r16" | "r8" | "r4" | "r2") => {
     try {
+      setActiveSimPhase(phase);
       const isSim = (testMode && activeSimulationTab === "simulation");
       const currentSim = isSim 
         ? (simulatedResults || createEmptyBracketPredictions())
@@ -929,61 +931,158 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
         </div>
 
         <div className="space-y-1">
-          <button
-            type="button"
-            disabled={locked || !teamA}
-            onClick={() => teamA && handleSelectWinner(round, matchId, teamAId)}
-            className={`w-full flex items-center justify-between p-1.5 rounded-lg text-xs font-bold transition-all ${
-              !teamA
-                ? "bg-gray-50 border border-dashed border-gray-200 text-gray-400 cursor-not-allowed"
-                : isWinnerA
-                  ? "bg-emerald-50 border border-emerald-500 text-emerald-950 font-black shadow-xs"
-                  : "bg-white border border-gray-200 text-gray-750 hover:bg-gray-50 hover:border-gray-300 cursor-pointer"
-            }`}
-          >
-            <span className="flex items-center gap-1.5 truncate">
-              {maskPrediction ? (
-                <>
-                  <span className="text-xs shrink-0">🔒</span>
-                  <span className="text-gray-400 italic">Masqué</span>
-                </>
-              ) : (
-                <>
-                  <span className="text-sm shrink-0">{teamA ? teamA.flag : "❓"}</span>
-                  <span className="truncate">{teamA ? teamA.name : "À déterminer"}</span>
-                </>
-              )}
-            </span>
-            {isWinnerA && !maskPrediction && <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />}
-          </button>
+          {(() => {
+            const simWinnerId = (testMode && simulatedResults) ? getSelectedWinnerForPredictions(simulatedResults, matchId) : "";
+            const isSimWinnerA = simWinnerId === teamAId && teamAId !== "";
+            const isSimWinnerB = simWinnerId === teamBId && teamBId !== "";
+            const showValidation = testMode && simulatedResults && simWinnerId && activeSimulationTab !== "simulation";
 
-          <button
-            type="button"
-            disabled={locked || !teamB}
-            onClick={() => teamB && handleSelectWinner(round, matchId, teamBId)}
-            className={`w-full flex items-center justify-between p-1.5 rounded-lg text-xs font-bold transition-all ${
-              !teamB
-                ? "bg-gray-55 border border-dashed border-gray-200 text-gray-400 cursor-not-allowed"
-                : isWinnerB
-                  ? "bg-emerald-50 border border-emerald-500 text-emerald-950 font-black shadow-xs"
-                  : "bg-white border border-gray-200 text-gray-750 hover:bg-gray-50 hover:border-gray-300 cursor-pointer"
-            }`}
-          >
-            <span className="flex items-center gap-1.5 truncate">
-              {maskPrediction ? (
-                <>
-                  <span className="text-xs shrink-0">🔒</span>
-                  <span className="text-gray-400 italic">Masqué</span>
-                </>
-              ) : (
-                <>
-                  <span className="text-sm shrink-0">{teamB ? teamB.flag : "❓"}</span>
-                  <span className="truncate">{teamB ? teamB.name : "À déterminer"}</span>
-                </>
-              )}
-            </span>
-            {isWinnerB && !maskPrediction && <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />}
-          </button>
+            let btnClassA = "";
+            if (!teamA) {
+              btnClassA = "bg-gray-55 border border-dashed border-gray-200 text-gray-400 cursor-not-allowed";
+            } else if (showValidation) {
+              if (isWinnerA) {
+                if (isSimWinnerA) {
+                  btnClassA = "bg-emerald-50/80 border-emerald-500 text-emerald-950 font-black shadow-sm ring-1 ring-emerald-500/30";
+                } else {
+                  btnClassA = "bg-rose-50 border-rose-400 text-rose-950 font-bold shadow-xs";
+                }
+              } else {
+                if (isSimWinnerA) {
+                  btnClassA = "bg-amber-50/30 border-amber-300 text-amber-950 font-bold";
+                } else {
+                  btnClassA = "bg-white border-gray-150 text-gray-400 opacity-60 hover:opacity-100";
+                }
+              }
+            } else {
+              btnClassA = isWinnerA
+                ? "bg-emerald-50 border-emerald-500 text-emerald-950 font-black shadow-xs"
+                : "bg-white border-gray-200 text-gray-750 hover:bg-gray-50 hover:border-gray-300 cursor-pointer";
+            }
+
+            let btnClassB = "";
+            if (!teamB) {
+              btnClassB = "bg-gray-55 border border-dashed border-gray-200 text-gray-400 cursor-not-allowed";
+            } else if (showValidation) {
+              if (isWinnerB) {
+                if (isSimWinnerB) {
+                  btnClassB = "bg-emerald-50/80 border-emerald-500 text-emerald-950 font-black shadow-sm ring-1 ring-emerald-500/30";
+                } else {
+                  btnClassB = "bg-rose-50 border-rose-400 text-rose-950 font-bold shadow-xs";
+                }
+              } else {
+                if (isSimWinnerB) {
+                  btnClassB = "bg-amber-50/30 border-amber-300 text-amber-950 font-bold";
+                } else {
+                  btnClassB = "bg-white border-gray-150 text-gray-400 opacity-60 hover:opacity-100";
+                }
+              }
+            } else {
+              btnClassB = isWinnerB
+                ? "bg-emerald-50 border-emerald-500 text-emerald-950 font-black shadow-xs"
+                : "bg-white border-gray-200 text-gray-750 hover:bg-gray-50 hover:border-gray-300 cursor-pointer";
+            }
+
+            return (
+              <>
+                <button
+                  type="button"
+                  disabled={locked || !teamA}
+                  onClick={() => teamA && handleSelectWinner(round, matchId, teamAId)}
+                  className={`w-full flex items-center justify-between p-1.5 rounded-lg text-xs font-bold transition-all ${btnClassA}`}
+                >
+                  <span className="flex items-center gap-1.5 truncate">
+                    {maskPrediction ? (
+                      <>
+                        <span className="text-xs shrink-0">🔒</span>
+                        <span className="text-gray-400 italic">Masqué</span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="text-sm shrink-0">{teamA ? teamA.flag : "❓"}</span>
+                        <span className="truncate">{teamA ? teamA.name : "À déterminer"}</span>
+                        {showValidation && !maskPrediction && teamA && (
+                          <>
+                            {isWinnerA && isSimWinnerA && (
+                              <span className="text-[7px] bg-emerald-600 text-white font-black px-1 py-0.2 rounded shrink-0 uppercase tracking-wider">Correct</span>
+                            )}
+                            {isWinnerA && !isSimWinnerA && (
+                              <span className="text-[7px] bg-rose-600 text-white font-black px-1 py-0.2 rounded shrink-0 uppercase tracking-wider">Faux</span>
+                            )}
+                            {!isWinnerA && isSimWinnerA && (
+                              <span className="text-[7px] bg-amber-500 text-white font-black px-1 py-0.2 rounded shrink-0 uppercase tracking-wider">Gagnant</span>
+                            )}
+                          </>
+                        )}
+                      </>
+                    )}
+                  </span>
+                  {isWinnerA && !maskPrediction && (
+                    showValidation ? (
+                      isSimWinnerA ? (
+                        <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                      ) : (
+                        <span className="text-rose-600 text-[10px] font-black shrink-0">❌</span>
+                      )
+                    ) : (
+                      <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                    )
+                  )}
+                  {!isWinnerA && showValidation && isSimWinnerA && !maskPrediction && (
+                    <span className="text-amber-500 text-[10px] font-black shrink-0">🏆</span>
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  disabled={locked || !teamB}
+                  onClick={() => teamB && handleSelectWinner(round, matchId, teamBId)}
+                  className={`w-full flex items-center justify-between p-1.5 rounded-lg text-xs font-bold transition-all ${btnClassB}`}
+                >
+                  <span className="flex items-center gap-1.5 truncate">
+                    {maskPrediction ? (
+                      <>
+                        <span className="text-xs shrink-0">🔒</span>
+                        <span className="text-gray-400 italic">Masqué</span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="text-sm shrink-0">{teamB ? teamB.flag : "❓"}</span>
+                        <span className="truncate">{teamB ? teamB.name : "À déterminer"}</span>
+                        {showValidation && !maskPrediction && teamB && (
+                          <>
+                            {isWinnerB && isSimWinnerB && (
+                              <span className="text-[7px] bg-emerald-600 text-white font-black px-1 py-0.2 rounded shrink-0 uppercase tracking-wider">Correct</span>
+                            )}
+                            {isWinnerB && !isSimWinnerB && (
+                              <span className="text-[7px] bg-rose-600 text-white font-black px-1 py-0.2 rounded shrink-0 uppercase tracking-wider">Faux</span>
+                            )}
+                            {!isWinnerB && isSimWinnerB && (
+                              <span className="text-[7px] bg-amber-500 text-white font-black px-1 py-0.2 rounded shrink-0 uppercase tracking-wider">Gagnant</span>
+                            )}
+                          </>
+                        )}
+                      </>
+                    )}
+                  </span>
+                  {isWinnerB && !maskPrediction && (
+                    showValidation ? (
+                      isSimWinnerB ? (
+                        <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                      ) : (
+                        <span className="text-rose-600 text-[10px] font-black shrink-0">❌</span>
+                      )
+                    ) : (
+                      <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                    )
+                  )}
+                  {!isWinnerB && showValidation && isSimWinnerB && !maskPrediction && (
+                    <span className="text-amber-500 text-[10px] font-black shrink-0">🏆</span>
+                  )}
+                </button>
+              </>
+            );
+          })()}
         </div>
 
         {stats && (
@@ -1343,7 +1442,11 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
                   <button
                     type="button"
                     onClick={() => handleSimulatePhase("all")}
-                    className="bg-amber-600 hover:bg-amber-700 text-white font-extrabold px-2 py-1.5 rounded-lg text-[10px] text-center transition cursor-pointer shadow-xs"
+                    className={`font-extrabold px-2 py-1.5 rounded-lg text-[10px] text-center transition cursor-pointer shadow-xs ${
+                      activeSimPhase === "all"
+                        ? "bg-amber-600 hover:bg-amber-700 text-white"
+                        : "bg-white border border-amber-300 hover:bg-amber-50 text-amber-950"
+                    }`}
                     title="Simuler toutes les phases"
                   >
                     🔥 Toutes phases
@@ -1352,7 +1455,11 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
                   <button
                     type="button"
                     onClick={() => handleSimulatePhase("r32")}
-                    className="bg-white border border-amber-300 hover:bg-amber-50 text-amber-950 font-extrabold px-2 py-1.5 rounded-lg text-[10px] text-center transition cursor-pointer"
+                    className={`font-extrabold px-2 py-1.5 rounded-lg text-[10px] text-center transition cursor-pointer shadow-xs ${
+                      activeSimPhase === "r32"
+                        ? "bg-amber-600 hover:bg-amber-700 text-white"
+                        : "bg-white border border-amber-300 hover:bg-amber-50 text-amber-950"
+                    }`}
                     title="Simuler les 1/16 de finale"
                   >
                     1/16 de finale
@@ -1361,7 +1468,11 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
                   <button
                     type="button"
                     onClick={() => handleSimulatePhase("r16")}
-                    className="bg-white border border-amber-300 hover:bg-amber-50 text-amber-950 font-extrabold px-2 py-1.5 rounded-lg text-[10px] text-center transition cursor-pointer"
+                    className={`font-extrabold px-2 py-1.5 rounded-lg text-[10px] text-center transition cursor-pointer shadow-xs ${
+                      activeSimPhase === "r16"
+                        ? "bg-amber-600 hover:bg-amber-700 text-white"
+                        : "bg-white border border-amber-300 hover:bg-amber-50 text-amber-950"
+                    }`}
                     title="Simuler les 1/8 de finale"
                   >
                     1/8 de finale
@@ -1370,7 +1481,11 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
                   <button
                     type="button"
                     onClick={() => handleSimulatePhase("r8")}
-                    className="bg-white border border-amber-300 hover:bg-amber-50 text-amber-950 font-extrabold px-2 py-1.5 rounded-lg text-[10px] text-center transition cursor-pointer"
+                    className={`font-extrabold px-2 py-1.5 rounded-lg text-[10px] text-center transition cursor-pointer shadow-xs ${
+                      activeSimPhase === "r8"
+                        ? "bg-amber-600 hover:bg-amber-700 text-white"
+                        : "bg-white border border-amber-300 hover:bg-amber-50 text-amber-950"
+                    }`}
                     title="Simuler les Quarts de finale"
                   >
                     Quarts (1/4)
@@ -1379,7 +1494,11 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
                   <button
                     type="button"
                     onClick={() => handleSimulatePhase("r4")}
-                    className="bg-white border border-amber-300 hover:bg-amber-50 text-amber-950 font-extrabold px-2 py-1.5 rounded-lg text-[10px] text-center transition cursor-pointer"
+                    className={`font-extrabold px-2 py-1.5 rounded-lg text-[10px] text-center transition cursor-pointer shadow-xs ${
+                      activeSimPhase === "r4"
+                        ? "bg-amber-600 hover:bg-amber-700 text-white"
+                        : "bg-white border border-amber-300 hover:bg-amber-50 text-amber-950"
+                    }`}
                     title="Simuler les Demi-finales"
                   >
                     Demis (1/2)
@@ -1388,7 +1507,11 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
                   <button
                     type="button"
                     onClick={() => handleSimulatePhase("r2")}
-                    className="bg-white border border-amber-300 hover:bg-amber-50 text-amber-950 font-extrabold px-2 py-1.5 rounded-lg text-[10px] text-center transition cursor-pointer"
+                    className={`font-extrabold px-2 py-1.5 rounded-lg text-[10px] text-center transition cursor-pointer shadow-xs ${
+                      activeSimPhase === "r2"
+                        ? "bg-amber-600 hover:bg-amber-700 text-white"
+                        : "bg-white border border-amber-300 hover:bg-amber-50 text-amber-950"
+                    }`}
                     title="Simuler la Finale"
                   >
                     🏆 Finale
