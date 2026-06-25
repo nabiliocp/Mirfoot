@@ -4017,7 +4017,7 @@ export default function ChallengesView({
                 Classement Général de ce défi
               </h3>
               
-              {loadingChallengeDetails ? (
+              {loadingChallengeDetails && leaderboard.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-16 space-y-3">
                   <div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
                   <p className="text-gray-500 text-xs font-semibold animate-pulse">Chargement en cours...</p>
@@ -4133,7 +4133,7 @@ export default function ChallengesView({
                 Liste des Participants ({participants.length})
               </h3>
               
-              {loadingChallengeDetails ? (
+              {loadingChallengeDetails && participants.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-16 space-y-3">
                   <div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
                   <p className="text-gray-500 text-xs font-semibold animate-pulse">Chargement en cours...</p>
