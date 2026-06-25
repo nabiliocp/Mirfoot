@@ -1645,6 +1645,8 @@ async function startServer() {
           points_awarded: bet?.points_awarded || 0,
           created_at: bet?.created_at || new Date().toISOString(),
           username: profile?.username || "Joueur Anonyme",
+          first_name: profile?.first_name || "",
+          last_name: profile?.last_name || "",
           avatar_type: profile?.avatar_type || "emoji",
           avatar_value: profile?.avatar_value || "⚽",
           profile_points: profile?.points || 0

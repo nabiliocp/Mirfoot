@@ -23,6 +23,63 @@ interface BracketChallengeProps {
   detailTab?: "matches" | "leaderboard" | "participants" | "results";
 }
 
+const getFlagUrl = (teamName: string) => {
+  const nameLower = (teamName || "").toLowerCase().trim();
+  const mapping: Record<string, string> = {
+    "morocco": "ma", "maroc": "ma",
+    "france": "fr",
+    "brazil": "br", "brésil": "br",
+    "argentina": "ar", "argentine": "ar",
+    "spain": "es", "espagne": "es",
+    "belgium": "be", "belgique": "be",
+    "croatia": "hr", "croatie": "hr",
+    "portugal": "pt",
+    "england": "gb-eng", "angleterre": "gb-eng",
+    "germany": "de", "allemagne": "de",
+    "netherlands": "nl", "pays-bas": "nl",
+    "senegal": "sn", "sénégal": "sn",
+    "switzerland": "ch", "suisse": "ch",
+    "usa": "us", "united states": "us", "états-unis": "us",
+    "wales": "gb-wls", "pays de galles": "gb-wls",
+    "tunisia": "tn", "tunisie": "tn",
+    "saudi arabia": "sa", "arabie saoudite": "sa",
+    "mexico": "mx", "mexique": "mx",
+    "poland": "pl", "pologne": "pl",
+    "australia": "au", "australie": "au",
+    "denmark": "dk", "danemark": "dk",
+    "costa rica": "cr",
+    "japan": "jp", "japon": "jp",
+    "canada": "ca",
+    "cameroon": "cm", "cameroun": "cm",
+    "serbia": "rs", "serbie": "rs",
+    "ghana": "gh",
+    "uruguay": "uy",
+    "south korea": "kr", "corée du sud": "kr",
+    "ecuador": "ec", "équateur": "ec",
+    "qatar": "qa"
+  };
+  for (const [key, code] of Object.entries(mapping)) {
+    if (nameLower.includes(key)) {
+      return `https://flagcdn.com/w80/${code}.png`;
+    }
+  }
+  // Fallbacks for top clubs
+  if (nameLower.includes("real madrid")) return "https://crests.football-data.org/86.svg";
+  if (nameLower.includes("barcelona") || nameLower.includes("barcelone")) return "https://crests.football-data.org/81.svg";
+  if (nameLower.includes("manchester city")) return "https://crests.football-data.org/65.svg";
+  if (nameLower.includes("manchester united")) return "https://crests.football-data.org/66.svg";
+  if (nameLower.includes("liverpool")) return "https://crests.football-data.org/64.svg";
+  if (nameLower.includes("arsenal")) return "https://crests.football-data.org/57.svg";
+  if (nameLower.includes("bayern")) return "https://crests.football-data.org/5.svg";
+  if (nameLower.includes("psg") || nameLower.includes("paris saint-germain")) return "https://crests.football-data.org/524.svg";
+  if (nameLower.includes("milan")) return "https://crests.football-data.org/98.svg";
+  if (nameLower.includes("inter")) return "https://crests.football-data.org/108.svg";
+  if (nameLower.includes("juventus")) return "https://crests.football-data.org/109.svg";
+  if (nameLower.includes("dortmund")) return "https://crests.football-data.org/4.svg";
+  
+  return null;
+};
+
 export const BracketChallenge: React.FC<BracketChallengeProps> = ({
   challenge,
   userId,
@@ -1423,7 +1480,7 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
       ) : (detailTab === "leaderboard" || detailTab === "participants") ? (
         <div className="space-y-4">
           <div className="bg-white rounded-2xl border border-gray-150 overflow-hidden shadow-xs">
-            <div className="bg-gray-50/50 px-4 py-3 border-b border-gray-150 flex items-center justify-between">
+            <div className="bg-gray-50/50 px-4 py-3.5 border-b border-gray-150 flex items-center justify-between">
               <h3 className="text-xs font-extrabold text-gray-500 uppercase tracking-widest">Classement du Défi</h3>
               <span className="text-[10px] text-gray-400 font-bold">{participants.length} Participants</span>
             </div>
@@ -1435,7 +1492,7 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
                 <p className="text-[10px] text-gray-400">Invitez vos amis en partageant le code du défi !</p>
               </div>
             ) : (
-              <div className="divide-y divide-gray-150">
+              <div className="p-4 space-y-3">
                 {[...participants]
                   .sort((a, b) => {
                     const predictionsA = a.user_id === userId ? picks : (a.predictions || {});
@@ -1451,6 +1508,7 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
                   })
                   .map((p, index) => {
                     const isCurrentUser = p.user_id === userId;
+                    const isLast = index === participants.length - 1 && participants.length > 1;
                     const rank = index + 1;
                     
                     const pPicks = isCurrentUser ? picks : (p.predictions || {});
@@ -1468,26 +1526,60 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
                     return (
                       <div 
                         key={p.id || p.user_id} 
-                        className={`flex items-center justify-between p-4 transition hover:bg-gray-50/50 ${
-                          isCurrentUser ? "bg-emerald-50/20" : ""
+                        className={`flex items-center justify-between p-3.5 rounded-xl border transition-all ${
+                          isCurrentUser 
+                            ? "bg-emerald-50/50 border-emerald-300 shadow-sm" 
+                            : index === 0 
+                              ? "bg-yellow-50/20 border-yellow-100" 
+                              : isLast 
+                                ? "bg-pink-50/20 border-pink-100"
+                                : "bg-white border-gray-100 hover:border-gray-200"
                         }`}
                       >
                         <div className="flex items-center gap-3 min-w-0">
-                          <div className="w-7 text-center font-black text-sm text-gray-500 shrink-0">
+                          <span className={`w-6 text-center font-black text-xs ${index === 0 ? 'text-yellow-600' : 'text-gray-400'}`}>
                             {rank === 1 ? "🥇" : rank === 2 ? "🥈" : rank === 3 ? "🥉" : `#${rank}`}
+                          </span>
+                          
+                          <div className="w-8 h-8 flex items-center justify-center shrink-0">
+                            {p.avatar_type === 'emoji' ? (
+                              <span className="text-xl">{p.avatar_value === '🐷' ? '👽' : p.avatar_value}</span>
+                            ) : (
+                              <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white shadow-inner" style={{ backgroundColor: p.avatar_value || '#3b82f6' }}>
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20.38 3.46 16 2a8.86 8.86 0 0 1-8 0L3.62 3.46a2 2 0 0 0-1.34 2.23l.58 3.47a1 1 0 0 0 .99.84H6v10c0 1.1.9 2 2 2h8a2 2 0 0 0 2-2V10h2.15a1 1 0 0 0 .99-.84l.58-3.47a2 2 0 0 0-1.34-2.23z"/></svg>
+                              </div>
+                            )}
                           </div>
                           
-                          <div className="w-9 h-9 bg-gray-100 rounded-full flex items-center justify-center text-lg shadow-inner shrink-0">
-                            {p.avatar_value}
-                          </div>
                           <div className="min-w-0">
-                            <div className="font-extrabold text-sm text-gray-800 flex items-center gap-1.5 truncate">
-                              <span className="truncate">{p.username}</span>
+                            <span className={`text-xs font-bold flex items-center gap-1.5 flex-wrap ${isCurrentUser ? "text-emerald-950 font-black" : "text-gray-800"}`}>
+                              <span className="truncate">{p.username || "Joueur"}</span>
                               {isCurrentUser && (
-                                <span className="text-[8px] bg-emerald-600 text-white px-1.5 py-0.5 rounded-full font-black uppercase shrink-0">Vous</span>
+                                <span className="font-black text-[9px] bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded shrink-0">Moi</span>
                               )}
-                            </div>
-                            <div className="text-[10px] text-gray-400 font-semibold">
+                              
+                              <div className="flex items-center gap-1 shrink-0">
+                                {p.first_name && (
+                                  <div className="w-3.5 h-3.5 bg-white rounded-full overflow-hidden border border-gray-100 flex items-center justify-center shadow-xs" title={p.first_name}>
+                                    <img 
+                                      src={getFlagUrl(p.first_name) || "https://flagcdn.com/w80/un.png"} 
+                                      className="w-full h-full object-contain" 
+                                      onError={(e) => { e.currentTarget.style.display='none' }}
+                                    />
+                                  </div>
+                                )}
+                                {p.last_name && (
+                                  <div className="w-3.5 h-3.5 bg-white rounded-full overflow-hidden border border-gray-100 flex items-center justify-center shadow-xs" title={p.last_name}>
+                                    <img 
+                                      src={getFlagUrl(p.last_name) || "https://flagcdn.com/w80/un.png"} 
+                                      className="w-full h-full object-contain" 
+                                      onError={(e) => { e.currentTarget.style.display='none' }}
+                                    />
+                                  </div>
+                                )}
+                              </div>
+                            </span>
+                            <div className="text-[10px] text-gray-400 font-semibold mt-0.5">
                               {totalC}/31 pronostics complétés
                             </div>
                           </div>
@@ -1495,7 +1587,7 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
                         
                         <div className="flex items-center gap-3 shrink-0">
                           <div className="text-right">
-                            <div className="text-sm font-black text-emerald-800 flex items-center gap-1">
+                            <div className="text-xs font-extrabold text-emerald-800 flex items-center gap-1">
                               <span>{displayPoints} pts</span>
                               {testMode && simulatedResults && (
                                 <span className="text-[8px] bg-amber-100 text-amber-800 px-1 py-0.2 rounded font-extrabold">Simulé</span>
@@ -1509,7 +1601,7 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
                           <button
                             type="button"
                             onClick={() => setSelectedParticipant(p)}
-                            className="bg-white hover:bg-gray-100 text-gray-750 border border-gray-200 font-black text-xs px-3 py-1.5 rounded-xl transition cursor-pointer flex items-center gap-1 shadow-xs"
+                            className="bg-white hover:bg-gray-150 text-gray-750 border border-gray-200 font-black text-[11px] px-3 py-1.5 rounded-xl transition cursor-pointer flex items-center gap-1 shadow-xs"
                           >
                             👁️ Voir
                           </button>
