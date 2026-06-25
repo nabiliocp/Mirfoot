@@ -26,6 +26,7 @@ import {
   CheckSquare,
   Search,
   X,
+  RefreshCw,
 } from "lucide-react";
 import { supabase } from "../lib/supabase";
 import { calculateMatchPoints } from "../lib/pointCalculation";
@@ -441,7 +442,37 @@ export default function ChallengesView({
     qualification: "Qualification (Tirs au but, etc)",
   };
 
-  const renderReadableRules = (rules: PointRules) => {
+  const renderReadableRules = (rules: PointRules, type?: string) => {
+    if (type === "bracket") {
+      return (
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 gap-2 pl-4 border-l-2 border-pink-200">
+            <div className="flex justify-between text-xs items-center">
+              <span className="text-gray-650 font-semibold">🏆 Bon Qualifié Huitièmes (R16)</span>
+              <span className="bg-pink-50 text-pink-700 px-2.5 py-0.5 rounded-full font-bold">+{rules.exact_score ?? 100} pts</span>
+            </div>
+            <div className="flex justify-between text-xs items-center">
+              <span className="text-gray-650 font-semibold">🏆 Bon Qualifié Quarts (R8)</span>
+              <span className="bg-pink-50 text-pink-700 px-2.5 py-0.5 rounded-full font-bold">+{rules.close_score ?? 200} pts</span>
+            </div>
+            <div className="flex justify-between text-xs items-center">
+              <span className="text-gray-650 font-semibold">🏆 Bon Qualifié Demis (R4)</span>
+              <span className="bg-pink-50 text-pink-700 px-2.5 py-0.5 rounded-full font-bold">+{rules.correct_winner ?? 300} pts</span>
+            </div>
+            <div className="flex justify-between text-xs items-center">
+              <span className="text-gray-650 font-semibold">🏆 Bon Qualifié Finale & Vainqueur (R2)</span>
+              <span className="bg-pink-50 text-pink-700 px-2.5 py-0.5 rounded-full font-bold">+{rules.qualification ?? 400} pts</span>
+            </div>
+          </div>
+          <div className="bg-pink-50 border border-pink-200 p-3 rounded-xl mt-4 space-y-1.5">
+            <p className="font-extrabold text-xs text-pink-900 mb-1 flex items-center gap-1">🏆 Méga Bonus Spéciaux :</p>
+            <p className="text-xs text-pink-800">• <strong>4 Demis Exacts:</strong> +1000 pts</p>
+            <p className="text-xs text-pink-800">• <strong>2 Finalistes Exacts:</strong> +2000 pts</p>
+            <p className="text-xs text-pink-800">• <strong>Vainqueur Exact:</strong> +2000 pts</p>
+          </div>
+        </div>
+      );
+    }
     return (
       <div className="space-y-4">
         <div className="grid grid-cols-1 gap-2 pl-4 border-l-2 border-emerald-100">
@@ -789,9 +820,11 @@ export default function ChallengesView({
     }
   }, [selectedChallenge]);
 
-  const loadChallengeData = async (challengeId: string) => {
+  const loadChallengeData = async (challengeId: string, silent = false) => {
     if (!supabase) return;
-    setLoadingChallengeDetails(true);
+    if (!silent) {
+      setLoadingChallengeDetails(true);
+    }
     try {
         const res = await fetch(`/api/challenges/${challengeId}/bets`);
         if (res.ok) {
@@ -827,7 +860,9 @@ export default function ChallengesView({
     } catch (err) {
         console.error("Error loading challenge data:", err);
     } finally {
-        setLoadingChallengeDetails(false);
+        if (!silent) {
+          setLoadingChallengeDetails(false);
+        }
     }
   };
 
@@ -835,6 +870,13 @@ export default function ChallengesView({
     if (!selectedChallenge) return;
     setDetailTab("matches");
     loadChallengeData(selectedChallenge.id);
+
+    // Set up auto-refresh interval every 30 seconds to fetch latest bets/standings in real-time
+    const interval = setInterval(() => {
+      loadChallengeData(selectedChallenge.id, true);
+    }, 30000);
+
+    return () => clearInterval(interval);
   }, [selectedChallenge]);
 
   const refreshChallengeBets = async () => {
@@ -2977,7 +3019,7 @@ export default function ChallengesView({
               </p>
             </div>
             
-            <div className="flex gap-2 shrink-0">
+            <div className="flex gap-2 shrink-0 flex-wrap">
               <a 
                 href={whatsappUrl}
                 target="_blank"
@@ -4140,7 +4182,57 @@ export default function ChallengesView({
                             )}
                           </div>
                         </div>
-                        <span className="text-[10px] bg-emerald-50 text-emerald-700 font-extrabold px-2 py-0.5 rounded uppercase font-mono">Inscrit</span>
+                        {(() => {
+                          const pBet = challengeBets.find(b => b.user_id === userId);
+                          if (challenge.type === "bracket") {
+                            const pPicks = pBet?.predictions || {};
+                            const r16C = Object.keys(pPicks.r16 || {}).filter(k => pPicks.r16[k]).length;
+                            const r8C = Object.keys(pPicks.r8 || {}).filter(k => pPicks.r8[k]).length;
+                            const r4C = Object.keys(pPicks.r4 || {}).filter(k => pPicks.r4[k]).length;
+                            const r2C = Object.keys(pPicks.r2 || {}).filter(k => pPicks.r2[k]).length;
+                            const winC = pPicks.winner ? 1 : 0;
+                            const totalC = r16C + r8C + r4C + r2C + winC;
+                            
+                            if (totalC === 31) {
+                              return (
+                                <span className="text-[9px] bg-pink-100 text-pink-800 font-extrabold px-2 py-0.5 rounded-full uppercase shrink-0">
+                                  Prêt (31/31)
+                                </span>
+                              );
+                            } else if (totalC > 0) {
+                              return (
+                                <span className="text-[9px] bg-amber-100 text-amber-800 font-extrabold px-2 py-0.5 rounded-full uppercase shrink-0 animate-pulse">
+                                  En cours ({totalC}/31)
+                                </span>
+                              );
+                            } else {
+                              return (
+                                <span className="text-[9px] bg-gray-100 text-gray-500 font-extrabold px-2 py-0.5 rounded-full uppercase shrink-0">
+                                  Non rempli
+                                </span>
+                              );
+                            }
+                          } else {
+                            // Standard match challenge
+                            const hasPicks = pBet && pBet.predictions && (
+                              (pBet.predictions.homeScore !== undefined) || 
+                              (pBet.predictions.matches && Object.keys(pBet.predictions.matches).length > 0)
+                            );
+                            if (hasPicks) {
+                              return (
+                                <span className="text-[9px] bg-emerald-100 text-emerald-800 font-extrabold px-2 py-0.5 rounded-full uppercase shrink-0">
+                                  A parié
+                                </span>
+                              );
+                            } else {
+                              return (
+                                <span className="text-[9px] bg-amber-50 text-amber-700 font-extrabold px-2 py-0.5 rounded-full uppercase shrink-0">
+                                  En attente
+                                </span>
+                              );
+                            }
+                          }
+                        })()}
                       </div>
                     );
                   })}

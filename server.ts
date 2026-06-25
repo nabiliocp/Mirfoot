@@ -1110,7 +1110,7 @@ async function startServer() {
     }
   }
 
-  // Auto-resolve cron/interval running every 60 seconds
+  // Auto-resolve cron/interval running every 30 seconds
   setInterval(async () => {
     try {
       const resolved = await runChallengeResolution();
@@ -1120,7 +1120,7 @@ async function startServer() {
     } catch (err) {
       console.error("Auto-resolve setInterval error:", err);
     }
-  }, 60000);
+  }, 30000);
 
   // Admin endpoint to manually resolve challenges
   app.post("/api/admin/resolve-challenges", async (req, res) => {
