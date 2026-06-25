@@ -374,6 +374,163 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
     }
   };
 
+  const handleSimulatePhase = (phase: "all" | "r32" | "r16" | "r8" | "r4" | "r2") => {
+    try {
+      const targetPicks = JSON.parse(
+        JSON.stringify(
+          (testMode && activeSimulationTab === "simulation" && simulatedResults)
+            ? simulatedResults
+            : (activeSimulationTab === "simulation" ? (simulatedResults || createEmptyBracketPredictions()) : picks)
+        )
+      );
+
+      const r32Mapping: Record<string, string> = {
+        R32_L1: "R16_L1_H", R32_L2: "R16_L1_A", R32_L3: "R16_L2_H", R32_L4: "R16_L2_A",
+        R32_L5: "R16_L3_H", R32_L6: "R16_L3_A", R32_L7: "R16_L4_H", R32_L8: "R16_L4_A",
+        R32_R1: "R16_R1_H", R32_R2: "R16_R1_A", R32_R3: "R16_R2_H", R32_R4: "R16_R2_A",
+        R32_R5: "R16_R3_H", R32_R6: "R16_R3_A", R32_R7: "R16_R4_H", R32_R8: "R16_R4_A",
+      };
+
+      const r16Mapping: Record<string, string> = {
+        R16_L1: "R8_L1_H", R16_L2: "R8_L1_A", R16_L3: "R8_L2_H", R16_L4: "R8_L2_A",
+        R16_R1: "R8_R1_H", R16_R2: "R8_R1_A", R16_R3: "R8_R2_H", R16_R4: "R8_R2_A",
+      };
+
+      const r8Mapping: Record<string, string> = {
+        R8_L1: "R4_L1_H", R8_L2: "R4_L1_A", R8_R1: "R4_R1_H", R8_R2: "R4_R1_A",
+      };
+
+      const r4Mapping: Record<string, string> = {
+        R4_L1: "R2_L1_H", R4_R1: "R2_L1_A",
+      };
+
+      const pickRandom = (teamA: string, teamB: string) => {
+        if (!teamA && !teamB) return "";
+        if (!teamA) return teamB;
+        if (!teamB) return teamA;
+        return Math.random() < 0.5 ? teamA : teamB;
+      };
+
+      // 1. R32
+      if (phase === "all" || phase === "r32" || !Object.keys(targetPicks.r16 || {}).length) {
+        if (!targetPicks.r16) targetPicks.r16 = {};
+        STARTING_R32_MATCHES.forEach(m => {
+          const slotKey = r32Mapping[m.id];
+          if (slotKey) {
+            targetPicks.r16[slotKey] = pickRandom(m.homeId, m.awayId);
+          }
+        });
+        if (phase === "r32") {
+          targetPicks.r8 = {};
+          targetPicks.r4 = {};
+          targetPicks.r2 = {};
+          targetPicks.winner = "";
+        }
+      }
+
+      // 2. R16
+      if (phase === "all" || phase === "r16" || (["r8", "r4", "r2"].includes(phase) && !Object.keys(targetPicks.r8 || {}).length)) {
+        if (!targetPicks.r8) targetPicks.r8 = {};
+        const matches = [
+          { id: "R16_L1", home: targetPicks.r16["R16_L1_H"], away: targetPicks.r16["R16_L1_A"] },
+          { id: "R16_L2", home: targetPicks.r16["R16_L2_H"], away: targetPicks.r16["R16_L2_A"] },
+          { id: "R16_L3", home: targetPicks.r16["R16_L3_H"], away: targetPicks.r16["R16_L3_A"] },
+          { id: "R16_L4", home: targetPicks.r16["R16_L4_H"], away: targetPicks.r16["R16_L4_A"] },
+          { id: "R16_R1", home: targetPicks.r16["R16_R1_H"], away: targetPicks.r16["R16_R1_A"] },
+          { id: "R16_R2", home: targetPicks.r16["R16_R2_H"], away: targetPicks.r16["R16_R2_A"] },
+          { id: "R16_R3", home: targetPicks.r16["R16_R3_H"], away: targetPicks.r16["R16_R3_A"] },
+          { id: "R16_R4", home: targetPicks.r16["R16_R4_H"], away: targetPicks.r16["R16_R4_A"] },
+        ];
+
+        matches.forEach(m => {
+          const slotKey = r16Mapping[m.id];
+          if (slotKey) {
+            targetPicks.r8[slotKey] = pickRandom(m.home, m.away);
+          }
+        });
+
+        if (phase === "r16") {
+          targetPicks.r4 = {};
+          targetPicks.r2 = {};
+          targetPicks.winner = "";
+        }
+      }
+
+      // 3. R8
+      if (phase === "all" || phase === "r8" || (["r4", "r2"].includes(phase) && !Object.keys(targetPicks.r4 || {}).length)) {
+        if (!targetPicks.r4) targetPicks.r4 = {};
+        const matches = [
+          { id: "R8_L1", home: targetPicks.r8["R8_L1_H"], away: targetPicks.r8["R8_L1_A"] },
+          { id: "R8_L2", home: targetPicks.r8["R8_L2_H"], away: targetPicks.r8["R8_L2_A"] },
+          { id: "R8_R1", home: targetPicks.r8["R8_R1_H"], away: targetPicks.r8["R8_R1_A"] },
+          { id: "R8_R2", home: targetPicks.r8["R8_R2_H"], away: targetPicks.r8["R8_R2_A"] },
+        ];
+
+        matches.forEach(m => {
+          const slotKey = r8Mapping[m.id];
+          if (slotKey) {
+            targetPicks.r4[slotKey] = pickRandom(m.home, m.away);
+          }
+        });
+
+        if (phase === "r8") {
+          targetPicks.r2 = {};
+          targetPicks.winner = "";
+        }
+      }
+
+      // 4. R4
+      if (phase === "all" || phase === "r4" || (phase === "r2" && !Object.keys(targetPicks.r2 || {}).length)) {
+        if (!targetPicks.r2) targetPicks.r2 = {};
+        const matches = [
+          { id: "R4_L1", home: targetPicks.r4["R4_L1_H"], away: targetPicks.r4["R4_L1_A"] },
+          { id: "R4_R1", home: targetPicks.r4["R4_R1_H"], away: targetPicks.r4["R4_R1_A"] },
+        ];
+
+        matches.forEach(m => {
+          const slotKey = r4Mapping[m.id];
+          if (slotKey) {
+            targetPicks.r2[slotKey] = pickRandom(m.home, m.away);
+          }
+        });
+
+        if (phase === "r4") {
+          targetPicks.winner = "";
+        }
+      }
+
+      // 5. R2
+      if (phase === "all" || phase === "r2") {
+        const home = targetPicks.r2["R2_L1_H"];
+        const away = targetPicks.r2["R2_L1_A"];
+        targetPicks.winner = pickRandom(home, away);
+      }
+
+      const isSim = (testMode && activeSimulationTab === "simulation");
+      if (isSim) {
+        setSimulatedResults(targetPicks);
+      } else {
+        setPicks(targetPicks);
+      }
+
+      let phaseLabel = "";
+      if (phase === "all") phaseLabel = "Toutes les phases";
+      else if (phase === "r32") phaseLabel = "Seizièmes de finale (1/16)";
+      else if (phase === "r16") phaseLabel = "Huitièmes de finale (1/8)";
+      else if (phase === "r8") phaseLabel = "Quarts de finale (1/4)";
+      else if (phase === "r4") phaseLabel = "Demi-finales (1/2)";
+      else if (phase === "r2") phaseLabel = "Finale & Champion";
+
+      setMessage({
+        type: "success",
+        text: `⚡ Résultats factis de [${phaseLabel}] générés avec succès pour [${isSim ? "Résultats Réels Simulés" : "Mes Pronostics"}]. N'oubliez pas de sauvegarder.`
+      });
+    } catch (err: any) {
+      console.error(err);
+      setMessage({ type: "error", text: "Erreur lors de la simulation de phase : " + err.message });
+    }
+  };
+
   const handleResolveChallenge = async () => {
     setSaving(true);
     setMessage(null);
@@ -1010,6 +1167,73 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
           <p className="text-[10px] text-amber-700 font-semibold leading-relaxed mt-2 bg-amber-50 p-2 rounded-lg">
             💡 <strong>Comment ça marche ?</strong> Sélectionnez <strong>"Résultats Réels Simulés"</strong> pour remplir les vainqueurs réels sur le tableau ci-dessous. Allez ensuite dans l'onglet <strong>"Participants & Classement"</strong> : le score et le classement de chaque joueur seront recalculés <strong>en direct</strong> selon votre simulation !
           </p>
+
+          {/* Phase Simulation Selector */}
+          <div className="bg-amber-100/40 p-3 rounded-xl border border-amber-200/60 space-y-2 mt-2">
+            <div className="flex items-center gap-1.5 text-xs font-black text-amber-950">
+              <span>🎲 Simuler des résultats factis :</span>
+            </div>
+            
+            <div className="grid grid-cols-2 sm:grid-cols-6 gap-2">
+              <button
+                type="button"
+                onClick={() => handleSimulatePhase("all")}
+                className="bg-amber-600 hover:bg-amber-700 text-white font-extrabold px-2 py-1.5 rounded-lg text-[10px] text-center transition cursor-pointer shadow-xs"
+                title="Simuler toutes les phases"
+              >
+                🔥 Toutes phases
+              </button>
+              
+              <button
+                type="button"
+                onClick={() => handleSimulatePhase("r32")}
+                className="bg-white border border-amber-300 hover:bg-amber-50 text-amber-950 font-extrabold px-2 py-1.5 rounded-lg text-[10px] text-center transition cursor-pointer"
+                title="Simuler les 1/16 de finale"
+              >
+                1/16 de finale
+              </button>
+              
+              <button
+                type="button"
+                onClick={() => handleSimulatePhase("r16")}
+                className="bg-white border border-amber-300 hover:bg-amber-50 text-amber-950 font-extrabold px-2 py-1.5 rounded-lg text-[10px] text-center transition cursor-pointer"
+                title="Simuler les 1/8 de finale"
+              >
+                1/8 de finale
+              </button>
+              
+              <button
+                type="button"
+                onClick={() => handleSimulatePhase("r8")}
+                className="bg-white border border-amber-300 hover:bg-amber-50 text-amber-950 font-extrabold px-2 py-1.5 rounded-lg text-[10px] text-center transition cursor-pointer"
+                title="Simuler les Quarts de finale"
+              >
+                Quarts (1/4)
+              </button>
+              
+              <button
+                type="button"
+                onClick={() => handleSimulatePhase("r4")}
+                className="bg-white border border-amber-300 hover:bg-amber-50 text-amber-950 font-extrabold px-2 py-1.5 rounded-lg text-[10px] text-center transition cursor-pointer"
+                title="Simuler les Demi-finales"
+              >
+                Demis (1/2)
+              </button>
+              
+              <button
+                type="button"
+                onClick={() => handleSimulatePhase("r2")}
+                className="bg-white border border-amber-300 hover:bg-amber-50 text-amber-950 font-extrabold px-2 py-1.5 rounded-lg text-[10px] text-center transition cursor-pointer"
+                title="Simuler la Finale"
+              >
+                🏆 Finale
+              </button>
+            </div>
+            
+            <p className="text-[9px] text-amber-800 leading-normal font-medium">
+              💡 Cette action génère des vainqueurs aléatoires pour la phase sélectionnée et l'applique au tableau actif ci-dessous (<strong>{activeSimulationTab === "simulation" ? "🏆 Résultats Réels Simulés" : "🎯 Mes Pronostics"}</strong>).
+            </p>
+          </div>
         </div>
       )}
 
