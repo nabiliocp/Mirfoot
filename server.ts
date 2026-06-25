@@ -156,6 +156,10 @@ const apiCache: Record<string, CacheEntry> = {};
 const TODAY_CACHE_TTL = 60 * 1000; // 60 seconds (1 minute cache for live scores & matches of today)
 const COMP_CACHE_TTL = 2 * 60 * 60 * 1000; // 2 hours (saves huge amount of rate limits and loads instantaneously from the in-memory cache)
 
+// Server-side cache for user profiles to drastically speed up queries and avoid DB bottlenecks
+const profilesCache: Record<string, { data: any; timestamp: number }> = {};
+const PROFILES_CACHE_TTL = 5 * 60 * 1000; // 5 minutes cache is safe and extremely fast
+
 // Bidirectional Competition ID mapping (football-data.org ID : api-football.com ID)
 const COMPETITION_ID_MAP: Record<number, number> = {
   2015: 61, // Ligue 1
@@ -579,8 +583,6 @@ async function startServer() {
   });
 
   app.get("/api/matches/:competitionId", async (req, res) => {
-    // Non-blocking trigger to resolve challenges automatically when requests come in
-    runChallengeResolution().catch(err => console.error("Auto-resolve during match request error:", err));
     const activeProvider = getActiveApiProvider();
     const fdCompId = Number(req.params.competitionId);
     const reqSeason = req.query.season ? Number(req.query.season) : null;
@@ -874,9 +876,23 @@ async function startServer() {
         return 0;
       }
 
+      const now = Date.now();
+      const eligibleChallenges = challenges.filter((c: any) => {
+        if (c.type === "bracket" || c.match_id === 0 || c.match_id === 999999 || !c.match_id) {
+          return false;
+        }
+        if (!c.match_date) return false;
+        // Only resolve challenges whose match has started or finished (match_date is in the past)
+        return new Date(c.match_date).getTime() < now;
+      });
+
+      if (eligibleChallenges.length === 0) {
+        return 0;
+      }
+
       let resolvedCount = 0;
 
-      for (const challenge of challenges) {
+      for (const challenge of eligibleChallenges) {
         let matchData: any = null;
 
         if (
@@ -1110,7 +1126,7 @@ async function startServer() {
     }
   }
 
-  // Auto-resolve cron/interval running every 30 seconds
+  // Auto-resolve cron/interval running every 5 minutes
   setInterval(async () => {
     try {
       const resolved = await runChallengeResolution();
@@ -1120,7 +1136,7 @@ async function startServer() {
     } catch (err) {
       console.error("Auto-resolve setInterval error:", err);
     }
-  }, 30000);
+  }, 300000);
 
   // Admin endpoint to manually resolve challenges
   app.post("/api/admin/resolve-challenges", async (req, res) => {
@@ -1384,22 +1400,43 @@ async function startServer() {
 
       // Combine user IDs
       const allUserIds = new Set<string>();
-      if (bets) bets.forEach(b => allUserIds.add(b.user_id));
-      if (invites) invites.forEach(i => allUserIds.add(i.user_id));
+      if (bets) bets.forEach(b => { if (b.user_id) allUserIds.add(b.user_id); });
+      if (invites) invites.forEach(i => { if (i.user_id) allUserIds.add(i.user_id); });
 
-      const userIds = Array.from(allUserIds);
+      const userIds = Array.from(allUserIds).filter(id => id && typeof id === "string" && id.trim() !== "");
       let profiles: any[] = [];
       if (userIds.length > 0) {
-        const { data: profs, error: profsError } = await supabase
-          .from("profiles")
-          .select("id, username, first_name, last_name, avatar_type, avatar_value, points")
-          .in("id", userIds);
-        
-        if (profsError) {
-          console.error("Error fetching profiles for bets:", profsError);
-        } else {
-          profiles = profs || [];
+        const now = Date.now();
+        // Determine which user IDs are missing from cache or have expired entries
+        const missingUserIds = userIds.filter(id => {
+          const cached = profilesCache[id];
+          return !cached || (now - cached.timestamp > PROFILES_CACHE_TTL);
+        });
+
+        if (missingUserIds.length > 0) {
+          console.log(`[Profiles Cache] Fetching ${missingUserIds.length} missing profiles from DB...`);
+          const { data: profs, error: profsError } = await supabase
+            .from("profiles")
+            .select("id, username, first_name, last_name, avatar_type, avatar_value, points")
+            .in("id", missingUserIds);
+          
+          if (profsError) {
+            console.error("Error fetching profiles for bets:", profsError);
+          } else if (profs) {
+            profs.forEach(p => {
+              profilesCache[p.id] = { data: p, timestamp: now };
+            });
+            // Mark any user ID that was requested but not returned in profs as data: null (so we don't query it again for PROFILES_CACHE_TTL)
+            missingUserIds.forEach(id => {
+              if (!profilesCache[id]) {
+                profilesCache[id] = { data: null, timestamp: now };
+              }
+            });
+          }
         }
+
+        // Gather all profiles from the cache
+        profiles = userIds.map(id => profilesCache[id]?.data).filter(Boolean);
       }
 
       // Map profiles to bets (or placeholders for users who haven't bet yet)
