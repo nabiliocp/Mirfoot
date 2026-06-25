@@ -983,6 +983,33 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
                 : "bg-white border-gray-200 text-gray-750 hover:bg-gray-50 hover:border-gray-300 cursor-pointer";
             }
 
+            const getSimTeamsForMatch = (mId: string) => {
+              if (!simulatedResults) return { homeId: "", awayId: "" };
+              if (mId.startsWith("R32_")) {
+                const startMatch = STARTING_R32_MATCHES.find(m => m.id === mId);
+                return { homeId: startMatch?.homeId || "", awayId: startMatch?.awayId || "" };
+              }
+              const simState = computeBracketState(simulatedResults);
+              if (mId.startsWith("R16_")) {
+                const match = simState.r16Matches.find(m => m.id === mId);
+                return { homeId: match?.homeId || "", awayId: match?.awayId || "" };
+              } else if (mId.startsWith("R8_")) {
+                const match = simState.r8Matches.find(m => m.id === mId);
+                return { homeId: match?.homeId || "", awayId: match?.awayId || "" };
+              } else if (mId.startsWith("R4_")) {
+                const match = simState.r4Matches.find(m => m.id === mId);
+                return { homeId: match?.homeId || "", awayId: match?.awayId || "" };
+              } else if (mId === "R2_F1") {
+                return { homeId: simState.finalMatch.homeId || "", awayId: simState.finalMatch.awayId || "" };
+              }
+              return { homeId: "", awayId: "" };
+            };
+
+            const simTeams = showValidation ? getSimTeamsForMatch(matchId) : null;
+            const simHome = simTeams ? BRACKET_TEAMS[simTeams.homeId] : null;
+            const simAway = simTeams ? BRACKET_TEAMS[simTeams.awayId] : null;
+            const simWinner = simWinnerId ? BRACKET_TEAMS[simWinnerId] : null;
+
             return (
               <>
                 <button
@@ -1080,6 +1107,24 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
                     <span className="text-amber-500 text-[10px] font-black shrink-0">🏆</span>
                   )}
                 </button>
+
+                {showValidation && (
+                  <div className="mt-1.5 pt-1.5 border-t border-dashed border-gray-150 bg-amber-50/40 rounded-lg p-1 text-[8.5px] leading-tight text-amber-950 font-bold">
+                    <div className="flex items-center justify-between text-amber-800 font-extrabold uppercase tracking-wider text-[7px] mb-1">
+                      <span>Simulé Réel</span>
+                      <span>🏆 {simWinner ? `${simWinner.flag} ${simWinner.name}` : "Aucun"}</span>
+                    </div>
+                    {simHome && simAway ? (
+                      <div className="flex items-center gap-1 text-gray-500 font-medium">
+                        <span className="truncate">
+                          {simHome.flag} {simHome.name} vs {simAway.flag} {simAway.name}
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="text-gray-400 italic text-[7.5px]">Équipes précédentes non qualifiées</div>
+                    )}
+                  </div>
+                )}
               </>
             );
           })()}
