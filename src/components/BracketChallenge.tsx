@@ -1201,16 +1201,18 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
           {/* Team A */}
           <button
             type="button"
-            disabled={locked || !teamA}
-            onClick={() => teamA && handleSelectWinner(round, matchId, teamAId)}
+            disabled={locked || !teamA || !teamB}
+            onClick={() => teamA && teamB && handleSelectWinner(round, matchId, teamAId)}
             className={`w-full flex items-center justify-between p-2 rounded-xl border text-sm font-bold transition-all ${
               !teamA 
                 ? "bg-gray-55 border-dashed border-gray-200 text-gray-400 cursor-not-allowed"
-                : isSelectedA
-                  ? "bg-emerald-50 border-emerald-500 text-emerald-950 shadow-sm"
-                  : locked
-                    ? "bg-gray-50 border-gray-100 text-gray-500 cursor-not-allowed"
-                    : "bg-white border-gray-100 text-gray-800 hover:bg-gray-50 cursor-pointer"
+                : !teamB
+                  ? "bg-gray-50/50 border-gray-150 text-gray-500 opacity-75 cursor-not-allowed"
+                  : isSelectedA
+                    ? "bg-emerald-50 border-emerald-500 text-emerald-950 shadow-sm"
+                    : locked
+                      ? "bg-gray-50 border-gray-100 text-gray-500 cursor-not-allowed"
+                      : "bg-white border-gray-100 text-gray-800 hover:bg-gray-50 cursor-pointer"
             }`}
           >
             <span className="flex items-center gap-2">
@@ -1228,16 +1230,18 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
           {/* Team B */}
           <button
             type="button"
-            disabled={locked || !teamB}
-            onClick={() => teamB && handleSelectWinner(round, matchId, teamBId)}
+            disabled={locked || !teamA || !teamB}
+            onClick={() => teamA && teamB && handleSelectWinner(round, matchId, teamBId)}
             className={`w-full flex items-center justify-between p-2 rounded-xl border text-sm font-bold transition-all ${
               !teamB 
                 ? "bg-gray-55 border-dashed border-gray-200 text-gray-400 cursor-not-allowed"
-                : isSelectedB
-                  ? "bg-emerald-50 border-emerald-500 text-emerald-950 shadow-sm"
-                  : locked
-                    ? "bg-gray-50 border-gray-100 text-gray-500 cursor-not-allowed"
-                    : "bg-white border-gray-100 text-gray-800 hover:bg-gray-50 cursor-pointer"
+                : !teamA
+                  ? "bg-gray-50/50 border-gray-150 text-gray-500 opacity-75 cursor-not-allowed"
+                  : isSelectedB
+                    ? "bg-emerald-50 border-emerald-500 text-emerald-950 shadow-sm"
+                    : locked
+                      ? "bg-gray-50 border-gray-100 text-gray-500 cursor-not-allowed"
+                      : "bg-white border-gray-100 text-gray-800 hover:bg-gray-50 cursor-pointer"
             }`}
           >
             <span className="flex items-center gap-2">
@@ -1386,6 +1390,8 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
             let btnClassA = "";
             if (!teamA) {
               btnClassA = "bg-gray-55 border border-dashed border-gray-200 text-gray-400 cursor-not-allowed";
+            } else if (!teamB && !showValidation) {
+              btnClassA = "bg-gray-50 border border-gray-150 text-gray-500 opacity-75 cursor-not-allowed";
             } else if (showValidation) {
               if (isWinnerA) {
                 if (isSimWinnerA) {
@@ -1409,6 +1415,8 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
             let btnClassB = "";
             if (!teamB) {
               btnClassB = "bg-gray-55 border border-dashed border-gray-200 text-gray-400 cursor-not-allowed";
+            } else if (!teamA && !showValidation) {
+              btnClassB = "bg-gray-50 border border-gray-150 text-gray-500 opacity-75 cursor-not-allowed";
             } else if (showValidation) {
               if (isWinnerB) {
                 if (isSimWinnerB) {
@@ -1460,8 +1468,8 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
               <>
                 <button
                   type="button"
-                  disabled={locked || !teamA}
-                  onClick={() => teamA && handleSelectWinner(round, matchId, teamAId)}
+                  disabled={locked || !teamA || !teamB}
+                  onClick={() => teamA && teamB && handleSelectWinner(round, matchId, teamAId)}
                   className={`w-full flex items-center justify-between p-1.5 rounded-lg text-xs font-bold transition-all ${btnClassA}`}
                 >
                   <span className="flex items-center gap-1.5 truncate">
@@ -1508,8 +1516,8 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
 
                 <button
                   type="button"
-                  disabled={locked || !teamB}
-                  onClick={() => teamB && handleSelectWinner(round, matchId, teamBId)}
+                  disabled={locked || !teamA || !teamB}
+                  onClick={() => teamA && teamB && handleSelectWinner(round, matchId, teamBId)}
                   className={`w-full flex items-center justify-between p-1.5 rounded-lg text-xs font-bold transition-all ${btnClassB}`}
                 >
                   <span className="flex items-center gap-1.5 truncate">
@@ -1640,16 +1648,18 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
           </div>
         )}
 
-        {/* Info banner for dynamic qualifications */}
-        <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3 flex items-start gap-2.5 shadow-2xs">
-          <Sparkles className="w-4 h-4 text-emerald-600 mt-0.5 shrink-0 animate-pulse" />
-          <div className="text-left">
-            <span className="text-[10px] font-black text-slate-800 uppercase tracking-wide block mb-0.5">
-              🏆 Qualifications Dynamiques & Officielles (1/16 de finale)
-            </span>
-            <p className="text-[9.5px] text-slate-600 leading-relaxed font-medium">
-              Afin de garantir l'équité et le réalisme, seules les équipes de la phase de groupes dont la qualification est <strong className="text-emerald-700 font-bold">officiellement et mathématiquement confirmée</strong> par les résultats réels de l'API sont affichées dans les emplacements du tableau. Les équipes non encore assurées de se qualifier restent masquées sous la mention <span className="italic text-amber-600 font-bold">"À déterminer"</span> jusqu'à ce que leurs derniers matchs soient joués.
-            </p>
+        {/* Call to action to invite user to predict */}
+        <div className="bg-emerald-50/40 border border-emerald-100 rounded-2xl p-4 flex items-center justify-between gap-4 shadow-2xs">
+          <div className="flex items-start gap-3 text-left">
+            <span className="text-xl mt-0.5 shrink-0 select-none">🔮</span>
+            <div>
+              <span className="text-[11px] font-extrabold text-emerald-950 uppercase tracking-wide block">
+                Faites vos jeux !
+              </span>
+              <p className="text-[10px] text-emerald-800 leading-relaxed font-semibold">
+                Remplissez votre tableau de pronostics de la phase finale, défiez vos amis et tentez de décrocher le titre suprême ! 🏆
+              </p>
+            </div>
           </div>
         </div>
 
