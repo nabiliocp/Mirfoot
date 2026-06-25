@@ -91,7 +91,33 @@ interface StandingTeam {
 function getOfficialQualifiedTeams(matches: any[]): Set<string> {
   const qualified = new Set<string>();
   
-  // 1. Group matches by group
+  // 1. Priorité absolue : Vérifier si l'API officielle a déjà renseigné les équipes dans les matchs à élimination directe !
+  // Si oui, nous extrayons ces équipes directement, ce qui garantit un alignement parfait à 100% avec les calculs officiels de la FIFA (y compris le système complexe de départage des meilleurs 3èmes).
+  let foundKnockoutTeams = false;
+  matches.forEach(m => {
+    if (m.stage && m.stage !== "GROUP_STAGE") {
+      const homeCode = (m.homeTeam?.tla || m.homeTeam?.id || "").toString().toUpperCase();
+      const awayCode = (m.awayTeam?.tla || m.awayTeam?.id || "").toString().toUpperCase();
+      
+      // On s'assure qu'il s'agit de vrais codes de pays à 3 lettres et non de placeholders (ex: "TBD", "W49")
+      if (homeCode && homeCode.length === 3 && /^[A-Z]{3}$/.test(homeCode)) {
+        qualified.add(homeCode);
+        foundKnockoutTeams = true;
+      }
+      if (awayCode && awayCode.length === 3 && /^[A-Z]{3}$/.test(awayCode)) {
+        qualified.add(awayCode);
+        foundKnockoutTeams = true;
+      }
+    }
+  });
+
+  if (foundKnockoutTeams && qualified.size > 0) {
+    console.log("Qualifications obtenues directement depuis les matchs officiels de l'API (Knockout) :", Array.from(qualified));
+    return qualified;
+  }
+
+  // 2. Stratégie de secours : Si aucun match à élimination directe n'est encore renseigné (ex: pendant la phase de poules),
+  // nous calculons de manière robuste les qualifications mathématiques à partir des résultats des matchs de groupe.
   const groupMatches: Record<string, any[]> = {};
   matches.forEach(m => {
     if (m.stage === "GROUP_STAGE" && m.group) {
@@ -100,12 +126,14 @@ function getOfficialQualifiedTeams(matches: any[]): Set<string> {
     }
   });
 
-  // For each group, compute current standings and verify qualification
+  // Pour chaque groupe, calcul des classements en cours et vérification des qualifiés
   Object.entries(groupMatches).forEach(([groupName, matchesInGroup]) => {
     const teamsInGroup = new Set<string>();
     matchesInGroup.forEach(m => {
-      if (m.homeTeam?.id) teamsInGroup.add(m.homeTeam.id);
-      if (m.awayTeam?.id) teamsInGroup.add(m.awayTeam.id);
+      const homeCode = (m.homeTeam?.tla || m.homeTeam?.id || "").toString().toUpperCase();
+      const awayCode = (m.awayTeam?.tla || m.awayTeam?.id || "").toString().toUpperCase();
+      if (homeCode && homeCode.length === 3) teamsInGroup.add(homeCode);
+      if (awayCode && awayCode.length === 3) teamsInGroup.add(awayCode);
     });
 
     const teamStats: Record<string, StandingTeam> = {};
@@ -113,13 +141,13 @@ function getOfficialQualifiedTeams(matches: any[]): Set<string> {
       teamStats[tid] = { id: tid, points: 0, goalDiff: 0, goalsFor: 0, played: 0 };
     });
 
-    // Compute stats from finished matches
+    // Calcul des statistiques pour les matchs joués (status === "FINISHED")
     let finishedCount = 0;
     matchesInGroup.forEach(m => {
       if (m.status === "FINISHED") {
         finishedCount++;
-        const homeId = m.homeTeam?.id;
-        const awayId = m.awayTeam?.id;
+        const homeId = (m.homeTeam?.tla || m.homeTeam?.id || "").toString().toUpperCase();
+        const awayId = (m.awayTeam?.tla || m.awayTeam?.id || "").toString().toUpperCase();
         const hGoal = m.score?.fullTime?.home ?? 0;
         const aGoal = m.score?.fullTime?.away ?? 0;
 
@@ -151,7 +179,7 @@ function getOfficialQualifiedTeams(matches: any[]): Set<string> {
     const isGroupFullyFinished = finishedCount === totalGroupMatchesExpected;
 
     if (isGroupFullyFinished) {
-      // Sort teams to find 1st and 2nd
+      // Tri classique par points, différence de buts, et buts marqués
       const sorted = Object.values(teamStats).sort((a, b) => {
         if (b.points !== a.points) return b.points - a.points;
         if (b.goalDiff !== a.goalDiff) return b.goalDiff - a.goalDiff;
@@ -160,8 +188,7 @@ function getOfficialQualifiedTeams(matches: any[]): Set<string> {
       if (sorted[0]) qualified.add(sorted[0].id);
       if (sorted[1]) qualified.add(sorted[1].id);
     } else {
-      // Group is not fully finished. Use mathematical guarantee!
-      // A team is guaranteed top 2 if their minPoints > second highest maxPoints of other teams
+      // Garantie mathématique en cours de poules
       Object.entries(teamStats).forEach(([tid, stats]) => {
         const minPoints = stats.points;
         const remainingMatches = 3 - stats.played;
@@ -176,9 +203,8 @@ function getOfficialQualifiedTeams(matches: any[]): Set<string> {
           }
         });
 
-        // Sort other teams max points in ascending order
         otherTeamsMaxPoints.sort((a, b) => a - b);
-        const secondHighestOtherMax = otherTeamsMaxPoints[1]; // Index 1 is mid in [min, mid, max] (3 items)
+        const secondHighestOtherMax = otherTeamsMaxPoints[1]; // Index 1 est le milieu dans un groupe de 4 (3 adversaires)
 
         if (minPoints > secondHighestOtherMax) {
           qualified.add(tid);
@@ -187,7 +213,7 @@ function getOfficialQualifiedTeams(matches: any[]): Set<string> {
     }
   });
 
-  // Also handle 3rd placed teams qualification if ALL groups are finished!
+  // Gestion des meilleurs 3èmes (uniquement si TOUS les groupes sont complètement terminés)
   const allGroups = Object.keys(groupMatches);
   const finishedGroupsCount = allGroups.filter(gName => {
     return groupMatches[gName].filter(m => m.status === "FINISHED").length === 6;
@@ -199,8 +225,10 @@ function getOfficialQualifiedTeams(matches: any[]): Set<string> {
       const matchesInGroup = groupMatches[gName];
       const teamsInGroup = new Set<string>();
       matchesInGroup.forEach(m => {
-        if (m.homeTeam?.id) teamsInGroup.add(m.homeTeam.id);
-        if (m.awayTeam?.id) teamsInGroup.add(m.awayTeam.id);
+        const homeCode = (m.homeTeam?.tla || m.homeTeam?.id || "").toString().toUpperCase();
+        const awayCode = (m.awayTeam?.tla || m.awayTeam?.id || "").toString().toUpperCase();
+        if (homeCode && homeCode.length === 3) teamsInGroup.add(homeCode);
+        if (awayCode && awayCode.length === 3) teamsInGroup.add(awayCode);
       });
 
       const teamStats: Record<string, StandingTeam> = {};
@@ -209,8 +237,8 @@ function getOfficialQualifiedTeams(matches: any[]): Set<string> {
       });
 
       matchesInGroup.forEach(m => {
-        const homeId = m.homeTeam?.id;
-        const awayId = m.awayTeam?.id;
+        const homeId = (m.homeTeam?.tla || m.homeTeam?.id || "").toString().toUpperCase();
+        const awayId = (m.awayTeam?.tla || m.awayTeam?.id || "").toString().toUpperCase();
         const hGoal = m.score?.fullTime?.home ?? 0;
         const aGoal = m.score?.fullTime?.away ?? 0;
 
