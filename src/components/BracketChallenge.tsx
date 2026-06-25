@@ -338,14 +338,14 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
     }
   };
 
-  const handleSeedMockParticipants = async () => {
+  const handleSeedMockParticipants = async (count: number = 2) => {
     setSeeding(true);
     setMessage(null);
     try {
       const response = await fetch(`/api/challenges/${challenge.id}/seed-mock-bets`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ count: 5 }),
+        body: JSON.stringify({ count }),
       });
 
       const resData = await response.json();
@@ -353,7 +353,7 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
         throw new Error(resData.error || "Erreur lors de la génération.");
       }
 
-      setMessage({ type: "success", text: `Génération réussie : ${resData.count} participants fictifs ajoutés !` });
+      setMessage({ type: "success", text: `Génération réussie : ${resData.count} participant(s) fictif(s) ajouté(s) avec des pronostics !` });
       await loadParticipants();
     } catch (err: any) {
       console.error(err);
@@ -1086,21 +1086,38 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
         <div className="bg-amber-50/50 border border-amber-200 rounded-2xl p-4 space-y-3">
           <h4 className="text-xs font-extrabold text-amber-900 uppercase tracking-wider">Options de Simulation</h4>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-            <button
-              type="button"
-              disabled={seeding}
-              onClick={handleSeedMockParticipants}
-              className="bg-white border border-amber-300 hover:bg-amber-50 text-amber-950 font-black px-3 py-2 rounded-xl text-xs flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
-            >
-              {seeding ? (
-                <>
-                  <div className="w-3.5 h-3.5 border-2 border-amber-800 border-t-transparent rounded-full animate-spin"></div>
-                  Génération...
-                </>
-              ) : (
-                <>👥 Générer 5 joueurs fictifs</>
-              )}
-            </button>
+            <div className="flex flex-col gap-1">
+              <button
+                type="button"
+                disabled={seeding}
+                onClick={() => handleSeedMockParticipants(1)}
+                className="bg-white border border-amber-300 hover:bg-amber-50 text-amber-950 font-black px-3 py-1.5 rounded-xl text-[11px] flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+              >
+                {seeding ? (
+                  <>
+                    <div className="w-3 h-3 border-2 border-amber-800 border-t-transparent rounded-full animate-spin"></div>
+                    Génération...
+                  </>
+                ) : (
+                  <>👤 Générer 1 joueur fictif</>
+                )}
+              </button>
+              <button
+                type="button"
+                disabled={seeding}
+                onClick={() => handleSeedMockParticipants(2)}
+                className="bg-white border border-amber-300 hover:bg-amber-50 text-amber-950 font-black px-3 py-1.5 rounded-xl text-[11px] flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+              >
+                {seeding ? (
+                  <>
+                    <div className="w-3 h-3 border-2 border-amber-800 border-t-transparent rounded-full animate-spin"></div>
+                    Génération...
+                  </>
+                ) : (
+                  <>👥 Générer 2 joueurs fictifs (max)</>
+                )}
+              </button>
+            </div>
 
             <button
               type="button"

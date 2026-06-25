@@ -3086,7 +3086,7 @@ export default function ChallengesView({
         </div>
 
         {/* INTERACTIVE SCORE SIMULATION/TESTING WORKSPACE */}
-        {isAuthorizedForSimulation && (
+        {isAuthorizedForSimulation && challenge.type !== 'bracket' && (
           <div className="bg-slate-50 border border-slate-200/60 rounded-3xl p-5 shadow-xs transition-all duration-300">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
               <div className="flex items-start gap-2.5">
