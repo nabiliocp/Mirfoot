@@ -793,21 +793,37 @@ export default function ChallengesView({
     if (!supabase) return;
     setLoadingChallengeDetails(true);
     try {
-        const [betsRes, invsRes] = await Promise.all([
-          supabase.from("bets").select("*").eq("challenge_id", challengeId),
-          supabase.from("challenge_invitations").select("user_id").eq("challenge_id", challengeId)
-        ]);
-        if (betsRes.data) setChallengeBets(betsRes.data);
-        
-        // Combine user IDs from bets and invitations to workaround RLS on invitations
-        const participantIds = new Set<string>();
-        if (betsRes.data) betsRes.data.forEach((b: any) => participantIds.add(b.user_id));
-        if (invsRes.data) invsRes.data.forEach((i: any) => participantIds.add(i.user_id));
-        
-        if (userId) participantIds.add(userId);
-        if (selectedChallenge && selectedChallenge.creatorId) participantIds.add(selectedChallenge.creatorId);
-        
-        setParticipants(Array.from(participantIds));
+        const res = await fetch(`/api/challenges/${challengeId}/bets`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.bets) {
+            setChallengeBets(data.bets);
+            
+            const participantIds = new Set<string>();
+            data.bets.forEach((b: any) => participantIds.add(b.user_id));
+            if (userId) participantIds.add(userId);
+            if (selectedChallenge && selectedChallenge.creatorId) participantIds.add(selectedChallenge.creatorId);
+            
+            setParticipants(Array.from(participantIds));
+            
+            // Merge loaded profiles into allProfiles state
+            setAllProfiles(prev => {
+              const next = [...prev];
+              data.bets.forEach((b: any) => {
+                if (!next.some(x => x.id === b.user_id)) {
+                  next.push({
+                    id: b.user_id,
+                    username: b.username,
+                    avatar_type: b.avatar_type,
+                    avatar_value: b.avatar_value,
+                    points: b.profile_points
+                  });
+                }
+              });
+              return next;
+            });
+          }
+        }
     } catch (err) {
         console.error("Error loading challenge data:", err);
     } finally {
@@ -4458,7 +4474,9 @@ export default function ChallengesView({
                                   ⚽ Défi ouvert
                                 </span>
                               )}
-                              {challenge.matchId !== 0 ? (
+                              {challenge.type === "bracket" ? (
+                                <span className="bg-pink-50 border border-pink-100/50 text-pink-700 px-2.5 py-0.5 rounded-full font-bold text-[9px] uppercase tracking-wider">🏆 Tableau</span>
+                              ) : challenge.matchId !== 0 ? (
                                 <span className="bg-indigo-50 border border-indigo-100/50 text-indigo-700 px-2.5 py-0.5 rounded-full font-bold text-[9px] uppercase tracking-wider">🎯 Match Unique</span>
                               ) : (
                                 <span className="bg-emerald-50 border border-emerald-100/50 text-emerald-800 px-2.5 py-0.5 rounded-full font-bold text-[9px] uppercase tracking-wider">🏆 Compétition</span>
@@ -4466,12 +4484,31 @@ export default function ChallengesView({
                             </div>
                           </div>
 
-                          {/* Competition and Date Metadata (Single match or full competition) - Uniformed */}
+                          {/* Competition and Date Metadata (Single match, full competition, or bracket) - Uniformed */}
                           <div className="mt-4 pt-4 border-t border-gray-100">
                             <div className="flex flex-col gap-1.5">
                               {(() => {
+                                const isBracket = challenge.type === "bracket";
                                 const comp = competitions.find(c => String(c.id) === String(challenge.competitionId));
                                 const isSingleMatch = challenge.matchId !== 0;
+                                
+                                if (isBracket) {
+                                  return (
+                                    <>
+                                      <div className="flex items-center gap-2 text-xs font-bold text-gray-800">
+                                         <span className="text-pink-700 bg-pink-50 px-2 py-0.5 rounded-md">
+                                           🏆 Tableau Éliminatoire
+                                         </span>
+                                         <span>Phase Finale</span>
+                                      </div>
+                                      
+                                      <div className="text-xs text-gray-500 font-semibold flex items-center gap-1.5 mt-0.5">
+                                         <Calendar className="w-3.5 h-3.5" />
+                                         Paris ouverts par match
+                                      </div>
+                                    </>
+                                  );
+                                }
                                 
                                 return (
                                   <>
@@ -5053,29 +5090,36 @@ export default function ChallengesView({
                         )}
 
                         {editPointRules && (
-                          <div className="bg-gray-50 p-3 rounded-xl border border-gray-100">
-                            <label className="block text-xs font-black text-gray-700 uppercase tracking-wider mb-2">
-                              Règles Unifiées du Défi
-                            </label>
-                            <div className="space-y-1.5 pt-1">
-                              <div className="flex justify-between text-[11px] font-semibold text-gray-700">
-                                <span>Score Exact</span>
-                                <span className="text-emerald-600">+{editPointRules.exact_score} pts</span>
-                              </div>
-                              <div className="flex justify-between text-[11px] font-semibold text-gray-700">
-                                <span>Score Proche</span>
-                                <span className="text-emerald-600">+{editPointRules.close_score} pts</span>
-                              </div>
-                              <div className="flex justify-between text-[11px] font-semibold text-gray-700">
-                                <span>Bon Vainqueur</span>
-                                <span className="text-emerald-600">+{editPointRules.correct_winner} pts</span>
-                              </div>
-                              <div className="flex justify-between text-[11px] font-semibold text-gray-700">
-                                <span>Qualification</span>
-                                <span className="text-emerald-600">+{editPointRules.qualification || 0} pts</span>
+                          activeModal.challenge.type === "bracket" ? (
+                            <div className="bg-emerald-50/50 p-3.5 rounded-xl border border-emerald-100 text-xs text-emerald-950">
+                              <p className="font-extrabold text-sm text-emerald-800 mb-2">🏆 Barème du Tableau Éliminatoire :</p>
+                              <p className="leading-relaxed font-medium">Ce défi de type Tableau utilise un barème de points fixe de phase finale (+100, +200, +300, +400 pts) et des super-bonus de performance. Ces règles ne sont pas éditables.</p>
+                            </div>
+                          ) : (
+                            <div className="bg-gray-50 p-3 rounded-xl border border-gray-100">
+                              <label className="block text-xs font-black text-gray-700 uppercase tracking-wider mb-2">
+                                Règles Unifiées du Défi
+                              </label>
+                              <div className="space-y-1.5 pt-1">
+                                <div className="flex justify-between text-[11px] font-semibold text-gray-700">
+                                  <span>Score Exact</span>
+                                  <span className="text-emerald-600">+{editPointRules.exact_score} pts</span>
+                                </div>
+                                <div className="flex justify-between text-[11px] font-semibold text-gray-700">
+                                  <span>Score Proche</span>
+                                  <span className="text-emerald-600">+{editPointRules.close_score} pts</span>
+                                </div>
+                                <div className="flex justify-between text-[11px] font-semibold text-gray-700">
+                                  <span>Bon Vainqueur</span>
+                                  <span className="text-emerald-600">+{editPointRules.correct_winner} pts</span>
+                                </div>
+                                <div className="flex justify-between text-[11px] font-semibold text-gray-700">
+                                  <span>Qualification</span>
+                                  <span className="text-emerald-600">+{editPointRules.qualification || 0} pts</span>
+                                </div>
                               </div>
                             </div>
-                          </div>
+                          )
                         )}
 
                         <div className="pt-2 border-t border-gray-100 flex flex-col gap-2">

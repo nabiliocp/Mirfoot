@@ -1372,8 +1372,22 @@ async function startServer() {
         return res.status(500).json({ error: betsError.message });
       }
 
-      // 2. Fetch profiles of all users who bet
-      const userIds = bets.map(b => b.user_id);
+      // 1b. Fetch all accepted invitations for this challenge to find users who joined but didn't bet yet
+      const { data: invites, error: invitesError } = await supabase
+        .from("challenge_invitations")
+        .select("user_id")
+        .eq("challenge_id", challengeId);
+
+      if (invitesError) {
+        console.error("Error fetching invitations for challenge:", invitesError);
+      }
+
+      // Combine user IDs
+      const allUserIds = new Set<string>();
+      if (bets) bets.forEach(b => allUserIds.add(b.user_id));
+      if (invites) invites.forEach(i => allUserIds.add(i.user_id));
+
+      const userIds = Array.from(allUserIds);
       let profiles: any[] = [];
       if (userIds.length > 0) {
         const { data: profs, error: profsError } = await supabase
@@ -1388,11 +1402,18 @@ async function startServer() {
         }
       }
 
-      // Map profiles to bets
-      const results = bets.map(bet => {
-        const profile = profiles.find(p => p.id === bet.user_id);
+      // Map profiles to bets (or placeholders for users who haven't bet yet)
+      const results = userIds.map(uId => {
+        const bet = bets ? bets.find(b => b.user_id === uId) : null;
+        const profile = profiles.find(p => p.id === uId);
+        
         return {
-          ...bet,
+          id: bet?.id || `placeholder-${uId}`,
+          challenge_id: challengeId,
+          user_id: uId,
+          predictions: bet?.predictions || { r16: {}, r8: {}, r4: {}, r2: {}, winner: "" },
+          points_awarded: bet?.points_awarded || 0,
+          created_at: bet?.created_at || new Date().toISOString(),
           username: profile?.username || "Joueur Anonyme",
           avatar_type: profile?.avatar_type || "emoji",
           avatar_value: profile?.avatar_value || "⚽",

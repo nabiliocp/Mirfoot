@@ -7,7 +7,8 @@ import {
   BracketPredictions,
   createEmptyBracketPredictions,
   BRACKET_MATCH_TIMES,
-  generateRandomBracketPicks
+  generateRandomBracketPicks,
+  calculateBracketPoints
 } from "../bracketData";
 import { supabase } from "../lib/supabase";
 import { Check, Lock, Trophy, AlertTriangle, Sparkles, HelpCircle } from "lucide-react";
@@ -18,6 +19,7 @@ interface BracketChallengeProps {
   mode: "prediction" | "results"; // prediction for users, results for creator resolution
   onSaveSuccess?: () => void;
   onShowRules?: () => void;
+  isSimulationMode?: boolean;
 }
 
 export const BracketChallenge: React.FC<BracketChallengeProps> = ({
@@ -25,7 +27,8 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
   userId,
   mode,
   onSaveSuccess,
-  onShowRules
+  onShowRules,
+  isSimulationMode = false
 }) => {
   const [picks, setPicks] = useState<BracketPredictions>(createEmptyBracketPredictions());
   const [loading, setLoading] = useState(false);
@@ -39,11 +42,34 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
 
   // Test mode options
   const [testMode, setTestMode] = useState(false);
+  const [activeSimulationTab, setActiveSimulationTab] = useState<"picks" | "simulation">("picks");
+  const [simulatedResults, setSimulatedResults] = useState<BracketPredictions | null>(null);
   const [seeding, setSeeding] = useState(false);
   const [forceLockMatches, setForceLockMatches] = useState(false);
 
   // Phase timeline state
   const [currentPhase, setCurrentPhase] = useState<"r32" | "r16" | "r8" | "r4" | "r2" | "winner">("r32");
+
+  // Synchronize with parent app's simulation mode state
+  useEffect(() => {
+    if (isSimulationMode) {
+      setTestMode(true);
+    } else {
+      setTestMode(false);
+    }
+  }, [isSimulationMode]);
+
+  // Handle local simulatedResults state lifecycle
+  useEffect(() => {
+    if (testMode) {
+      const actual = typeof challenge.pointRules === "string"
+        ? JSON.parse(challenge.pointRules)
+        : (challenge.pointRules || {});
+      setSimulatedResults(actual.actualBracketPicks || createEmptyBracketPredictions());
+    } else {
+      setSimulatedResults(null);
+    }
+  }, [testMode, challenge.pointRules]);
 
   // Drag-to-scroll implementation for full-size view on both desktop/laptop and mobile (kept to avoid removing refs)
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -99,15 +125,18 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
   };
 
   // Load existing prediction (if in prediction mode) or actual results (if in results mode)
+  const challengeId = challenge.id;
+  const pointRulesStr = typeof challenge.pointRules === "string" 
+    ? challenge.pointRules 
+    : JSON.stringify(challenge.pointRules || {});
+
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
       try {
         if (mode === "results") {
           // In results mode, load the actual results stored in point_rules.actualBracketPicks
-          const pointRules = typeof challenge.pointRules === "string"
-            ? JSON.parse(challenge.pointRules)
-            : challenge.pointRules || {};
+          const pointRules = pointRulesStr ? JSON.parse(pointRulesStr) : {};
 
           if (pointRules.actualBracketPicks) {
             setPicks(pointRules.actualBracketPicks);
@@ -116,7 +145,7 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
           }
         } else {
           // In prediction mode, load the user's prediction from our secure backend API proxy
-          const res = await fetch(`/api/bets?userId=${userId}&challengeId=${challenge.id}`);
+          const res = await fetch(`/api/bets?userId=${userId}&challengeId=${challengeId}`);
           if (res.ok) {
             const result = await res.json();
             if (result.data && result.data.predictions) {
@@ -142,22 +171,28 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
     };
 
     loadData();
-  }, [challenge.id, challenge.pointRules, userId, mode]);
+  }, [challengeId, pointRulesStr, userId, mode]);
 
-  // Compute the current state of matches in later rounds based on current picks
-  const bracketState = computeBracketState(picks);
+  // Determine which predictions are currently active for the bracket tree
+  const isViewingOther = !!selectedParticipant;
+  const activePicks = (testMode && activeSimulationTab === "simulation" && simulatedResults)
+    ? simulatedResults
+    : (selectedParticipant ? selectedParticipant.predictions : picks);
+
+  // Compute the current state of matches in later rounds based on active predictions
+  const bracketState = computeBracketState(activePicks);
 
   // Determine slot progression mapping
   // maps previous round winner to subsequent round position key
   const handleSelectWinner = (round: "r32" | "r16" | "r8" | "r4" | "r2", matchId: string, teamId: string) => {
     // Check lock conditions if in prediction mode
-    if (mode === "prediction" && isMatchLocked(matchId)) {
+    if (mode === "prediction" && isMatchLocked(matchId) && !(testMode && activeSimulationTab === "simulation")) {
       setMessage({ type: "error", text: "Ce match a déjà commencé. Les pronostics sont clôturés." });
       return;
     }
 
     setMessage(null);
-    const updatedPicks = { ...picks };
+    const updatedPicks = { ...activePicks };
 
     if (round === "r32") {
       // Maps R32 to R16 slots
@@ -248,7 +283,11 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
       updatedPicks.winner = teamId;
     }
 
-    setPicks(updatedPicks);
+    if (testMode && activeSimulationTab === "simulation") {
+      setSimulatedResults(updatedPicks);
+    } else {
+      setPicks(updatedPicks);
+    }
   };
 
   // Helper to clear invalid subsequent selections of a team that lost in an earlier round
@@ -368,6 +407,7 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
   const renderMatchCard = (round: "r32" | "r16" | "r8" | "r4" | "r2", matchId: string, teamAId: string, teamBId: string) => {
     const teamA = BRACKET_TEAMS[teamAId];
     const teamB = BRACKET_TEAMS[teamBId];
+    const currentPicks = activePicks;
     
     // Check which team is predicted/selected as winner in this match
     // To do this, check the next round's slot value or winner value
@@ -386,9 +426,9 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
         R32_R7: "R16_R4_H", R32_R8: "R16_R4_A",
       };
       const slot = slotMap[matchId];
-      if (picks.r16[slot]) {
-        isSelectedA = picks.r16[slot] === teamAId;
-        isSelectedB = picks.r16[slot] === teamBId;
+      if (currentPicks.r16[slot]) {
+        isSelectedA = currentPicks.r16[slot] === teamAId;
+        isSelectedB = currentPicks.r16[slot] === teamBId;
       }
     } else if (round === "r16") {
       const slotMap: Record<string, string> = {
@@ -398,9 +438,9 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
         R16_R3: "R8_R2_H", R16_R4: "R8_R2_A",
       };
       const slot = slotMap[matchId];
-      if (picks.r8[slot]) {
-        isSelectedA = picks.r8[slot] === teamAId;
-        isSelectedB = picks.r8[slot] === teamBId;
+      if (currentPicks.r8[slot]) {
+        isSelectedA = currentPicks.r8[slot] === teamAId;
+        isSelectedB = currentPicks.r8[slot] === teamBId;
       }
     } else if (round === "r8") {
       const slotMap: Record<string, string> = {
@@ -408,23 +448,23 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
         R8_R1: "R4_R1_H", R8_R2: "R4_R1_A",
       };
       const slot = slotMap[matchId];
-      if (picks.r4[slot]) {
-        isSelectedA = picks.r4[slot] === teamAId;
-        isSelectedB = picks.r4[slot] === teamBId;
+      if (currentPicks.r4[slot]) {
+        isSelectedA = currentPicks.r4[slot] === teamAId;
+        isSelectedB = currentPicks.r4[slot] === teamBId;
       }
     } else if (round === "r4") {
       const slotMap: Record<string, string> = {
         R4_L1: "R2_L1_H", R4_R1: "R2_L1_A",
       };
       const slot = slotMap[matchId];
-      if (picks.r2[slot]) {
-        isSelectedA = picks.r2[slot] === teamAId;
-        isSelectedB = picks.r2[slot] === teamBId;
+      if (currentPicks.r2[slot]) {
+        isSelectedA = currentPicks.r2[slot] === teamAId;
+        isSelectedB = currentPicks.r2[slot] === teamBId;
       }
     } else if (round === "r2") {
-      if (picks.winner) {
-        isSelectedA = picks.winner === teamAId;
-        isSelectedB = picks.winner === teamBId;
+      if (currentPicks.winner) {
+        isSelectedA = currentPicks.winner === teamAId;
+        isSelectedB = currentPicks.winner === teamBId;
       }
     }
 
@@ -502,11 +542,11 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
   }
 
   // Count progress
-  const r16Progress = Object.keys(picks.r16).filter(k => picks.r16[k]).length;
-  const r8Progress = Object.keys(picks.r8).filter(k => picks.r8[k]).length;
-  const r4Progress = Object.keys(picks.r4).filter(k => picks.r4[k]).length;
-  const r2Progress = Object.keys(picks.r2).filter(k => picks.r2[k]).length;
-  const isWinnerPicked = !!picks.winner;
+  const r16Progress = Object.keys(activePicks.r16).filter(k => activePicks.r16[k]).length;
+  const r8Progress = Object.keys(activePicks.r8).filter(k => activePicks.r8[k]).length;
+  const r4Progress = Object.keys(activePicks.r4).filter(k => activePicks.r4[k]).length;
+  const r2Progress = Object.keys(activePicks.r2).filter(k => activePicks.r2[k]).length;
+  const isWinnerPicked = !!activePicks.winner;
 
   const totalCompletedPicks = r16Progress + r8Progress + r4Progress + r2Progress + (isWinnerPicked ? 1 : 0);
   const totalSlots = 16 + 8 + 4 + 2 + 1; // 31 total slots to fill
@@ -815,7 +855,7 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
 
             {currentPhase === "winner" && (
               <div className="flex-1 flex justify-center py-12 md:py-24">
-                {picks.winner ? (
+                {activePicks.winner ? (
                   <div className="relative group w-full max-w-sm">
                     <div className="absolute inset-0 bg-amber-500/10 rounded-2xl blur-lg opacity-60"></div>
                     <div className="relative bg-gradient-to-b from-amber-400 to-yellow-500 border border-amber-300 rounded-3xl p-10 text-slate-950 shadow-md space-y-4 text-center">
@@ -823,8 +863,8 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
                       <div>
                         <div className="text-xs font-extrabold uppercase tracking-widest text-amber-900">Champion Prédit</div>
                         <div className="text-3xl font-black flex items-center justify-center gap-3 mt-3">
-                          <span className="text-4xl">{BRACKET_TEAMS[picks.winner]?.flag}</span>
-                          <span>{BRACKET_TEAMS[picks.winner]?.name}</span>
+                          <span className="text-4xl">{BRACKET_TEAMS[activePicks.winner]?.flag}</span>
+                          <span>{BRACKET_TEAMS[activePicks.winner]?.name}</span>
                         </div>
                       </div>
                     </div>
@@ -925,8 +965,50 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
               🔒 {forceLockMatches ? "Matches Verrouillés (Activé)" : "Verrouiller tous les matches"}
             </button>
           </div>
-          <p className="text-[10px] text-amber-700 font-semibold leading-relaxed">
-            💡 <strong>Astuce :</strong> Activez "Verrouiller tous les matches" pour tester instantanément le dévoilement des pronostics des autres participants. Allez ensuite dans l'onglet "Participants & Classement" et cliquez sur un participant pour voir ses choix !
+          
+          <div className="bg-amber-100/40 p-2.5 rounded-xl flex flex-col sm:flex-row items-center justify-between border border-amber-200/65 mt-2 gap-2">
+            <div className="text-xs font-black text-amber-950">
+              ⚡ Saisie active dans l'éditeur :
+            </div>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveSimulationTab("picks");
+                  setSelectedParticipant(null);
+                  setActiveSubTab("myBracket");
+                }}
+                className={`px-3 py-1.5 rounded-lg text-xs font-black transition cursor-pointer ${
+                  activeSimulationTab === "picks"
+                    ? "bg-emerald-600 text-white shadow-xs"
+                    : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-200"
+                }`}
+              >
+                🎯 Mes Pronostics
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveSimulationTab("simulation");
+                  setSelectedParticipant(null);
+                  setActiveSubTab("myBracket");
+                  if (!simulatedResults) {
+                    setSimulatedResults(createEmptyBracketPredictions());
+                  }
+                }}
+                className={`px-3 py-1.5 rounded-lg text-xs font-black transition cursor-pointer ${
+                  activeSimulationTab === "simulation"
+                    ? "bg-amber-600 text-white shadow-xs"
+                    : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-200"
+                }`}
+              >
+                🏆 Résultats Réels Simulés
+              </button>
+            </div>
+          </div>
+
+          <p className="text-[10px] text-amber-700 font-semibold leading-relaxed mt-2 bg-amber-50 p-2 rounded-lg">
+            💡 <strong>Comment ça marche ?</strong> Sélectionnez <strong>"Résultats Réels Simulés"</strong> pour remplir les vainqueurs réels sur le tableau ci-dessous. Allez ensuite dans l'onglet <strong>"Participants & Classement"</strong> : le score et le classement de chaque joueur seront recalculés <strong>en direct</strong> selon votre simulation !
           </p>
         </div>
       )}
@@ -1008,8 +1090,12 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
               <div className="divide-y divide-gray-150">
                 {[...participants]
                   .sort((a, b) => {
-                    const ptsA = a.points_awarded || 0;
-                    const ptsB = b.points_awarded || 0;
+                    const ptsA = (testMode && simulatedResults)
+                      ? calculateBracketPoints(a.predictions || {}, simulatedResults)
+                      : (a.points_awarded || 0);
+                    const ptsB = (testMode && simulatedResults)
+                      ? calculateBracketPoints(b.predictions || {}, simulatedResults)
+                      : (b.points_awarded || 0);
                     if (ptsA !== ptsB) return ptsB - ptsA;
                     return (b.profile_points || 0) - (a.profile_points || 0);
                   })
@@ -1024,6 +1110,10 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
                     const r2C = Object.keys(pPicks.r2 || {}).filter(k => pPicks.r2[k]).length;
                     const winC = pPicks.winner ? 1 : 0;
                     const totalC = r16C + r8C + r4C + r2C + winC;
+
+                    const displayPoints = (testMode && simulatedResults)
+                      ? calculateBracketPoints(pPicks, simulatedResults)
+                      : (p.points_awarded || 0);
                     
                     return (
                       <div 
@@ -1055,8 +1145,11 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
                         
                         <div className="flex items-center gap-3 shrink-0">
                           <div className="text-right">
-                            <div className="text-sm font-black text-emerald-800">
-                              {p.points_awarded || 0} pts
+                            <div className="text-sm font-black text-emerald-800 flex items-center gap-1">
+                              <span>{displayPoints} pts</span>
+                              {testMode && simulatedResults && (
+                                <span className="text-[8px] bg-amber-100 text-amber-800 px-1 py-0.2 rounded font-extrabold">Simulé</span>
+                              )}
                             </div>
                             <div className="text-[9px] text-gray-400 font-bold">
                               Profil: {p.profile_points || 0} pts
