@@ -40,7 +40,10 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
   const [seeding, setSeeding] = useState(false);
   const [forceLockMatches, setForceLockMatches] = useState(false);
 
-  // Drag-to-scroll implementation for full-size view on both desktop/laptop and mobile
+  // Phase timeline state
+  const [currentPhase, setCurrentPhase] = useState<"r32" | "r16" | "r8" | "r4" | "r2" | "winner">("r32");
+
+  // Drag-to-scroll implementation for full-size view on both desktop/laptop and mobile (kept to avoid removing refs)
   const scrollRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [startX, setStartX] = useState(0);
@@ -709,142 +712,149 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
     const r4Right = bracketState.r4Matches.filter(m => m.id.includes("_R"));
 
     return (
-      <div className="space-y-3">
-        {/* Helper Drag tip */}
-        <div className="flex items-center justify-center gap-1.5 text-xs text-emerald-700 font-extrabold bg-emerald-50 py-2.5 px-4 rounded-xl border border-emerald-100/60 max-w-md mx-auto text-center select-none">
-          <span className="animate-pulse">👈</span>
-          <span>Glissez le tableau de gauche à droite pour voir l'ensemble des matchs</span>
-          <span className="animate-pulse">👉</span>
+      <div className="space-y-4">
+        {/* Phase navigation timeline */}
+        <div className="flex bg-gray-100 rounded-xl p-1 overflow-x-auto scrollbar-none snap-x border border-gray-200 shadow-inner">
+          <button onClick={() => setCurrentPhase("r32")} className={`snap-center flex-1 min-w-[70px] py-2 px-2 rounded-lg text-[10px] font-black transition ${currentPhase === "r32" ? "bg-white text-emerald-700 shadow-sm" : "text-gray-500 hover:text-gray-700 hover:bg-gray-200/50"}`}>1/16</button>
+          <button onClick={() => setCurrentPhase("r16")} className={`snap-center flex-1 min-w-[70px] py-2 px-2 rounded-lg text-[10px] font-black transition ${currentPhase === "r16" ? "bg-white text-emerald-700 shadow-sm" : "text-gray-500 hover:text-gray-700 hover:bg-gray-200/50"}`}>1/8</button>
+          <button onClick={() => setCurrentPhase("r8")} className={`snap-center flex-1 min-w-[70px] py-2 px-2 rounded-lg text-[10px] font-black transition ${currentPhase === "r8" ? "bg-white text-emerald-700 shadow-sm" : "text-gray-500 hover:text-gray-700 hover:bg-gray-200/50"}`}>Quarts</button>
+          <button onClick={() => setCurrentPhase("r4")} className={`snap-center flex-1 min-w-[70px] py-2 px-2 rounded-lg text-[10px] font-black transition ${currentPhase === "r4" ? "bg-white text-emerald-700 shadow-sm" : "text-gray-500 hover:text-gray-700 hover:bg-gray-200/50"}`}>Demies</button>
+          <button onClick={() => setCurrentPhase("r2")} className={`snap-center flex-1 min-w-[70px] py-2 px-2 rounded-lg text-[10px] font-black transition ${currentPhase === "r2" ? "bg-white text-emerald-700 shadow-sm" : "text-gray-500 hover:text-gray-700 hover:bg-gray-200/50"}`}>Finale</button>
+          <button onClick={() => setCurrentPhase("winner")} className={`snap-center flex-1 min-w-[70px] py-2 px-2 rounded-lg text-[10px] font-black transition ${currentPhase === "winner" ? "bg-emerald-500 text-white shadow-sm" : "text-gray-500 hover:text-gray-700 hover:bg-gray-200/50"}`}>Champion</button>
         </div>
 
-        {/* Outer Draggable scroll container */}
-        <div 
-          ref={scrollRef}
-          onMouseDown={handleMouseDown}
-          onMouseLeave={handleMouseLeave}
-          onMouseUp={handleMouseUp}
-          onMouseMove={handleMouseMove}
-          className="overflow-x-auto pb-4 border border-gray-200 rounded-3xl bg-white shadow-xs cursor-grab active:cursor-grabbing select-none scrollbar-thin scrollbar-thumb-gray-200 scrollbar-track-transparent"
-          id="bracket-container-wrap"
-        >
-          <div className="min-w-[1840px] p-8 flex justify-between items-center h-[1000px] gap-6 relative">
-            <div className="absolute inset-0 bg-[radial-gradient(#e2e8f0_1.5px,transparent_1.5px)] [background-size:24px_24px] bg-slate-50/40 pointer-events-none rounded-3xl"></div>
-
-            {/* COL 1: 1/16 LEFT */}
-            <div className="flex flex-col h-full justify-between relative z-10 py-4">
-              <div className="text-[10px] text-gray-400 font-black tracking-widest uppercase text-center mb-2">1/16 Finales (G)</div>
-              {r32Left.map(m => (
-                <div key={m.id} className="relative">
-                  {renderTreeMatchNode("r32", m.id, m.homeId, m.awayId, "left")}
+        {/* Phase content */}
+        <div className="bg-white border border-gray-200 rounded-3xl p-4 md:p-6 shadow-xs relative overflow-hidden min-h-[400px]">
+          <div className="absolute inset-0 bg-[radial-gradient(#e2e8f0_1.5px,transparent_1.5px)] [background-size:24px_24px] bg-slate-50/40 pointer-events-none rounded-3xl"></div>
+          
+          <div className="relative z-10 flex flex-col md:flex-row gap-6 md:gap-12">
+            
+            {currentPhase === "r32" && (
+              <>
+                <div className="flex-1 space-y-4">
+                  <div className="text-[10px] text-gray-400 font-black tracking-widest uppercase text-center mb-4">1/16 Finales (Partie Gauche)</div>
+                  <div className="grid grid-cols-1 gap-4">
+                    {r32Left.map(m => <div key={m.id} className="relative">{renderTreeMatchNode("r32", m.id, m.homeId, m.awayId, "center")}</div>)}
+                  </div>
                 </div>
-              ))}
-            </div>
-
-            {/* COL 2: 1/8 LEFT */}
-            <div className="flex flex-col h-full justify-around relative z-10 py-12">
-              <div className="text-[10px] text-gray-400 font-black tracking-widest uppercase text-center mb-2">Huitièmes (G)</div>
-              {r16Left.map(m => (
-                <div key={m.id} className="relative">
-                  {renderTreeMatchNode("r16", m.id, m.homeId, m.awayId, "left")}
+                <div className="hidden md:block w-px bg-gray-200"></div>
+                <div className="flex-1 space-y-4">
+                  <div className="text-[10px] text-gray-400 font-black tracking-widest uppercase text-center mb-4">1/16 Finales (Partie Droite)</div>
+                  <div className="grid grid-cols-1 gap-4">
+                    {r32Right.map(m => <div key={m.id} className="relative">{renderTreeMatchNode("r32", m.id, m.homeId, m.awayId, "center")}</div>)}
+                  </div>
                 </div>
-              ))}
-            </div>
+              </>
+            )}
 
-            {/* COL 3: 1/4 LEFT */}
-            <div className="flex flex-col h-full justify-around relative z-10 py-24">
-              <div className="text-[10px] text-gray-400 font-black tracking-widest uppercase text-center mb-2">Quarts (G)</div>
-              {r8Left.map(m => (
-                <div key={m.id} className="relative">
-                  {renderTreeMatchNode("r8", m.id, m.homeId, m.awayId, "left")}
+            {currentPhase === "r16" && (
+              <>
+                <div className="flex-1 space-y-4">
+                  <div className="text-[10px] text-gray-400 font-black tracking-widest uppercase text-center mb-4">Huitièmes (Partie Gauche)</div>
+                  <div className="grid grid-cols-1 gap-4">
+                    {r16Left.map(m => <div key={m.id} className="relative">{renderTreeMatchNode("r16", m.id, m.homeId, m.awayId, "center")}</div>)}
+                  </div>
                 </div>
-              ))}
-            </div>
-
-            {/* COL 4: 1/2 LEFT */}
-            <div className="flex flex-col h-full justify-center relative z-10 py-32 space-y-4">
-              <div className="text-[10px] text-gray-400 font-black tracking-widest uppercase text-center mb-2">Demi-finale (G)</div>
-              {r4Left.map(m => (
-                <div key={m.id} className="relative">
-                  {renderTreeMatchNode("r4", m.id, m.homeId, m.awayId, "left")}
+                <div className="hidden md:block w-px bg-gray-200"></div>
+                <div className="flex-1 space-y-4">
+                  <div className="text-[10px] text-gray-400 font-black tracking-widest uppercase text-center mb-4">Huitièmes (Partie Droite)</div>
+                  <div className="grid grid-cols-1 gap-4">
+                    {r16Right.map(m => <div key={m.id} className="relative">{renderTreeMatchNode("r16", m.id, m.homeId, m.awayId, "center")}</div>)}
+                  </div>
                 </div>
-              ))}
-            </div>
+              </>
+            )}
 
-            {/* COL 5: CENTER FINALE */}
-            <div className="flex flex-col h-full justify-center items-center relative z-10 w-[220px]">
-              <div className="flex flex-col items-center justify-center space-y-6 w-full text-center">
-                {/* Champion Box */}
+            {currentPhase === "r8" && (
+              <>
+                <div className="flex-1 space-y-4">
+                  <div className="text-[10px] text-gray-400 font-black tracking-widest uppercase text-center mb-4">Quarts (Partie Gauche)</div>
+                  <div className="grid grid-cols-1 gap-4">
+                    {r8Left.map(m => <div key={m.id} className="relative">{renderTreeMatchNode("r8", m.id, m.homeId, m.awayId, "center")}</div>)}
+                  </div>
+                </div>
+                <div className="hidden md:block w-px bg-gray-200"></div>
+                <div className="flex-1 space-y-4">
+                  <div className="text-[10px] text-gray-400 font-black tracking-widest uppercase text-center mb-4">Quarts (Partie Droite)</div>
+                  <div className="grid grid-cols-1 gap-4">
+                    {r8Right.map(m => <div key={m.id} className="relative">{renderTreeMatchNode("r8", m.id, m.homeId, m.awayId, "center")}</div>)}
+                  </div>
+                </div>
+              </>
+            )}
+
+            {currentPhase === "r4" && (
+              <>
+                <div className="flex-1 space-y-4">
+                  <div className="text-[10px] text-gray-400 font-black tracking-widest uppercase text-center mb-4">Demi-finale (Partie Gauche)</div>
+                  <div className="grid grid-cols-1 gap-6 md:gap-12 md:py-8">
+                    {r4Left.map(m => <div key={m.id} className="relative">{renderTreeMatchNode("r4", m.id, m.homeId, m.awayId, "center")}</div>)}
+                  </div>
+                </div>
+                <div className="hidden md:block w-px bg-gray-200"></div>
+                <div className="flex-1 space-y-4">
+                  <div className="text-[10px] text-gray-400 font-black tracking-widest uppercase text-center mb-4">Demi-finale (Partie Droite)</div>
+                  <div className="grid grid-cols-1 gap-6 md:gap-12 md:py-8">
+                    {r4Right.map(m => <div key={m.id} className="relative">{renderTreeMatchNode("r4", m.id, m.homeId, m.awayId, "center")}</div>)}
+                  </div>
+                </div>
+              </>
+            )}
+
+            {currentPhase === "r2" && (
+              <div className="flex-1 space-y-4 flex flex-col items-center py-12 md:py-16">
+                <div className="text-[12px] text-amber-600 font-extrabold uppercase tracking-widest text-center mb-8">🏆 Grande Finale 🏆</div>
+                <div className="w-full max-w-md relative">
+                  {renderTreeMatchNode("r2", "R2_F1", bracketState.finalMatch.homeId, bracketState.finalMatch.awayId, "center")}
+                </div>
+              </div>
+            )}
+
+            {currentPhase === "winner" && (
+              <div className="flex-1 flex justify-center py-12 md:py-24">
                 {picks.winner ? (
-                  <div className="relative group">
+                  <div className="relative group w-full max-w-sm">
                     <div className="absolute inset-0 bg-amber-500/10 rounded-2xl blur-lg opacity-60"></div>
-                    <div className="relative bg-gradient-to-b from-amber-400 to-yellow-500 border border-amber-300 rounded-2xl p-4 text-slate-950 shadow-md space-y-2 w-[180px]">
-                      <Trophy className="w-10 h-10 mx-auto text-amber-950 animate-bounce" />
+                    <div className="relative bg-gradient-to-b from-amber-400 to-yellow-500 border border-amber-300 rounded-3xl p-10 text-slate-950 shadow-md space-y-4 text-center">
+                      <Trophy className="w-20 h-20 mx-auto text-amber-950 animate-bounce" />
                       <div>
-                        <div className="text-[10px] font-extrabold uppercase tracking-widest text-amber-900">Champion Prédit</div>
-                        <div className="text-sm font-black flex items-center justify-center gap-1.5 mt-1 truncate">
-                          <span>{BRACKET_TEAMS[picks.winner]?.flag}</span>
-                          <span className="truncate max-w-[120px]">{BRACKET_TEAMS[picks.winner]?.name}</span>
+                        <div className="text-xs font-extrabold uppercase tracking-widest text-amber-900">Champion Prédit</div>
+                        <div className="text-3xl font-black flex items-center justify-center gap-3 mt-3">
+                          <span className="text-4xl">{BRACKET_TEAMS[picks.winner]?.flag}</span>
+                          <span>{BRACKET_TEAMS[picks.winner]?.name}</span>
                         </div>
                       </div>
                     </div>
                   </div>
                 ) : (
-                  <div className="bg-white border border-gray-200 border-dashed rounded-2xl p-4 text-gray-400 space-y-2 w-[180px]">
-                    <HelpCircle className="w-8 h-8 mx-auto text-gray-300 animate-pulse" />
-                    <div className="text-[10px] font-extrabold uppercase tracking-wider">Champion à prédire</div>
+                  <div className="bg-white border-2 border-gray-200 border-dashed rounded-3xl p-16 text-gray-400 space-y-4 w-full max-w-sm text-center flex flex-col items-center justify-center">
+                    <HelpCircle className="w-16 h-16 mx-auto text-gray-300 animate-pulse" />
+                    <div className="text-base font-extrabold uppercase tracking-wider">Champion à prédire</div>
+                    <div className="text-[11px] text-gray-400">Remplissez d'abord la finale pour choisir le vainqueur.</div>
                   </div>
                 )}
-
-                {/* Connector from Champion */}
-                <div className="w-[2px] h-10 bg-gradient-to-b from-amber-500 to-gray-200"></div>
-
-                {/* Finale Match */}
-                <div className="space-y-1.5">
-                  <div className="text-[10px] text-amber-600 font-extrabold uppercase tracking-widest text-center">🏆 Grande Finale 🏆</div>
-                  {renderTreeMatchNode("r2", "R2_F1", bracketState.finalMatch.homeId, bracketState.finalMatch.awayId, "center")}
-                </div>
               </div>
-            </div>
+            )}
 
-            {/* COL 6: 1/2 RIGHT */}
-            <div className="flex flex-col h-full justify-center relative z-10 py-32 space-y-4">
-              <div className="text-[10px] text-gray-400 font-black tracking-widest uppercase text-center mb-2">Demi-finale (D)</div>
-              {r4Right.map(m => (
-                <div key={m.id} className="relative">
-                  {renderTreeMatchNode("r4", m.id, m.homeId, m.awayId, "right")}
-                </div>
-              ))}
-            </div>
+          </div>
 
-            {/* COL 7: 1/4 RIGHT */}
-            <div className="flex flex-col h-full justify-around relative z-10 py-24">
-              <div className="text-[10px] text-gray-400 font-black tracking-widest uppercase text-center mb-2">Quarts (D)</div>
-              {r8Right.map(m => (
-                <div key={m.id} className="relative">
-                  {renderTreeMatchNode("r8", m.id, m.homeId, m.awayId, "right")}
-                </div>
-              ))}
-            </div>
-
-            {/* COL 8: 1/8 RIGHT */}
-            <div className="flex flex-col h-full justify-around relative z-10 py-12">
-              <div className="text-[10px] text-gray-400 font-black tracking-widest uppercase text-center mb-2">Huitièmes (D)</div>
-              {r16Right.map(m => (
-                <div key={m.id} className="relative">
-                  {renderTreeMatchNode("r16", m.id, m.homeId, m.awayId, "right")}
-                </div>
-              ))}
-            </div>
-
-            {/* COL 9: 1/16 RIGHT */}
-            <div className="flex flex-col h-full justify-between relative z-10 py-4">
-              <div className="text-[10px] text-gray-400 font-black tracking-widest uppercase text-center mb-2">1/16 Finales (D)</div>
-              {r32Right.map(m => (
-                <div key={m.id} className="relative">
-                  {renderTreeMatchNode("r32", m.id, m.homeId, m.awayId, "right")}
-                </div>
-              ))}
-            </div>
+          {/* Wizard Next Button */}
+          <div className="mt-8 flex justify-center border-t border-gray-100 pt-6 relative z-10">
+             {currentPhase === "r32" && (
+                <button onClick={() => setCurrentPhase("r16")} className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm px-6 py-2.5 rounded-xl shadow-sm transition">Continuer vers 1/8 ➡️</button>
+             )}
+             {currentPhase === "r16" && (
+                <button onClick={() => setCurrentPhase("r8")} className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm px-6 py-2.5 rounded-xl shadow-sm transition">Continuer vers Quarts ➡️</button>
+             )}
+             {currentPhase === "r8" && (
+                <button onClick={() => setCurrentPhase("r4")} className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm px-6 py-2.5 rounded-xl shadow-sm transition">Continuer vers Demies ➡️</button>
+             )}
+             {currentPhase === "r4" && (
+                <button onClick={() => setCurrentPhase("r2")} className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm px-6 py-2.5 rounded-xl shadow-sm transition">Continuer vers Finale ➡️</button>
+             )}
+             {currentPhase === "r2" && (
+                <button onClick={() => setCurrentPhase("winner")} className="bg-amber-500 hover:bg-amber-600 text-white font-bold text-sm px-6 py-2.5 rounded-xl shadow-sm transition">Choisir le Vainqueur 🏆</button>
+             )}
           </div>
         </div>
       </div>

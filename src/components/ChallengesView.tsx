@@ -3298,30 +3298,36 @@ export default function ChallengesView({
               <CheckSquare className="w-4 h-4" />
               Pronostics
             </button>
-            <button
-              type="button"
-              onClick={() => setDetailTab("leaderboard")}
-              className={`flex-1 min-w-[70px] text-center py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
-                detailTab === "leaderboard"
-                  ? "bg-emerald-600 text-white shadow-xs"
-                  : "text-gray-500 hover:text-gray-800 hover:bg-gray-50"
-              }`}
-            >
-              <Trophy className="w-4 h-4" />
-              Classement
-            </button>
-            <button
-              type="button"
-              onClick={() => setDetailTab("participants")}
-              className={`flex-1 min-w-[70px] text-center py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
-                detailTab === "participants"
-                  ? "bg-emerald-600 text-white shadow-xs"
-                  : "text-gray-500 hover:text-gray-800 hover:bg-gray-50"
-              }`}
-            >
-              <Users className="w-4 h-4" />
-              Participants
-            </button>
+            
+            {challenge.type !== "bracket" && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setDetailTab("leaderboard")}
+                  className={`flex-1 min-w-[70px] text-center py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
+                    detailTab === "leaderboard"
+                      ? "bg-emerald-600 text-white shadow-xs"
+                      : "text-gray-500 hover:text-gray-800 hover:bg-gray-50"
+                  }`}
+                >
+                  <Trophy className="w-4 h-4" />
+                  Classement
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDetailTab("participants")}
+                  className={`flex-1 min-w-[70px] text-center py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
+                    detailTab === "participants"
+                      ? "bg-emerald-600 text-white shadow-xs"
+                      : "text-gray-500 hover:text-gray-800 hover:bg-gray-50"
+                  }`}
+                >
+                  <Users className="w-4 h-4" />
+                  Participants
+                </button>
+              </>
+            )}
+
             <button
               type="button"
               onClick={() => setDetailTab("results")}

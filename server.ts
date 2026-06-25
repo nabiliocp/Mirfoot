@@ -69,6 +69,61 @@ function loadPersistentCache(key: string): any | null {
   return null;
 }
 
+// Rate limiter queue logic to prevent 429 Too Many Requests or account bans
+const fetchQueue: (() => Promise<void>)[] = [];
+let isProcessingFetchQueue = false;
+const fetchTimestamps: number[] = [];
+const MAX_REQUESTS_PER_MINUTE = 15; // Safe margin below the typical 20 limit
+const RATE_LIMIT_WINDOW_MS = 60000; // 1 minute
+
+async function processFetchQueue() {
+  if (isProcessingFetchQueue) return;
+  isProcessingFetchQueue = true;
+
+  while (fetchQueue.length > 0) {
+    const now = Date.now();
+    // Remove timestamps older than 1 minute
+    while (fetchTimestamps.length > 0 && now - fetchTimestamps[0] > RATE_LIMIT_WINDOW_MS) {
+      fetchTimestamps.shift();
+    }
+
+    if (fetchTimestamps.length >= MAX_REQUESTS_PER_MINUTE) {
+      // Calculate how long to wait until the oldest request falls out of the window
+      const waitTime = RATE_LIMIT_WINDOW_MS - (now - fetchTimestamps[0]) + 100;
+      console.log(`[Rate Limiter] Limit of ${MAX_REQUESTS_PER_MINUTE} req/min reached. Waiting ${Math.round(waitTime / 1000)}s...`);
+      await new Promise(resolve => setTimeout(resolve, waitTime));
+      continue;
+    }
+
+    const task = fetchQueue.shift();
+    if (task) {
+      fetchTimestamps.push(Date.now());
+      try {
+        await task();
+      } catch (err) {
+        console.error("[Rate Limiter] Task error:", err);
+      }
+    }
+  }
+
+  isProcessingFetchQueue = false;
+}
+
+function rateLimitedFetch(url: string, options?: any): Promise<Response> {
+  return new Promise((resolve, reject) => {
+    fetchQueue.push(async () => {
+      try {
+        console.log(`[Rate Limiter] Executing fetch for: ${url}`);
+        const response = await fetch(url, options);
+        resolve(response);
+      } catch (err) {
+        reject(err);
+      }
+    });
+    processFetchQueue();
+  });
+}
+
 // In-memory API Cache Layer to protect free tier rate limits (100 requests / day)
 interface CacheEntry {
   data: any;
@@ -90,6 +145,7 @@ const COMPETITION_ID_MAP: Record<number, number> = {
   2013: 62, // Ligue 2
   2016: 141, // Segunda Division
   2022: 3, // UEFA Europa League
+  2018: 4, // Euro Championship
   679: 10, // Matchs Amicaux Internationaux
   2000: 1, // Coupe du Monde FIFA
 };
@@ -99,6 +155,12 @@ const REVERSE_COMPETITION_ID_MAP: Record<number, number> = Object.fromEntries(
 );
 
 const AVAILABLE_COMPETITIONS = [
+  {
+    id: 2018,
+    name: "Euro Championship",
+    emblem: "https://media.api-sports.io/football/leagues/4.png",
+    type: "CUP",
+  },
   {
     id: 2015,
     name: "Ligue 1",
@@ -323,7 +385,7 @@ async function startServer() {
         }
 
         try {
-          const response = await fetch(
+          const response = await rateLimitedFetch(
             `https://v3.football.api-sports.io/fixtures?date=${targetDate}`,
             {
               headers: { "x-apisports-key": apiKey },
@@ -393,7 +455,7 @@ async function startServer() {
       const apiKeyFootball = process.env.API_FOOTBALL_KEY;
       if (apiKeyFootball) {
         try {
-          const response = await fetch(
+          const response = await rateLimitedFetch(
             `https://v3.football.api-sports.io/fixtures?date=${targetDate}`,
             {
               headers: { "x-apisports-key": apiKeyFootball },
@@ -426,7 +488,7 @@ async function startServer() {
       if (!apiKey) return res.status(401).json({ error: "Clé API manquante" });
 
       try {
-        const response = await fetch(`https://api.football-data.org/v4/matches?dateFrom=${targetDate}&dateTo=${targetDate}`, {
+        const response = await rateLimitedFetch(`https://api.football-data.org/v4/matches?dateFrom=${targetDate}&dateTo=${targetDate}`, {
           headers: { "X-Auth-Token": apiKey },
         });
 
@@ -503,7 +565,7 @@ async function startServer() {
         const todayStr = new Date().toISOString().split("T")[0];
         let todayFriendlies: any[] = [];
         try {
-          const todayResponse = await fetch(
+          const todayResponse = await rateLimitedFetch(
             `https://v3.football.api-sports.io/fixtures?date=${todayStr}`,
             {
               headers: { "x-apisports-key": apiKey },
@@ -531,7 +593,7 @@ async function startServer() {
 
         try {
           let season = reqSeason || getSeasonYearForLeague(10);
-          let response = await fetch(
+          let response = await rateLimitedFetch(
             `https://v3.football.api-sports.io/fixtures?league=10&season=${season}`,
             {
               headers: { "x-apisports-key": apiKey },
@@ -555,7 +617,7 @@ async function startServer() {
             if (hasPlanError) {
               console.log("Free plan restriction detected for season", season, "- Falling back to season 2024.");
               season = 2024;
-              response = await fetch(
+              response = await rateLimitedFetch(
                 `https://v3.football.api-sports.io/fixtures?league=10&season=${season}`,
                 {
                   headers: { "x-apisports-key": apiKey },
@@ -618,7 +680,7 @@ async function startServer() {
 
         try {
           let season = reqSeason || getSeasonYearForLeague(mappedLeagueId);
-          let response = await fetch(
+          let response = await rateLimitedFetch(
             `https://v3.football.api-sports.io/fixtures?league=${mappedLeagueId}&season=${season}`,
             {
               headers: { "x-apisports-key": apiKey },
@@ -642,7 +704,7 @@ async function startServer() {
             if (hasPlanError) {
               console.log("Free plan restriction detected for season", season, "- Falling back to season 2024.");
               season = 2024;
-              response = await fetch(
+              response = await rateLimitedFetch(
                 `https://v3.football.api-sports.io/fixtures?league=${mappedLeagueId}&season=${season}`,
                 {
                   headers: { "x-apisports-key": apiKey },
@@ -691,7 +753,7 @@ async function startServer() {
       if (!apiKey) return res.status(401).json({ error: "Clé API manquante" });
 
       try {
-        const response = await fetch(
+        const response = await rateLimitedFetch(
           `https://api.football-data.org/v4/competitions/${req.params.competitionId}/matches`,
           {
             headers: { "X-Auth-Token": apiKey },
@@ -755,7 +817,7 @@ async function startServer() {
           apiKeyFootball
         ) {
           try {
-            const matchRes = await fetch(
+            const matchRes = await rateLimitedFetch(
               `https://v3.football.api-sports.io/fixtures?id=${challenge.match_id}`,
               {
                 headers: { "x-apisports-key": apiKeyFootball },
@@ -799,7 +861,7 @@ async function startServer() {
 
         if (!matchData && apiKeyFD) {
           try {
-            const matchRes = await fetch(
+            const matchRes = await rateLimitedFetch(
               `https://api.football-data.org/v4/matches/${challenge.match_id}`,
               {
                 headers: { "X-Auth-Token": apiKeyFD },
