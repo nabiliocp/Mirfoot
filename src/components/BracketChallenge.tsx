@@ -46,6 +46,7 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
   const [simulatedResults, setSimulatedResults] = useState<BracketPredictions | null>(null);
   const [seeding, setSeeding] = useState(false);
   const [forceLockMatches, setForceLockMatches] = useState(false);
+  const [isSimulationPanelExpanded, setIsSimulationPanelExpanded] = useState(true);
 
   // Phase timeline state
   const [currentPhase, setCurrentPhase] = useState<"r32" | "r16" | "r8" | "r4" | "r2" | "winner">("r32");
@@ -912,8 +913,30 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
     const r4Left = bracketState.r4Matches.filter(m => m.id.includes("_L"));
     const r4Right = bracketState.r4Matches.filter(m => m.id.includes("_R"));
 
+    const liveScore = testMode && simulatedResults ? calculateBracketPoints(picks, simulatedResults) : 0;
+
     return (
       <div className="space-y-4">
+        {testMode && simulatedResults && (
+          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-3.5 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-xs animate-fade-in">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <span className="text-xl shrink-0">📊</span>
+              <div className="min-w-0">
+                <div className="text-xs font-black text-amber-950 flex items-center gap-1.5">
+                  <span>Score Simulé en Direct</span>
+                  <span className="text-[8px] bg-amber-600 text-white px-1.5 py-0.5 rounded-full font-bold uppercase animate-pulse">Live</span>
+                </div>
+                <p className="text-[10px] text-amber-800 leading-normal font-medium">
+                  Modifiez vos pronostics ci-dessous : votre score est recalculé instantanément par rapport aux résultats simulés !
+                </p>
+              </div>
+            </div>
+            <div className="bg-amber-600 text-white font-black text-xs px-3.5 py-2 rounded-xl shadow-sm text-center shrink-0">
+              Score Simulé : {liveScore} pts
+            </div>
+          </div>
+        )}
+
         {/* Phase navigation timeline */}
         <div className="flex bg-gray-100 rounded-xl p-1 overflow-x-auto scrollbar-none snap-x border border-gray-200 shadow-inner">
           <button onClick={() => setCurrentPhase("r32")} className={`snap-center flex-1 min-w-[70px] py-2 px-2 rounded-lg text-[10px] font-black transition ${currentPhase === "r32" ? "bg-white text-emerald-700 shadow-sm" : "text-gray-500 hover:text-gray-700 hover:bg-gray-200/50"}`}>1/16</button>
@@ -1084,173 +1107,189 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
 
       {testMode && (
         <div className="bg-amber-50/50 border border-amber-200 rounded-2xl p-4 space-y-3">
-          <h4 className="text-xs font-extrabold text-amber-900 uppercase tracking-wider">Options de Simulation</h4>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-            <div className="flex flex-col gap-1">
-              <button
-                type="button"
-                disabled={seeding}
-                onClick={() => handleSeedMockParticipants(1)}
-                className="bg-white border border-amber-300 hover:bg-amber-50 text-amber-950 font-black px-3 py-1.5 rounded-xl text-[11px] flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
-              >
-                {seeding ? (
-                  <>
-                    <div className="w-3 h-3 border-2 border-amber-800 border-t-transparent rounded-full animate-spin"></div>
-                    Génération...
-                  </>
-                ) : (
-                  <>👤 Générer 1 joueur fictif</>
-                )}
-              </button>
-              <button
-                type="button"
-                disabled={seeding}
-                onClick={() => handleSeedMockParticipants(2)}
-                className="bg-white border border-amber-300 hover:bg-amber-50 text-amber-950 font-black px-3 py-1.5 rounded-xl text-[11px] flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
-              >
-                {seeding ? (
-                  <>
-                    <div className="w-3 h-3 border-2 border-amber-800 border-t-transparent rounded-full animate-spin"></div>
-                    Génération...
-                  </>
-                ) : (
-                  <>👥 Générer 2 joueurs fictifs (max)</>
-                )}
-              </button>
-            </div>
-
+          <div className="flex justify-between items-center pb-2 border-b border-amber-100">
+            <h4 className="text-xs font-extrabold text-amber-900 uppercase tracking-wider flex items-center gap-1.5">
+              <span>⚙️ Options de Simulation</span>
+            </h4>
             <button
               type="button"
-              onClick={handleFillRandomPicks}
-              className="bg-white border border-amber-300 hover:bg-amber-50 text-amber-950 font-black px-3 py-2 rounded-xl text-xs flex items-center justify-center gap-1.5 cursor-pointer"
+              onClick={() => setIsSimulationPanelExpanded(!isSimulationPanelExpanded)}
+              className="bg-amber-100 hover:bg-amber-200 text-amber-950 font-black text-[10px] px-2.5 py-1 rounded-lg transition"
             >
-              🎲 Remplir mes pronos au hasard
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setForceLockMatches(!forceLockMatches)}
-              className={`font-black px-3 py-2 rounded-xl text-xs flex items-center justify-center gap-1.5 cursor-pointer border ${
-                forceLockMatches
-                  ? "bg-amber-600 border-amber-600 text-white hover:bg-amber-700"
-                  : "bg-white border-amber-300 hover:bg-amber-50 text-amber-950"
-              }`}
-            >
-              🔒 {forceLockMatches ? "Matches Verrouillés (Activé)" : "Verrouiller tous les matches"}
+              {isSimulationPanelExpanded ? "[- Réduire]" : "[+ Déplier]"}
             </button>
           </div>
-          
-          <div className="bg-amber-100/40 p-2.5 rounded-xl flex flex-col sm:flex-row items-center justify-between border border-amber-200/65 mt-2 gap-2">
-            <div className="text-xs font-black text-amber-950">
-              ⚡ Saisie active dans l'éditeur :
-            </div>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setActiveSimulationTab("picks");
-                  setSelectedParticipant(null);
-                  setActiveSubTab("myBracket");
-                }}
-                className={`px-3 py-1.5 rounded-lg text-xs font-black transition cursor-pointer ${
-                  activeSimulationTab === "picks"
-                    ? "bg-emerald-600 text-white shadow-xs"
-                    : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-200"
-                }`}
-              >
-                🎯 Mes Pronostics
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setActiveSimulationTab("simulation");
-                  setSelectedParticipant(null);
-                  setActiveSubTab("myBracket");
-                  if (!simulatedResults) {
-                    setSimulatedResults(createEmptyBracketPredictions());
-                  }
-                }}
-                className={`px-3 py-1.5 rounded-lg text-xs font-black transition cursor-pointer ${
-                  activeSimulationTab === "simulation"
-                    ? "bg-amber-600 text-white shadow-xs"
-                    : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-200"
-                }`}
-              >
-                🏆 Résultats Réels Simulés
-              </button>
-            </div>
-          </div>
 
-          <p className="text-[10px] text-amber-700 font-semibold leading-relaxed mt-2 bg-amber-50 p-2 rounded-lg">
-            💡 <strong>Comment ça marche ?</strong> Sélectionnez <strong>"Résultats Réels Simulés"</strong> pour remplir les vainqueurs réels sur le tableau ci-dessous. Allez ensuite dans l'onglet <strong>"Participants & Classement"</strong> : le score et le classement de chaque joueur seront recalculés <strong>en direct</strong> selon votre simulation !
-          </p>
+          {isSimulationPanelExpanded && (
+            <div className="space-y-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                <div className="flex flex-col gap-1">
+                  <button
+                    type="button"
+                    disabled={seeding}
+                    onClick={() => handleSeedMockParticipants(1)}
+                    className="bg-white border border-amber-300 hover:bg-amber-50 text-amber-950 font-black px-3 py-1.5 rounded-xl text-[11px] flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                  >
+                    {seeding ? (
+                      <>
+                        <div className="w-3 h-3 border-2 border-amber-800 border-t-transparent rounded-full animate-spin"></div>
+                        Génération...
+                      </>
+                    ) : (
+                      <>👤 Générer 1 joueur fictif</>
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={seeding}
+                    onClick={() => handleSeedMockParticipants(2)}
+                    className="bg-white border border-amber-300 hover:bg-amber-50 text-amber-950 font-black px-3 py-1.5 rounded-xl text-[11px] flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                  >
+                    {seeding ? (
+                      <>
+                        <div className="w-3 h-3 border-2 border-amber-800 border-t-transparent rounded-full animate-spin"></div>
+                        Génération...
+                      </>
+                    ) : (
+                      <>👥 Générer 2 joueurs fictifs (max)</>
+                    )}
+                  </button>
+                </div>
 
-          {/* Phase Simulation Selector */}
-          <div className="bg-amber-100/40 p-3 rounded-xl border border-amber-200/60 space-y-2 mt-2">
-            <div className="flex items-center gap-1.5 text-xs font-black text-amber-950">
-              <span>🎲 Simuler des résultats factis :</span>
+                <button
+                  type="button"
+                  onClick={handleFillRandomPicks}
+                  className="bg-white border border-amber-300 hover:bg-amber-50 text-amber-950 font-black px-3 py-2 rounded-xl text-xs flex items-center justify-center gap-1.5 cursor-pointer"
+                >
+                  🎲 Remplir mes pronos au hasard
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setForceLockMatches(!forceLockMatches)}
+                  className={`font-black px-3 py-2 rounded-xl text-xs flex items-center justify-center gap-1.5 cursor-pointer border ${
+                    forceLockMatches
+                      ? "bg-amber-600 border-amber-600 text-white hover:bg-amber-700"
+                      : "bg-white border-amber-300 hover:bg-amber-50 text-amber-950"
+                  }`}
+                >
+                  🔒 {forceLockMatches ? "Matches Verrouillés (Activé)" : "Verrouiller tous les matches"}
+                </button>
+              </div>
+              
+              <div className="bg-amber-100/40 p-2.5 rounded-xl flex flex-col sm:flex-row items-center justify-between border border-amber-200/65 mt-2 gap-2">
+                <div className="text-xs font-black text-amber-950">
+                  ⚡ Saisie active dans l'éditeur :
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveSimulationTab("picks");
+                      setSelectedParticipant(null);
+                      setActiveSubTab("myBracket");
+                    }}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-black transition cursor-pointer ${
+                      activeSimulationTab === "picks"
+                        ? "bg-emerald-600 text-white shadow-xs"
+                        : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-200"
+                    }`}
+                  >
+                    🎯 Mes Pronostics
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveSimulationTab("simulation");
+                      setSelectedParticipant(null);
+                      setActiveSubTab("myBracket");
+                      if (!simulatedResults) {
+                        setSimulatedResults(createEmptyBracketPredictions());
+                      }
+                    }}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-black transition cursor-pointer ${
+                      activeSimulationTab === "simulation"
+                        ? "bg-amber-600 text-white shadow-xs"
+                        : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-200"
+                    }`}
+                  >
+                    🏆 Résultats Réels Simulés
+                  </button>
+                </div>
+              </div>
+
+              <p className="text-[10px] text-amber-700 font-semibold leading-relaxed mt-2 bg-amber-50 p-2 rounded-lg">
+                💡 <strong>Comment ça marche ?</strong> Sélectionnez <strong>"Résultats Réels Simulés"</strong> pour remplir les vainqueurs réels sur le tableau ci-dessous. Allez ensuite dans l'onglet <strong>"Participants & Classement"</strong> : le score et le classement de chaque joueur seront recalculés <strong>en direct</strong> selon votre simulation !
+              </p>
+
+              {/* Phase Simulation Selector */}
+              <div className="bg-amber-100/40 p-3 rounded-xl border border-amber-200/60 space-y-2 mt-2">
+                <div className="flex items-center gap-1.5 text-xs font-black text-amber-950">
+                  <span>🎲 Simuler des résultats factis :</span>
+                </div>
+                
+                <div className="grid grid-cols-2 sm:grid-cols-6 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleSimulatePhase("all")}
+                    className="bg-amber-600 hover:bg-amber-700 text-white font-extrabold px-2 py-1.5 rounded-lg text-[10px] text-center transition cursor-pointer shadow-xs"
+                    title="Simuler toutes les phases"
+                  >
+                    🔥 Toutes phases
+                  </button>
+                  
+                  <button
+                    type="button"
+                    onClick={() => handleSimulatePhase("r32")}
+                    className="bg-white border border-amber-300 hover:bg-amber-50 text-amber-950 font-extrabold px-2 py-1.5 rounded-lg text-[10px] text-center transition cursor-pointer"
+                    title="Simuler les 1/16 de finale"
+                  >
+                    1/16 de finale
+                  </button>
+                  
+                  <button
+                    type="button"
+                    onClick={() => handleSimulatePhase("r16")}
+                    className="bg-white border border-amber-300 hover:bg-amber-50 text-amber-950 font-extrabold px-2 py-1.5 rounded-lg text-[10px] text-center transition cursor-pointer"
+                    title="Simuler les 1/8 de finale"
+                  >
+                    1/8 de finale
+                  </button>
+                  
+                  <button
+                    type="button"
+                    onClick={() => handleSimulatePhase("r8")}
+                    className="bg-white border border-amber-300 hover:bg-amber-50 text-amber-950 font-extrabold px-2 py-1.5 rounded-lg text-[10px] text-center transition cursor-pointer"
+                    title="Simuler les Quarts de finale"
+                  >
+                    Quarts (1/4)
+                  </button>
+                  
+                  <button
+                    type="button"
+                    onClick={() => handleSimulatePhase("r4")}
+                    className="bg-white border border-amber-300 hover:bg-amber-50 text-amber-950 font-extrabold px-2 py-1.5 rounded-lg text-[10px] text-center transition cursor-pointer"
+                    title="Simuler les Demi-finales"
+                  >
+                    Demis (1/2)
+                  </button>
+                  
+                  <button
+                    type="button"
+                    onClick={() => handleSimulatePhase("r2")}
+                    className="bg-white border border-amber-300 hover:bg-amber-50 text-amber-950 font-extrabold px-2 py-1.5 rounded-lg text-[10px] text-center transition cursor-pointer"
+                    title="Simuler la Finale"
+                  >
+                    🏆 Finale
+                  </button>
+                </div>
+                
+                <p className="text-[9px] text-amber-800 leading-normal font-medium">
+                  💡 Cette action génère des vainqueurs aléatoires pour la phase sélectionnée et l'applique au tableau actif ci-dessous (<strong>{activeSimulationTab === "simulation" ? "🏆 Résultats Réels Simulés" : "🎯 Mes Pronostics"}</strong>).
+                </p>
+              </div>
             </div>
-            
-            <div className="grid grid-cols-2 sm:grid-cols-6 gap-2">
-              <button
-                type="button"
-                onClick={() => handleSimulatePhase("all")}
-                className="bg-amber-600 hover:bg-amber-700 text-white font-extrabold px-2 py-1.5 rounded-lg text-[10px] text-center transition cursor-pointer shadow-xs"
-                title="Simuler toutes les phases"
-              >
-                🔥 Toutes phases
-              </button>
-              
-              <button
-                type="button"
-                onClick={() => handleSimulatePhase("r32")}
-                className="bg-white border border-amber-300 hover:bg-amber-50 text-amber-950 font-extrabold px-2 py-1.5 rounded-lg text-[10px] text-center transition cursor-pointer"
-                title="Simuler les 1/16 de finale"
-              >
-                1/16 de finale
-              </button>
-              
-              <button
-                type="button"
-                onClick={() => handleSimulatePhase("r16")}
-                className="bg-white border border-amber-300 hover:bg-amber-50 text-amber-950 font-extrabold px-2 py-1.5 rounded-lg text-[10px] text-center transition cursor-pointer"
-                title="Simuler les 1/8 de finale"
-              >
-                1/8 de finale
-              </button>
-              
-              <button
-                type="button"
-                onClick={() => handleSimulatePhase("r8")}
-                className="bg-white border border-amber-300 hover:bg-amber-50 text-amber-950 font-extrabold px-2 py-1.5 rounded-lg text-[10px] text-center transition cursor-pointer"
-                title="Simuler les Quarts de finale"
-              >
-                Quarts (1/4)
-              </button>
-              
-              <button
-                type="button"
-                onClick={() => handleSimulatePhase("r4")}
-                className="bg-white border border-amber-300 hover:bg-amber-50 text-amber-950 font-extrabold px-2 py-1.5 rounded-lg text-[10px] text-center transition cursor-pointer"
-                title="Simuler les Demi-finales"
-              >
-                Demis (1/2)
-              </button>
-              
-              <button
-                type="button"
-                onClick={() => handleSimulatePhase("r2")}
-                className="bg-white border border-amber-300 hover:bg-amber-50 text-amber-950 font-extrabold px-2 py-1.5 rounded-lg text-[10px] text-center transition cursor-pointer"
-                title="Simuler la Finale"
-              >
-                🏆 Finale
-              </button>
-            </div>
-            
-            <p className="text-[9px] text-amber-800 leading-normal font-medium">
-              💡 Cette action génère des vainqueurs aléatoires pour la phase sélectionnée et l'applique au tableau actif ci-dessous (<strong>{activeSimulationTab === "simulation" ? "🏆 Résultats Réels Simulés" : "🎯 Mes Pronostics"}</strong>).
-            </p>
-          </div>
+          )}
         </div>
       )}
 
@@ -1331,11 +1370,13 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
               <div className="divide-y divide-gray-150">
                 {[...participants]
                   .sort((a, b) => {
+                    const predictionsA = a.user_id === userId ? picks : (a.predictions || {});
+                    const predictionsB = b.user_id === userId ? picks : (b.predictions || {});
                     const ptsA = (testMode && simulatedResults)
-                      ? calculateBracketPoints(a.predictions || {}, simulatedResults)
+                      ? calculateBracketPoints(predictionsA, simulatedResults)
                       : (a.points_awarded || 0);
                     const ptsB = (testMode && simulatedResults)
-                      ? calculateBracketPoints(b.predictions || {}, simulatedResults)
+                      ? calculateBracketPoints(predictionsB, simulatedResults)
                       : (b.points_awarded || 0);
                     if (ptsA !== ptsB) return ptsB - ptsA;
                     return (b.profile_points || 0) - (a.profile_points || 0);
@@ -1344,7 +1385,7 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
                     const isCurrentUser = p.user_id === userId;
                     const rank = index + 1;
                     
-                    const pPicks = p.predictions || {};
+                    const pPicks = isCurrentUser ? picks : (p.predictions || {});
                     const r16C = Object.keys(pPicks.r16 || {}).filter(k => pPicks.r16[k]).length;
                     const r8C = Object.keys(pPicks.r8 || {}).filter(k => pPicks.r8[k]).length;
                     const r4C = Object.keys(pPicks.r4 || {}).filter(k => pPicks.r4[k]).length;

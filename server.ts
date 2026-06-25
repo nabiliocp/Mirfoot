@@ -322,6 +322,199 @@ const translateApiFootballMatchToFootballData = (apiFMatch: any): any => {
   };
 };
 
+// Background sync system for matches cache
+const lastCompetitionFetchTime: Record<string, number> = {};
+
+async function updateActiveCompetitionsCache() {
+  if (!supabase) return;
+  try {
+    const activeProvider = getActiveApiProvider();
+    
+    // 1. Get unresolved challenges to see what competitions are active
+    const { data: challenges, error } = await supabase
+      .from("challenges")
+      .select("competition_id")
+      .neq("status", "resolved");
+
+    if (error) {
+      console.error("[Background Sync] Error fetching active challenges:", error);
+      return;
+    }
+
+    const competitionIds = Array.from(
+      new Set(
+        (challenges || [])
+          .map((c: any) => Number(c.competition_id))
+          .filter((id) => id && !isNaN(id))
+      )
+    );
+
+    // If there are no active competitions in unresolved challenges, default to Euros (2018) so we keep something warm
+    if (competitionIds.length === 0) {
+      competitionIds.push(2018);
+    }
+
+    const now = Date.now();
+
+    for (const compId of competitionIds) {
+      const cacheKey = `comp_${compId}_${activeProvider}_current`;
+      
+      // Determine if there is any live match currently or upcoming in the next 3 hours
+      let isLiveOrUpcoming = false;
+      const cached = apiCache[cacheKey] || loadPersistentCache(cacheKey);
+      
+      if (cached && cached.data && cached.data.matches) {
+        const matches = cached.data.matches;
+        const threeHours = 3 * 60 * 60 * 1000;
+        
+        isLiveOrUpcoming = matches.some((m: any) => {
+          const isLiveStatus = ["IN_PLAY", "PAUSED", "LIVE"].includes(m.status);
+          if (isLiveStatus) return true;
+          
+          if (m.utcDate) {
+            const mTime = new Date(m.utcDate).getTime();
+            const diff = mTime - now;
+            // Starts in <= 3 hours or finished within the last 2 hours
+            if (diff > -2 * 60 * 60 * 1000 && diff < threeHours) {
+              return true;
+            }
+          }
+          return false;
+        });
+      } else {
+        // If there's no cache at all, force fetch it
+        isLiveOrUpcoming = true;
+      }
+
+      // Check throttle:
+      // - If live or upcoming: fetch every 30 seconds
+      // - If quiet: fetch every 5 minutes (300,000 ms)
+      const lastFetch = lastCompetitionFetchTime[cacheKey] || 0;
+      const threshold = isLiveOrUpcoming ? 30000 : 300000;
+
+      if (now - lastFetch < threshold) {
+        // Still within throttle threshold, skip fetching this competition
+        continue;
+      }
+
+      console.log(`[Background Sync] Fetching fresh data for competition ${compId} (${isLiveOrUpcoming ? "LIVE/UPCOMING" : "QUIET"})...`);
+      lastCompetitionFetchTime[cacheKey] = now;
+
+      let freshMatches: any[] = [];
+
+      if (compId === 679) {
+        // Matchs Amicaux (Special custom handling via api-football)
+        const apiKey = process.env.API_FOOTBALL_KEY;
+        if (!apiKey) continue;
+
+        const todayStr = new Date().toISOString().split("T")[0];
+        let todayFriendlies: any[] = [];
+        try {
+          const todayResponse = await rateLimitedFetch(
+            `https://v3.football.api-sports.io/fixtures?date=${todayStr}`,
+            { headers: { "x-apisports-key": apiKey } }
+          );
+          if (todayResponse.ok) {
+            const todayData = await todayResponse.json();
+            if (!(todayData.errors && todayData.errors.requests)) {
+              const todayFixtures = todayData.response || [];
+              const friendlyFixtures = todayFixtures.filter((f: any) => f.league && f.league.id === 10);
+              todayFriendlies = friendlyFixtures.map(translateApiFootballMatchToFootballData).filter(Boolean);
+            }
+          }
+        } catch (e) {
+          console.error(`[Background Sync] Error today friendlies:`, e);
+        }
+
+        try {
+          const response = await rateLimitedFetch(
+            `https://v3.football.api-sports.io/fixtures?league=10&season=2024`,
+            { headers: { "x-apisports-key": apiKey } }
+          );
+          if (response.ok) {
+            const data = await response.json();
+            const fixtures = data.response || [];
+            freshMatches = fixtures.map(translateApiFootballMatchToFootballData).filter(Boolean);
+            
+            if (todayFriendlies.length > 0) {
+              const existingIds = new Set(freshMatches.map((m: any) => m.id));
+              todayFriendlies.forEach((m: any) => {
+                if (!existingIds.has(m.id)) {
+                  freshMatches.unshift(m);
+                }
+              });
+            }
+          }
+        } catch (e) {
+          console.error(`[Background Sync] Error friendly matches:`, e);
+        }
+      } else {
+        if (activeProvider === "api-football") {
+          const apiKey = process.env.API_FOOTBALL_KEY;
+          if (!apiKey) continue;
+
+          const mappedLeagueId = COMPETITION_ID_MAP[compId];
+          if (mappedLeagueId) {
+            try {
+              const season = getSeasonYearForLeague(mappedLeagueId);
+              const response = await rateLimitedFetch(
+                `https://v3.football.api-sports.io/fixtures?league=${mappedLeagueId}&season=${season}`,
+                { headers: { "x-apisports-key": apiKey } }
+              );
+              if (response.ok) {
+                const data = await response.json();
+                const fixtures = data.response || [];
+                freshMatches = fixtures.map(translateApiFootballMatchToFootballData).filter(Boolean);
+              }
+            } catch (e) {
+              console.error(`[Background Sync] Error api-football comp ${compId}:`, e);
+            }
+          }
+        } else {
+          // football-data.org
+          const apiKey = process.env.FOOTBALL_DATA_KEY;
+          if (!apiKey) continue;
+
+          try {
+            const response = await rateLimitedFetch(
+              `https://api.football-data.org/v4/competitions/${compId}/matches`,
+              { headers: { "X-Auth-Token": apiKey } }
+            );
+            if (response.ok) {
+              const data = await response.json();
+              freshMatches = data.matches || [];
+            }
+          } catch (e) {
+            console.error(`[Background Sync] Error football-data comp ${compId}:`, e);
+          }
+        }
+      }
+
+      if (freshMatches && freshMatches.length > 0) {
+        const cachedResult = { matches: freshMatches };
+        apiCache[cacheKey] = { data: cachedResult, timestamp: now };
+        savePersistentCache(cacheKey, cachedResult);
+        console.log(`[Background Sync] Cache updated for ${cacheKey} (${freshMatches.length} matches)`);
+      }
+    }
+  } catch (err) {
+    console.error("[Background Sync] Error during background synchronization:", err);
+  }
+}
+
+// Start background sync job on startup
+function startBackgroundSyncJob() {
+  // Run first update after 5 seconds of server startup to give server time to boot fully
+  setTimeout(() => {
+    updateActiveCompetitionsCache();
+  }, 5000);
+
+  // Run every 30 seconds
+  setInterval(() => {
+    updateActiveCompetitionsCache();
+  }, 30000);
+}
+
 async function startServer() {
   const app = express();
   const PORT = 3000;
@@ -2057,6 +2250,9 @@ async function startServer() {
       res.sendFile(path.join(distPath, "index.html"));
     });
   }
+
+  // Start background sync job for matches
+  startBackgroundSyncJob();
 
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`Server running on http://localhost:${PORT}`);
