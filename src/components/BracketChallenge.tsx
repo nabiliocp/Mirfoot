@@ -24,7 +24,8 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
   challenge,
   userId,
   mode,
-  onSaveSuccess
+  onSaveSuccess,
+  onShowRules
 }) => {
   const [picks, setPicks] = useState<BracketPredictions>(createEmptyBracketPredictions());
   const [loading, setLoading] = useState(false);

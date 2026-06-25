@@ -4201,7 +4201,14 @@ export default function ChallengesView({
     );
   };
 
-  if (loading) return null;
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 space-y-4">
+        <div className="w-10 h-10 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+        <p className="text-gray-500 font-medium text-sm animate-pulse">Chargement de vos défis...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 animate-in fade-in zoom-in-95 duration-300 pb-8">
