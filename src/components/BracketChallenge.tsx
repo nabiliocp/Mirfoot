@@ -596,7 +596,7 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
     const stats = isStarted ? getMatchStats(matchId, teamAId, teamBId) : null;
 
     return (
-      <div className="relative w-[180px] bg-white border border-gray-200 rounded-2xl p-2.5 shadow-sm hover:shadow-md hover:border-slate-350 transition duration-300">
+      <div className="relative w-full max-w-[200px] mx-auto bg-white border border-gray-200 rounded-2xl p-2.5 shadow-sm hover:shadow-md hover:border-slate-350 transition duration-300">
         {isStarted && (
           <div className="absolute -top-1.5 -right-1 flex items-center bg-red-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded-full border border-red-400 gap-0.5 shadow-xs">
             <Lock className="w-2.5 h-2.5" />
@@ -730,15 +730,15 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
             
             {currentPhase === "r32" && (
               <>
-                <div className="flex-1 space-y-4">
-                  <div className="text-[10px] text-gray-400 font-black tracking-widest uppercase text-center mb-4">1/16 Finales (Partie Gauche)</div>
+                <div className="flex-1 min-w-0 space-y-4">
+                  <div className="text-[10px] text-gray-400 font-black tracking-widest uppercase text-center mb-4 leading-tight">1/16 Finales (G)</div>
                   <div className="grid grid-cols-1 gap-4">
                     {r32Left.map(m => <div key={m.id} className="relative">{renderTreeMatchNode("r32", m.id, m.homeId, m.awayId, "center")}</div>)}
                   </div>
                 </div>
                 <div className="hidden md:block w-px bg-gray-200"></div>
-                <div className="flex-1 space-y-4">
-                  <div className="text-[10px] text-gray-400 font-black tracking-widest uppercase text-center mb-4">1/16 Finales (Partie Droite)</div>
+                <div className="flex-1 min-w-0 space-y-4">
+                  <div className="text-[10px] text-gray-400 font-black tracking-widest uppercase text-center mb-4 leading-tight">1/16 Finales (D)</div>
                   <div className="grid grid-cols-1 gap-4">
                     {r32Right.map(m => <div key={m.id} className="relative">{renderTreeMatchNode("r32", m.id, m.homeId, m.awayId, "center")}</div>)}
                   </div>
@@ -748,15 +748,15 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
 
             {currentPhase === "r16" && (
               <>
-                <div className="flex-1 space-y-4">
-                  <div className="text-[10px] text-gray-400 font-black tracking-widest uppercase text-center mb-4">Huitièmes (Partie Gauche)</div>
+                <div className="flex-1 min-w-0 space-y-4">
+                  <div className="text-[10px] text-gray-400 font-black tracking-widest uppercase text-center mb-4 leading-tight">Huitièmes (G)</div>
                   <div className="grid grid-cols-1 gap-4">
                     {r16Left.map(m => <div key={m.id} className="relative">{renderTreeMatchNode("r16", m.id, m.homeId, m.awayId, "center")}</div>)}
                   </div>
                 </div>
                 <div className="hidden md:block w-px bg-gray-200"></div>
-                <div className="flex-1 space-y-4">
-                  <div className="text-[10px] text-gray-400 font-black tracking-widest uppercase text-center mb-4">Huitièmes (Partie Droite)</div>
+                <div className="flex-1 min-w-0 space-y-4">
+                  <div className="text-[10px] text-gray-400 font-black tracking-widest uppercase text-center mb-4 leading-tight">Huitièmes (D)</div>
                   <div className="grid grid-cols-1 gap-4">
                     {r16Right.map(m => <div key={m.id} className="relative">{renderTreeMatchNode("r16", m.id, m.homeId, m.awayId, "center")}</div>)}
                   </div>
@@ -766,15 +766,15 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
 
             {currentPhase === "r8" && (
               <>
-                <div className="flex-1 space-y-4">
-                  <div className="text-[10px] text-gray-400 font-black tracking-widest uppercase text-center mb-4">Quarts (Partie Gauche)</div>
+                <div className="flex-1 min-w-0 space-y-4">
+                  <div className="text-[10px] text-gray-400 font-black tracking-widest uppercase text-center mb-4 leading-tight">Quarts (G)</div>
                   <div className="grid grid-cols-1 gap-4">
                     {r8Left.map(m => <div key={m.id} className="relative">{renderTreeMatchNode("r8", m.id, m.homeId, m.awayId, "center")}</div>)}
                   </div>
                 </div>
                 <div className="hidden md:block w-px bg-gray-200"></div>
-                <div className="flex-1 space-y-4">
-                  <div className="text-[10px] text-gray-400 font-black tracking-widest uppercase text-center mb-4">Quarts (Partie Droite)</div>
+                <div className="flex-1 min-w-0 space-y-4">
+                  <div className="text-[10px] text-gray-400 font-black tracking-widest uppercase text-center mb-4 leading-tight">Quarts (D)</div>
                   <div className="grid grid-cols-1 gap-4">
                     {r8Right.map(m => <div key={m.id} className="relative">{renderTreeMatchNode("r8", m.id, m.homeId, m.awayId, "center")}</div>)}
                   </div>
@@ -784,15 +784,15 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
 
             {currentPhase === "r4" && (
               <>
-                <div className="flex-1 space-y-4">
-                  <div className="text-[10px] text-gray-400 font-black tracking-widest uppercase text-center mb-4">Demi-finale (Partie Gauche)</div>
+                <div className="flex-1 min-w-0 space-y-4">
+                  <div className="text-[10px] text-gray-400 font-black tracking-widest uppercase text-center mb-4 leading-tight">Demi-finale (G)</div>
                   <div className="grid grid-cols-1 gap-6 md:gap-12 md:py-8">
                     {r4Left.map(m => <div key={m.id} className="relative">{renderTreeMatchNode("r4", m.id, m.homeId, m.awayId, "center")}</div>)}
                   </div>
                 </div>
                 <div className="hidden md:block w-px bg-gray-200"></div>
-                <div className="flex-1 space-y-4">
-                  <div className="text-[10px] text-gray-400 font-black tracking-widest uppercase text-center mb-4">Demi-finale (Partie Droite)</div>
+                <div className="flex-1 min-w-0 space-y-4">
+                  <div className="text-[10px] text-gray-400 font-black tracking-widest uppercase text-center mb-4 leading-tight">Demi-finale (D)</div>
                   <div className="grid grid-cols-1 gap-6 md:gap-12 md:py-8">
                     {r4Right.map(m => <div key={m.id} className="relative">{renderTreeMatchNode("r4", m.id, m.homeId, m.awayId, "center")}</div>)}
                   </div>
