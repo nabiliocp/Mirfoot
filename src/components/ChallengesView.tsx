@@ -4056,10 +4056,23 @@ export default function ChallengesView({
 
           {detailTab === "leaderboard" && (
             <div className="space-y-4">
-              <h3 className="font-bold text-gray-800 text-sm border-b border-gray-100 pb-3 mb-3 flex items-center gap-2">
-                <Trophy className="w-4 h-4 text-yellow-500" />
-                Classement Général de ce défi
-              </h3>
+              {challenge.type === "bracket" ? (
+                <BracketChallenge
+                  challenge={challenge}
+                  userId={userId || ""}
+                  mode="prediction"
+                  detailTab="leaderboard"
+                  onShowRules={() => setActiveModal({ type: 'rules', challenge })}
+                  onSaveSuccess={() => {
+                    refreshChallengeBets();
+                  }}
+                />
+              ) : (
+                <>
+                  <h3 className="font-bold text-gray-800 text-sm border-b border-gray-100 pb-3 mb-3 flex items-center gap-2">
+                    <Trophy className="w-4 h-4 text-yellow-500" />
+                    Classement Général de ce défi
+                  </h3>
               
               {loadingChallengeDetails && leaderboard.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-16 space-y-3">
@@ -4166,16 +4179,31 @@ export default function ChallengesView({
                   })}
                 </div>
               )}
+                </>
+              )}
             </div>
           )}
 
           {detailTab === "participants" && (
             <div className="space-y-4">
-              {console.log("Rendering participants tab. Participants state:", participants)}
-              <h3 className="font-bold text-gray-800 text-sm border-b border-gray-100 pb-3 mb-3 flex items-center gap-2">
-                <Users className="w-4 h-4 text-emerald-600" />
-                Liste des Participants ({participants.length})
-              </h3>
+              {challenge.type === "bracket" ? (
+                <BracketChallenge
+                  challenge={challenge}
+                  userId={userId || ""}
+                  mode="prediction"
+                  detailTab="participants"
+                  onShowRules={() => setActiveModal({ type: 'rules', challenge })}
+                  onSaveSuccess={() => {
+                    refreshChallengeBets();
+                  }}
+                />
+              ) : (
+                <>
+                  {console.log("Rendering participants tab. Participants state:", participants)}
+                  <h3 className="font-bold text-gray-800 text-sm border-b border-gray-100 pb-3 mb-3 flex items-center gap-2">
+                    <Users className="w-4 h-4 text-emerald-600" />
+                    Liste des Participants ({participants.length})
+                  </h3>
               
               {loadingChallengeDetails && participants.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-16 space-y-3">
@@ -4300,6 +4328,8 @@ export default function ChallengesView({
                     );
                   })}
                 </div>
+              )}
+                </>
               )}
             </div>
           )}

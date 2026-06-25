@@ -20,6 +20,7 @@ interface BracketChallengeProps {
   onSaveSuccess?: () => void;
   onShowRules?: () => void;
   isSimulationMode?: boolean;
+  detailTab?: "matches" | "leaderboard" | "participants" | "results";
 }
 
 export const BracketChallenge: React.FC<BracketChallengeProps> = ({
@@ -28,7 +29,8 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
   mode,
   onSaveSuccess,
   onShowRules,
-  isSimulationMode = false
+  isSimulationMode = false,
+  detailTab = "matches"
 }) => {
   const [picks, setPicks] = useState<BracketPredictions>(createEmptyBracketPredictions());
   const [loading, setLoading] = useState(false);
@@ -38,7 +40,6 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
   // Participant list and selected participant for viewing bracket
   const [participants, setParticipants] = useState<any[]>([]);
   const [selectedParticipant, setSelectedParticipant] = useState<any | null>(null);
-  const [activeSubTab, setActiveSubTab] = useState<"myBracket" | "leaderboard">("myBracket");
 
   // Test mode options
   const [testMode, setTestMode] = useState<boolean>(() => {
@@ -434,8 +435,10 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
 
   const handleSimulatePhase = (phase: "all" | "r32" | "r16" | "r8" | "r4" | "r2") => {
     try {
-      // We always simulate results into simulatedResults (mock real outcomes)
-      const currentSim = simulatedResults || createEmptyBracketPredictions();
+      const isSim = (testMode && activeSimulationTab === "simulation");
+      const currentSim = isSim 
+        ? (simulatedResults || createEmptyBracketPredictions())
+        : picks;
       const targetPicks = JSON.parse(JSON.stringify(currentSim));
 
       const r32Mapping: Record<string, string> = {
@@ -560,7 +563,11 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
         targetPicks.winner = pickRandom(home, away);
       }
 
-      updateSimulatedResults(targetPicks);
+      if (isSim) {
+        updateSimulatedResults(targetPicks);
+      } else {
+        setPicks(targetPicks);
+      }
 
       let phaseLabel = "";
       if (phase === "all") phaseLabel = "Toutes les phases";
@@ -570,9 +577,10 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
       else if (phase === "r4") phaseLabel = "Demi-finales (1/2)";
       else if (phase === "r2") phaseLabel = "Finale & Champion";
 
+      const editorLabel = isSim ? "les Résultats Réels Simulés" : "Mes Pronostics";
       setMessage({
         type: "success",
-        text: `⚡ Résultats factices de [${phaseLabel}] générés avec succès pour les Résultats Réels Simulés. Vous pouvez voir l'évolution de votre score en direct !`
+        text: `⚡ Résultats factices de [${phaseLabel}] générés avec succès pour ${editorLabel}. Vous pouvez voir l'évolution en direct !`
       });
     } catch (err: any) {
       console.error(err);
@@ -1168,7 +1176,7 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
             </button>
           </div>
 
-          {isSimulationPanelExpanded && (
+          {isSimulationPanelExpanded ? (
             <div className="space-y-3">
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                 <div className="flex flex-col gap-1">
@@ -1235,7 +1243,6 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
                     onClick={() => {
                       updateActiveSimulationTab("picks");
                       setSelectedParticipant(null);
-                      setActiveSubTab("myBracket");
                     }}
                     className={`px-3 py-1.5 rounded-lg text-xs font-black transition cursor-pointer ${
                       activeSimulationTab === "picks"
@@ -1250,7 +1257,6 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
                     onClick={() => {
                       updateActiveSimulationTab("simulation");
                       setSelectedParticipant(null);
-                      setActiveSubTab("myBracket");
                       if (!simulatedResults) {
                         updateSimulatedResults(createEmptyBracketPredictions());
                       }
@@ -1337,38 +1343,52 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
                 </p>
               </div>
             </div>
+          ) : (
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-2.5 pt-1">
+              <div className="flex items-center gap-1.5 text-xs font-semibold text-amber-900">
+                <span className="relative flex h-2 w-2 shrink-0">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+                </span>
+                <span>Mode Test actif (réduit). Classements basés sur vos scores simulés.</span>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    updateActiveSimulationTab("picks");
+                    setSelectedParticipant(null);
+                  }}
+                  className={`px-3 py-1.5 rounded-lg text-[10px] font-black transition cursor-pointer ${
+                    activeSimulationTab === "picks"
+                      ? "bg-emerald-600 text-white shadow-xs"
+                      : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-200"
+                  }`}
+                >
+                  🎯 Mes Pronostics
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    updateActiveSimulationTab("simulation");
+                    setSelectedParticipant(null);
+                    if (!simulatedResults) {
+                      updateSimulatedResults(createEmptyBracketPredictions());
+                    }
+                  }}
+                  className={`px-3 py-1.5 rounded-lg text-[10px] font-black transition cursor-pointer ${
+                    activeSimulationTab === "simulation"
+                      ? "bg-amber-600 text-white shadow-xs"
+                      : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-200"
+                  }`}
+                >
+                  🏆 Résultats Simulés
+                </button>
+              </div>
+            </div>
           )}
         </div>
       )}
-
-      {/* Tab Switcher */}
-      <div className="flex bg-gray-100 p-1 rounded-2xl gap-1 max-w-md mx-auto border border-gray-200">
-        <button
-          type="button"
-          onClick={() => {
-            setActiveSubTab("myBracket");
-            setSelectedParticipant(null);
-          }}
-          className={`flex-1 py-2 rounded-xl text-center text-xs font-black transition cursor-pointer flex items-center justify-center gap-1.5 ${
-            activeSubTab === "myBracket" && !selectedParticipant
-              ? "bg-emerald-600 text-white shadow-xs" 
-              : "text-gray-500 hover:text-gray-800 hover:bg-gray-200/50"
-          }`}
-        >
-          🌿 {mode === "results" ? "Résultats Officiels" : "Mon Tableau de Pronos"}
-        </button>
-        <button
-          type="button"
-          onClick={() => setActiveSubTab("leaderboard")}
-          className={`flex-1 py-2 rounded-xl text-center text-xs font-black transition cursor-pointer flex items-center justify-center gap-1.5 ${
-            activeSubTab === "leaderboard" || selectedParticipant
-              ? "bg-emerald-600 text-white shadow-xs" 
-              : "text-gray-500 hover:text-gray-800 hover:bg-gray-200/50"
-          }`}
-        >
-          🏆 Participants & Classement ({participants.length})
-        </button>
-      </div>
 
       {/* CONDITIONAL RENDERING OF CONTENT */}
       {selectedParticipant !== null ? (
@@ -1400,7 +1420,7 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
           {/* Render the other participant's bracket (read-only and auto-masked) */}
           {renderBracketTree()}
         </div>
-      ) : activeSubTab === "leaderboard" ? (
+      ) : (detailTab === "leaderboard" || detailTab === "participants") ? (
         <div className="space-y-4">
           <div className="bg-white rounded-2xl border border-gray-150 overflow-hidden shadow-xs">
             <div className="bg-gray-50/50 px-4 py-3 border-b border-gray-150 flex items-center justify-between">
