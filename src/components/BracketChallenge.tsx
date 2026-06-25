@@ -736,7 +736,7 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
   }, [challengeId, pointRulesStr, userId, mode]);
 
   // Determine which predictions are currently active for the bracket tree
-  const isViewingOther = !!selectedParticipant;
+  const isViewingOther = selectedParticipant !== null && selectedParticipant.user_id !== userId;
   const activePicks = (testMode && activeSimulationTab === "simulation" && simulatedResults)
     ? simulatedResults
     : (selectedParticipant ? selectedParticipant.predictions : picks);
@@ -1330,7 +1330,7 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
     teamBId: string,
     direction: "left" | "right" | "center"
   ) => {
-    const isViewingOther = selectedParticipant !== null;
+    const isViewingOther = selectedParticipant !== null && selectedParticipant.user_id !== userId;
     const currentPicks = isViewingOther ? selectedParticipant.predictions : picks;
 
     const teamA = BRACKET_TEAMS[teamAId];
@@ -2116,9 +2116,11 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
             </button>
           </div>
           
-          <div className="bg-amber-50/40 border border-amber-150 rounded-2xl p-3 text-[11px] text-amber-900 font-semibold text-center">
-            🔒 Les matchs non commencés de ce joueur restent masqués par sécurité et équité.
-          </div>
+          {selectedParticipant.user_id !== userId && (
+            <div className="bg-amber-50/40 border border-amber-150 rounded-2xl p-3 text-[11px] text-amber-900 font-semibold text-center">
+              🔒 Les matchs non commencés de ce joueur restent masqués par sécurité et équité.
+            </div>
+          )}
 
           {/* Render the other participant's bracket (read-only and auto-masked) */}
           {renderBracketTree()}
