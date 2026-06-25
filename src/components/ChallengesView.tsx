@@ -841,10 +841,23 @@ export default function ChallengesView({
     setActiveTooltipId(null);
     const targetChallenge = selectedChallenge || (activeModal && activeModal.type === "details" ? activeModal.challenge : null);
     
-    // Immediately clear previous matches and show loader when switching challenges
+    // Immediately use cached competition matches if we have them, avoiding empty screens and loader flickers
     if (targetChallenge) {
+      const existing = allMatchesByComp[String(targetChallenge.competitionId)];
+      if (existing && existing.length > 0) {
+        let filtered = [...existing];
+        if (targetChallenge.matchId && Number(targetChallenge.matchId) !== 0) {
+          filtered = filtered.filter((m: Match) => String(m.id) === String(targetChallenge.matchId));
+        }
+        setModalMatches(filtered);
+        setLoadingModalMatches(false);
+      } else {
+        setModalMatches([]);
+        setLoadingModalMatches(true);
+      }
+    } else {
       setModalMatches([]);
-      setLoadingModalMatches(true);
+      setLoadingModalMatches(false);
     }
 
     const fetchMatches = async () => {
@@ -865,7 +878,10 @@ export default function ChallengesView({
           setModalMatches(fetchedMatches);
         } catch (err) {
           console.error(err);
-          setModalMatchesError("Données temporairement indisponibles.");
+          // Only show error if we don't have any existing matches loaded
+          if (!allMatchesByComp[String(targetChallenge.competitionId)]) {
+            setModalMatchesError("Données temporairement indisponibles.");
+          }
         } finally {
           setLoadingModalMatches(false);
         }
@@ -877,7 +893,7 @@ export default function ChallengesView({
     };
 
     fetchMatches();
-    const interval = setInterval(fetchMatches, 10000); // Poll every 10 seconds
+    const interval = setInterval(fetchMatches, 15000); // Poll every 15 seconds instead of 10 to save rate limit
 
     return () => clearInterval(interval);
   }, [activeModal, selectedChallenge]);
@@ -3375,8 +3391,9 @@ export default function ChallengesView({
               </div>
 
               {loadingModalMatches ? (
-                <div className="flex justify-center py-16">
-                  <Clock className="w-8 h-8 text-emerald-500 animate-spin" />
+                <div className="flex flex-col items-center justify-center py-16 space-y-3">
+                  <div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+                  <p className="text-gray-500 text-xs font-semibold animate-pulse">Chargement en cours...</p>
                 </div>
               ) : modalMatchesError ? (
                 <p className="text-center py-12 text-sm text-red-500 italic bg-red-50 border border-red-100 rounded-2xl">{modalMatchesError}</p>
@@ -3943,8 +3960,9 @@ export default function ChallengesView({
               </h3>
               
               {loadingChallengeDetails ? (
-                <div className="flex justify-center py-16">
-                  <Clock className="w-8 h-8 text-emerald-500 animate-spin" />
+                <div className="flex flex-col items-center justify-center py-16 space-y-3">
+                  <div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+                  <p className="text-gray-500 text-xs font-semibold animate-pulse">Chargement en cours...</p>
                 </div>
               ) : leaderboard.length === 0 ? (
                 <div className="text-center py-12 text-gray-400 text-sm italic">
@@ -4058,8 +4076,9 @@ export default function ChallengesView({
               </h3>
               
               {loadingChallengeDetails ? (
-                <div className="flex justify-center py-16">
-                  <Clock className="w-8 h-8 text-emerald-500 animate-spin" />
+                <div className="flex flex-col items-center justify-center py-16 space-y-3">
+                  <div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+                  <p className="text-gray-500 text-xs font-semibold animate-pulse">Chargement en cours...</p>
                 </div>
               ) : participants.length === 0 ? (
                 <p className="text-center py-12 text-gray-400 text-sm italic">Aucun participant n'a encore rejoint ce défi.</p>
@@ -4153,8 +4172,9 @@ export default function ChallengesView({
               </h3>
 
               {loadingModalMatches ? (
-                <div className="flex justify-center py-16">
-                  <Clock className="w-8 h-8 text-emerald-500 animate-spin" />
+                <div className="flex flex-col items-center justify-center py-16 space-y-3">
+                  <div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+                  <p className="text-gray-500 text-xs font-semibold animate-pulse">Chargement en cours...</p>
                 </div>
               ) : modalMatchesError ? (
                 <p className="text-center py-12 text-sm text-red-500 italic bg-red-50 border border-red-100 rounded-2xl">{modalMatchesError}</p>
@@ -4539,8 +4559,9 @@ export default function ChallengesView({
                         // Competition Challenges Details View
                         <div className="space-y-4 pr-1 text-left max-h-[460px] overflow-y-auto">
                           {loadingModalMatches ? (
-                            <div className="flex justify-center py-12">
-                              <Clock className="animate-spin text-emerald-500 w-8 h-8" />
+                            <div className="flex flex-col items-center justify-center py-12 space-y-3">
+                              <div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+                              <p className="text-gray-500 text-xs font-semibold animate-pulse">Chargement en cours...</p>
                             </div>
                           ) : modalMatches.length === 0 ? (
                             <p className="text-center text-gray-500 py-8 text-sm font-semibold">Aucun match programmé trouvé pour cette compétition.</p>

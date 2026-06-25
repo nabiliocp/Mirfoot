@@ -109,12 +109,35 @@ async function processFetchQueue() {
   isProcessingFetchQueue = false;
 }
 
+// Tracking Football-Data.org Rate Limit headers dynamically to proactively protect against 429 errors
+let globalFootballDataAvailableRequests = 10;
+let globalFootballDataResetSeconds = 60;
+let globalFootballDataResetTimestamp = Date.now() + 60000;
+
 function rateLimitedFetch(url: string, options?: any): Promise<Response> {
   return new Promise((resolve, reject) => {
     fetchQueue.push(async () => {
       try {
         console.log(`[Rate Limiter] Executing fetch for: ${url}`);
         const response = await fetch(url, options);
+        
+        // Intercept headers for Football-Data.org
+        if (url.includes("football-data.org")) {
+          const avail = response.headers.get("x-requests-available-minute");
+          const reset = response.headers.get("x-requestcounter-reset");
+          if (avail !== null) {
+            const numAvail = parseInt(avail, 10);
+            console.log(`[Rate Limiter] Football-Data.org Requests Available in current minute: ${numAvail}`);
+            globalFootballDataAvailableRequests = numAvail;
+          }
+          if (reset !== null) {
+            const numReset = parseInt(reset, 10);
+            console.log(`[Rate Limiter] Football-Data.org Reset in: ${numReset} seconds`);
+            globalFootballDataResetSeconds = numReset;
+            globalFootballDataResetTimestamp = Date.now() + (numReset * 1000);
+          }
+        }
+        
         resolve(response);
       } catch (err) {
         reject(err);
@@ -130,8 +153,8 @@ interface CacheEntry {
   timestamp: number;
 }
 const apiCache: Record<string, CacheEntry> = {};
-const TODAY_CACHE_TTL = 10 * 1000; // 10 seconds (10 seconds cache for live scores & matches of today)
-const COMP_CACHE_TTL = 5 * 60 * 1000; // 300 seconds (5 minutes cache for overall tournament tables/fixtures)
+const TODAY_CACHE_TTL = 60 * 1000; // 60 seconds (1 minute cache for live scores & matches of today)
+const COMP_CACHE_TTL = 2 * 60 * 60 * 1000; // 2 hours (saves huge amount of rate limits and loads instantaneously from the in-memory cache)
 
 // Bidirectional Competition ID mapping (football-data.org ID : api-football.com ID)
 const COMPETITION_ID_MAP: Record<number, number> = {
@@ -370,8 +393,24 @@ async function startServer() {
     const now = Date.now();
 
     try {
-      if (apiCache[cacheKey] && (now - apiCache[cacheKey].timestamp < TODAY_CACHE_TTL)) {
+      const bypassCache = req.query.refresh === "true";
+      if (!bypassCache && apiCache[cacheKey] && (now - apiCache[cacheKey].timestamp < TODAY_CACHE_TTL)) {
         return res.json(apiCache[cacheKey].data);
+      }
+
+      // Proactive rate limit protection
+      const forceCache = globalFootballDataAvailableRequests <= 1 && Date.now() < globalFootballDataResetTimestamp;
+      const hasCache = !!apiCache[cacheKey];
+      const persistentCache = loadPersistentCache(cacheKey);
+
+      if (!bypassCache && forceCache && (hasCache || persistentCache)) {
+        console.log(`[Rate Limiter] Proactively avoiding API call for today matches to protect rate limit (available: ${globalFootballDataAvailableRequests}). Serving cache.`);
+        if (hasCache) {
+          return res.json(apiCache[cacheKey].data);
+        } else if (persistentCache) {
+          apiCache[cacheKey] = { data: persistentCache, timestamp: now };
+          return res.json(persistentCache);
+        }
       }
 
       if (activeProvider === "api-football") {
@@ -550,8 +589,24 @@ async function startServer() {
     const now = Date.now();
 
     try {
-      if (apiCache[cacheKey] && (now - apiCache[cacheKey].timestamp < COMP_CACHE_TTL)) {
+      const bypassCache = req.query.refresh === "true";
+      if (!bypassCache && apiCache[cacheKey] && (now - apiCache[cacheKey].timestamp < COMP_CACHE_TTL)) {
         return res.json(apiCache[cacheKey].data);
+      }
+
+      // Proactive rate limit protection
+      const forceCache = globalFootballDataAvailableRequests <= 1 && Date.now() < globalFootballDataResetTimestamp;
+      const hasCache = !!apiCache[cacheKey];
+      const persistentCache = loadPersistentCache(cacheKey);
+
+      if (!bypassCache && forceCache && (hasCache || persistentCache)) {
+        console.log(`[Rate Limiter] Proactively avoiding API call to protect rate limit (available: ${globalFootballDataAvailableRequests}). Serving cache.`);
+        if (hasCache) {
+          return res.json(apiCache[cacheKey].data);
+        } else if (persistentCache) {
+          apiCache[cacheKey] = { data: persistentCache, timestamp: now };
+          return res.json(persistentCache);
+        }
       }
 
       // If requested competition ID is 679 (Matchs Amicaux Internationaux), we MUST use api-football regardless of active provider
