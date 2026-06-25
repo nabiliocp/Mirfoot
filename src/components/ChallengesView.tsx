@@ -4384,7 +4384,40 @@ export default function ChallengesView({
               ) : (
                 <div className="space-y-4 max-h-[550px] overflow-y-auto pr-1">
                   {[...activeMatches]
-                    .sort((a, b) => new Date(b.utcDate).getTime() - new Date(a.utcDate).getTime())
+                    .sort((a, b) => {
+                      const hasKnownOpponents = (match: any) => {
+                        const home = (match.homeTeam?.name || "").toLowerCase();
+                        const away = (match.awayTeam?.name || "").toLowerCase();
+                        if (!home || !away) return false;
+                        if (home.includes("tbd") || home.includes("déterminer") || home.includes("determined") || home.includes("winner")) return false;
+                        if (away.includes("tbd") || away.includes("déterminer") || away.includes("determined") || away.includes("winner")) return false;
+                        return true;
+                      };
+
+                      const knownA = hasKnownOpponents(a);
+                      const knownB = hasKnownOpponents(b);
+                      if (knownA && !knownB) return -1;
+                      if (!knownA && knownB) return 1;
+
+                      const isFinishedA = a.status === "FINISHED";
+                      const isFinishedB = b.status === "FINISHED";
+                      const isLiveA = ["IN_PLAY", "LIVE", "PAUSED"].includes(a.status);
+                      const isLiveB = ["IN_PLAY", "LIVE", "PAUSED"].includes(b.status);
+                      
+                      const playedA = isFinishedA || isLiveA;
+                      const playedB = isFinishedB || isLiveB;
+                      
+                      if (playedA && !playedB) return -1;
+                      if (!playedA && playedB) return 1;
+                      
+                      if (playedA && playedB) {
+                        // Both played, most recent first (descending)
+                        return new Date(b.utcDate).getTime() - new Date(a.utcDate).getTime();
+                      } else {
+                        // Both upcoming, closest/soonest first (ascending)
+                        return new Date(a.utcDate).getTime() - new Date(b.utcDate).getTime();
+                      }
+                    })
                     .map(m => {
                     const isFinished = m.status === "FINISHED";
                     const isLive = ["IN_PLAY", "LIVE", "PAUSED"].includes(m.status);
