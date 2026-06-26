@@ -12,7 +12,7 @@ import {
   calculateBracketPoints
 } from "../bracketData";
 import { supabase } from "../lib/supabase";
-import { Check, Lock, Trophy, AlertTriangle, Sparkles, HelpCircle } from "lucide-react";
+import { Check, Lock, Trophy, AlertTriangle, Sparkles, HelpCircle, RefreshCw } from "lucide-react";
 
 interface BracketChallengeProps {
   challenge: any;
@@ -528,50 +528,35 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
   const [qualifiedTeams, setQualifiedTeams] = useState<Set<string>>(new Set());
   const [loadingQualifications, setLoadingQualifications] = useState<boolean>(false);
 
-  useEffect(() => {
-    let active = true;
-    const fetchMatchesAndComputeQualifications = async () => {
-      setLoadingQualifications(true);
-      try {
-        const res = await fetch("/api/matches/2000");
-        if (res.ok) {
-          const data = await res.json();
-          if (active && data && data.matches) {
-            const qualified = getOfficialQualifiedTeams(data.matches);
-            setQualifiedTeams(qualified);
-          }
-        }
-      } catch (err) {
-        console.error("Error fetching matches for bracket qualifications:", err);
-      } finally {
-        if (active) {
-          setLoadingQualifications(false);
+  const refreshQualifications = async (bypass = false) => {
+    setLoadingQualifications(true);
+    try {
+      const compId = challenge.competitionId || 2000;
+      const url = bypass ? `/api/matches/${compId}?refresh=true` : `/api/matches/${compId}`;
+      const res = await fetch(url);
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.matches) {
+          const qualified = getOfficialQualifiedTeams(data.matches);
+          setQualifiedTeams(qualified);
         }
       }
-    };
+    } catch (err) {
+      console.error("Error fetching matches for bracket qualifications:", err);
+    } finally {
+      setLoadingQualifications(false);
+    }
+  };
 
-    fetchMatchesAndComputeQualifications();
-    return () => {
-      active = false;
-    };
+  useEffect(() => {
+    refreshQualifications(false);
   }, []);
 
   const dynamicR32Matches = useMemo(() => {
-    // If we haven't loaded qualifications, or if they are empty (e.g. failed fetch or offline),
-    // we fallback to treating all preset teams as qualified to keep the challenge completely playable.
-    if (!qualifiedTeams || qualifiedTeams.size === 0) {
-      return STARTING_R32_MATCHES;
-    }
-    return STARTING_R32_MATCHES.map(m => {
-      const homeQualified = qualifiedTeams.has(m.homeId);
-      const awayQualified = qualifiedTeams.has(m.awayId);
-      return {
-        ...m,
-        homeId: homeQualified ? m.homeId : "",
-        awayId: awayQualified ? m.awayId : "",
-      };
-    });
-  }, [qualifiedTeams]);
+    // Keep the starting matches fully populated at all times so that the bracket is never empty,
+    // and let the dynamic "Qualifié" badge highlight officially qualified teams in real-time.
+    return STARTING_R32_MATCHES;
+  }, []);
 
   // State update helpers with localStorage persistence
   const updateTestMode = (val: boolean) => {
@@ -1224,9 +1209,14 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
                       : "bg-white border-gray-100 text-gray-800 hover:bg-gray-50 cursor-pointer"
             }`}
           >
-            <span className="flex items-center gap-2">
-              <span className="text-lg">{teamA ? teamA.flag : "❓"}</span>
+            <span className="flex items-center gap-1.5 min-w-0">
+              <span className="text-lg shrink-0">{teamA ? teamA.flag : "❓"}</span>
               <span className="truncate">{teamA ? teamA.name : "À déterminer"}</span>
+              {teamA && qualifiedTeams.has(teamAId) && (
+                <span className="bg-emerald-100 text-emerald-800 text-[8px] font-black px-1 py-0.5 rounded-sm shrink-0">
+                  QUALIFIÉ
+                </span>
+              )}
             </span>
             {isSelectedA && <Check className="w-4 h-4 text-emerald-600 shrink-0" />}
           </button>
@@ -1253,9 +1243,14 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
                       : "bg-white border-gray-100 text-gray-800 hover:bg-gray-50 cursor-pointer"
             }`}
           >
-            <span className="flex items-center gap-2">
-              <span className="text-lg">{teamB ? teamB.flag : "❓"}</span>
+            <span className="flex items-center gap-1.5 min-w-0">
+              <span className="text-lg shrink-0">{teamB ? teamB.flag : "❓"}</span>
               <span className="truncate">{teamB ? teamB.name : "À déterminer"}</span>
+              {teamB && qualifiedTeams.has(teamBId) && (
+                <span className="bg-emerald-100 text-emerald-800 text-[8px] font-black px-1 py-0.5 rounded-sm shrink-0">
+                  QUALIFIÉ
+                </span>
+              )}
             </span>
             {isSelectedB && <Check className="w-4 h-4 text-emerald-600 shrink-0" />}
           </button>
@@ -1357,8 +1352,10 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
         if (!pPicks) return;
         
         const pWinner = getSelectedWinnerForPredictions(pPicks, mId);
-        if (pWinner === tAId) votesA++;
-        else if (pWinner === tBId) votesB++;
+        if (pWinner) {
+          if (tAId && pWinner === tAId) votesA++;
+          else if (tBId && pWinner === tBId) votesB++;
+        }
       });
       
       const total = votesA + votesB;

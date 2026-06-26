@@ -69,6 +69,20 @@ function loadPersistentCache(key: string): any | null {
   return null;
 }
 
+function loadPersistentCacheWithTimestamp(key: string): { data: any, timestamp: number } | null {
+  try {
+    const p = persistentCachePath(key);
+    if (fs.existsSync(p)) {
+      const stat = fs.statSync(p);
+      const data = JSON.parse(fs.readFileSync(p, "utf-8"));
+      return { data, timestamp: stat.mtimeMs };
+    }
+  } catch (err) {
+    console.error(`Failed to load persistent cache with timestamp for ${key}:`, err);
+  }
+  return null;
+}
+
 // Rate limiter queue logic to prevent 429 Too Many Requests or account bans
 const fetchQueue: (() => Promise<void>)[] = [];
 let isProcessingFetchQueue = false;
@@ -672,6 +686,13 @@ async function startServer() {
 
     try {
       const bypassCache = req.query.refresh === "true";
+      if (!bypassCache && !apiCache[cacheKey]) {
+        const pc = loadPersistentCacheWithTimestamp(cacheKey);
+        if (pc) {
+          apiCache[cacheKey] = { data: pc.data, timestamp: pc.timestamp };
+        }
+      }
+
       if (!bypassCache && apiCache[cacheKey] && (now - apiCache[cacheKey].timestamp < TODAY_CACHE_TTL)) {
         return res.json(apiCache[cacheKey].data);
       }
@@ -857,15 +878,39 @@ async function startServer() {
   });
 
   app.get("/api/matches/:competitionId", async (req, res) => {
+    let hasSentResponse = false;
     const originalJson = res.json.bind(res);
+    const originalStatus = res.status.bind(res);
+    const originalSend = res.send.bind(res);
+
     res.json = (body: any) => {
+      if (hasSentResponse) {
+        console.log(`[Background Revalidation] Cache updated silently. Avoiding duplicate response.`);
+        return res;
+      }
       if (body && Array.isArray(body.matches)) {
         body = {
           ...body,
           matches: adjustMatchesDynamically(body.matches)
         };
       }
+      hasSentResponse = true;
       return originalJson(body);
+    };
+
+    res.status = (code: number) => {
+      if (hasSentResponse) {
+        return res;
+      }
+      return originalStatus(code);
+    };
+
+    res.send = (body: any) => {
+      if (hasSentResponse) {
+        return res;
+      }
+      hasSentResponse = true;
+      return originalSend(body);
     };
 
     const activeProvider = getActiveApiProvider();
@@ -877,6 +922,13 @@ async function startServer() {
 
     try {
       const bypassCache = req.query.refresh === "true";
+      if (!bypassCache && !apiCache[cacheKey]) {
+        const pc = loadPersistentCacheWithTimestamp(cacheKey);
+        if (pc) {
+          apiCache[cacheKey] = { data: pc.data, timestamp: pc.timestamp };
+        }
+      }
+
       if (!bypassCache && apiCache[cacheKey]) {
         let currentTtl = COMP_CACHE_TTL;
         const cachedData = apiCache[cacheKey].data;
@@ -907,6 +959,11 @@ async function startServer() {
         if (now - apiCache[cacheKey].timestamp < currentTtl) {
           return res.json(apiCache[cacheKey].data);
         }
+
+        // Stale-While-Revalidate: serve stale cache instantly and fetch in the background!
+        console.log(`[Cache Stale] Serving stale cache for key ${cacheKey} and revalidating in background...`);
+        res.json(apiCache[cacheKey].data);
+        hasSentResponse = true;
       }
 
       // Proactive rate limit protection
@@ -1103,6 +1160,12 @@ async function startServer() {
           const cachedResult = { matches: mappedMatches };
           apiCache[cacheKey] = { data: cachedResult, timestamp: now };
           savePersistentCache(cacheKey, cachedResult);
+          if (fdCompId === 2000) {
+            try {
+              fs.writeFileSync('./world_cup_fallback.json', JSON.stringify(cachedResult, null, 2), 'utf-8');
+              console.log("Successfully updated world_cup_fallback.json with latest API-Football matches data.");
+            } catch (e) {}
+          }
           return res.json(cachedResult);
         } catch (apiErr) {
           console.error("API-Football error, trying fallback:", apiErr);
@@ -1148,6 +1211,12 @@ async function startServer() {
 
         apiCache[cacheKey] = { data, timestamp: now };
         savePersistentCache(cacheKey, data);
+        if (fdCompId === 2000) {
+          try {
+            fs.writeFileSync('./world_cup_fallback.json', JSON.stringify(data, null, 2), 'utf-8');
+            console.log("Successfully updated world_cup_fallback.json with latest Football-Data matches data.");
+          } catch (e) {}
+        }
         res.json(data);
       } catch (apiErr) {
         console.error("Football-Data API error, trying fallback:", apiErr);
