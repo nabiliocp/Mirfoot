@@ -311,8 +311,39 @@ export default function ChallengesView({
   const [currentUsername, setCurrentUsername] = useState<string>("Moi");
   const [visibleMatchesCount, setVisibleMatchesCount] = useState<number>(4);
   const [activeTooltipId, setActiveTooltipId] = useState<number | null>(null);
-  const [upcomingMatchesByComp, setUpcomingMatchesByComp] = useState<Record<string, Match>>({});
-  const [allMatchesByComp, setAllMatchesByComp] = useState<Record<string, Match[]>>({});
+  const [upcomingMatchesByComp, setUpcomingMatchesByComp] = useState<Record<string, Match>>(() => {
+    try {
+      const saved = localStorage.getItem("mirfoot_upcoming_matches");
+      return saved ? JSON.parse(saved) : {};
+    } catch (e) {
+      return {};
+    }
+  });
+  const [allMatchesByComp, setAllMatchesByComp] = useState<Record<string, Match[]>>(() => {
+    try {
+      const saved = localStorage.getItem("mirfoot_matches_by_comp");
+      return saved ? JSON.parse(saved) : {};
+    } catch (e) {
+      return {};
+    }
+  });
+
+  // Persist matches and upcoming matches to localStorage on change
+  useEffect(() => {
+    try {
+      localStorage.setItem("mirfoot_upcoming_matches", JSON.stringify(upcomingMatchesByComp));
+    } catch (e) {
+      console.error("Failed to save upcoming matches to localStorage", e);
+    }
+  }, [upcomingMatchesByComp]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("mirfoot_matches_by_comp", JSON.stringify(allMatchesByComp));
+    } catch (e) {
+      console.error("Failed to save all matches to localStorage", e);
+    }
+  }, [allMatchesByComp]);
 
   const isChallengeCompleted = (challenge: Challenge) => {
     if (challenge.resolved) return true;

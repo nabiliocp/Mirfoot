@@ -167,6 +167,60 @@ interface CacheEntry {
   timestamp: number;
 }
 const apiCache: Record<string, CacheEntry> = {};
+
+// Pre-populate memory cache on startup from local fallback and previously saved persistent disk caches
+try {
+  // 1. Seed World Cup from world_cup_fallback.json
+  if (fs.existsSync("./world_cup_fallback.json")) {
+    const fallbackData = JSON.parse(fs.readFileSync("./world_cup_fallback.json", "utf-8"));
+    const keys = [
+      "comp_2000_api-football_current",
+      "comp_2000_football-data_current",
+      "comp_2000_api-football_2026",
+      "comp_2000_football-data_2026"
+    ];
+    keys.forEach(k => {
+      apiCache[k] = { data: fallbackData, timestamp: Date.now() };
+    });
+    console.log("[Startup Cache] Seeded competition 2000 (World Cup) successfully from world_cup_fallback.json.");
+  }
+
+  // 2. Discover and seed previous caches from disk
+  const files = fs.readdirSync(process.cwd());
+  let loadedDiskCaches = 0;
+  files.forEach(file => {
+    if (file.startsWith("cached_") && file.endsWith(".json")) {
+      try {
+        const filePath = path.join(process.cwd(), file);
+        const fileContent = fs.readFileSync(filePath, "utf-8");
+        const data = JSON.parse(fileContent);
+        const stat = fs.statSync(filePath);
+        
+        const fileKeyName = file.substring("cached_".length, file.length - ".json".length);
+        
+        apiCache[fileKeyName] = { data, timestamp: stat.mtimeMs };
+        
+        let normalizedKey = fileKeyName;
+        if (fileKeyName.includes("api_football")) {
+          normalizedKey = fileKeyName.replace("api_football", "api-football");
+          apiCache[normalizedKey] = { data, timestamp: stat.mtimeMs };
+        }
+        if (fileKeyName.includes("football_data")) {
+          normalizedKey = fileKeyName.replace("football_data", "football-data");
+          apiCache[normalizedKey] = { data, timestamp: stat.mtimeMs };
+        }
+        loadedDiskCaches++;
+      } catch (e) {
+        // Ignore single file parse errors
+      }
+    }
+  });
+  if (loadedDiskCaches > 0) {
+    console.log(`[Startup Cache] Restored ${loadedDiskCaches} persistent caches from disk.`);
+  }
+} catch (e) {
+  console.error("[Startup Cache] Error initializing cache seeders:", e);
+}
 const TODAY_CACHE_TTL = 60 * 1000; // 60 seconds (1 minute cache for live scores & matches of today)
 const COMP_CACHE_TTL = 2 * 60 * 60 * 1000; // 2 hours (saves huge amount of rate limits and loads instantaneously from the in-memory cache)
 
