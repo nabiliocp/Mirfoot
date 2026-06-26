@@ -83,45 +83,11 @@ function loadPersistentCacheWithTimestamp(key: string): { data: any, timestamp: 
   return null;
 }
 
-// Rate limiter queue logic to prevent 429 Too Many Requests or account bans
-const fetchQueue: (() => Promise<void>)[] = [];
-let isProcessingFetchQueue = false;
+// Non-blocking rate limiter to prevent cascading delays or thread locks.
+// If the rate limit is exceeded, we instantly throw an error so the route can fall back to cached data immediately.
 const fetchTimestamps: number[] = [];
 const MAX_REQUESTS_PER_MINUTE = 15; // Safe margin below the typical 20 limit
 const RATE_LIMIT_WINDOW_MS = 60000; // 1 minute
-
-async function processFetchQueue() {
-  if (isProcessingFetchQueue) return;
-  isProcessingFetchQueue = true;
-
-  while (fetchQueue.length > 0) {
-    const now = Date.now();
-    // Remove timestamps older than 1 minute
-    while (fetchTimestamps.length > 0 && now - fetchTimestamps[0] > RATE_LIMIT_WINDOW_MS) {
-      fetchTimestamps.shift();
-    }
-
-    if (fetchTimestamps.length >= MAX_REQUESTS_PER_MINUTE) {
-      // Calculate how long to wait until the oldest request falls out of the window
-      const waitTime = RATE_LIMIT_WINDOW_MS - (now - fetchTimestamps[0]) + 100;
-      console.log(`[Rate Limiter] Limit of ${MAX_REQUESTS_PER_MINUTE} req/min reached. Waiting ${Math.round(waitTime / 1000)}s...`);
-      await new Promise(resolve => setTimeout(resolve, waitTime));
-      continue;
-    }
-
-    const task = fetchQueue.shift();
-    if (task) {
-      fetchTimestamps.push(Date.now());
-      try {
-        await task();
-      } catch (err) {
-        console.error("[Rate Limiter] Task error:", err);
-      }
-    }
-  }
-
-  isProcessingFetchQueue = false;
-}
 
 // Tracking Football-Data.org Rate Limit headers dynamically to proactively protect against 429 errors
 let globalFootballDataAvailableRequests = 10;
@@ -129,35 +95,51 @@ let globalFootballDataResetSeconds = 60;
 let globalFootballDataResetTimestamp = Date.now() + 60000;
 
 function rateLimitedFetch(url: string, options?: any): Promise<Response> {
-  return new Promise((resolve, reject) => {
-    fetchQueue.push(async () => {
-      try {
-        console.log(`[Rate Limiter] Executing fetch for: ${url}`);
-        const response = await fetch(url, options);
-        
-        // Intercept headers for Football-Data.org
-        if (url.includes("football-data.org")) {
-          const avail = response.headers.get("x-requests-available-minute");
-          const reset = response.headers.get("x-requestcounter-reset");
-          if (avail !== null) {
-            const numAvail = parseInt(avail, 10);
-            console.log(`[Rate Limiter] Football-Data.org Requests Available in current minute: ${numAvail}`);
-            globalFootballDataAvailableRequests = numAvail;
-          }
-          if (reset !== null) {
-            const numReset = parseInt(reset, 10);
-            console.log(`[Rate Limiter] Football-Data.org Reset in: ${numReset} seconds`);
-            globalFootballDataResetSeconds = numReset;
-            globalFootballDataResetTimestamp = Date.now() + (numReset * 1000);
-          }
-        }
-        
-        resolve(response);
-      } catch (err) {
-        reject(err);
+  const now = Date.now();
+  
+  // Clean up old timestamps older than 1 minute
+  while (fetchTimestamps.length > 0 && now - fetchTimestamps[0] > RATE_LIMIT_WINDOW_MS) {
+    fetchTimestamps.shift();
+  }
+
+  // Check if we are proactively blocking Football-Data requests due to zero available
+  const isFootballData = url.includes("football-data.org");
+  const isProactivelyBlocked = isFootballData && 
+    globalFootballDataAvailableRequests <= 1 && 
+    now < globalFootballDataResetTimestamp;
+
+  // If rate limit reached, do not queue! Throw an error immediately so the caller can fall back to cache instantly.
+  if (fetchTimestamps.length >= MAX_REQUESTS_PER_MINUTE || isProactivelyBlocked) {
+    const reason = isProactivelyBlocked 
+      ? `Football-Data.org API rate limit exhausted. Reset in ${Math.round((globalFootballDataResetTimestamp - now) / 1000)}s.`
+      : `App rate limit of ${MAX_REQUESTS_PER_MINUTE} req/min reached.`;
+    
+    console.warn(`[Rate Limiter] Proactive bypass: ${reason}. Triggering instant fallback.`);
+    return Promise.reject(new Error(`RATE_LIMIT_REACHED: ${reason}`));
+  }
+
+  // Otherwise, run fetch immediately
+  fetchTimestamps.push(now);
+  console.log(`[Rate Limiter] Executing immediate fetch for: ${url}`);
+  
+  return fetch(url, options).then((response) => {
+    // Intercept headers for Football-Data.org
+    if (isFootballData) {
+      const avail = response.headers.get("x-requests-available-minute");
+      const reset = response.headers.get("x-requestcounter-reset");
+      if (avail !== null) {
+        const numAvail = parseInt(avail, 10);
+        console.log(`[Rate Limiter] Football-Data.org Requests Available in current minute: ${numAvail}`);
+        globalFootballDataAvailableRequests = numAvail;
       }
-    });
-    processFetchQueue();
+      if (reset !== null) {
+        const numReset = parseInt(reset, 10);
+        console.log(`[Rate Limiter] Football-Data.org Reset in: ${numReset} seconds`);
+        globalFootballDataResetSeconds = numReset;
+        globalFootballDataResetTimestamp = Date.now() + (numReset * 1000);
+      }
+    }
+    return response;
   });
 }
 
@@ -483,7 +465,7 @@ async function updateActiveCompetitionsCache() {
       new Set(
         (challenges || [])
           .map((c: any) => Number(c.competition_id))
-          .filter((id) => id && !isNaN(id))
+          .filter((id) => id && !isNaN(id) && id !== 2000) // Skip 2000 (World Cup) because it always loads instantly from local fallback
       )
     );
 
@@ -970,6 +952,16 @@ async function startServer() {
     const activeProvider = getActiveApiProvider();
     const fdCompId = Number(req.params.competitionId);
     const reqSeason = req.query.season ? Number(req.query.season) : null;
+
+    if (fdCompId === 2000) {
+      console.log("[World Cup Route] Returning fallback data immediately to guarantee instant loading.");
+      try {
+        const fallbackData = JSON.parse(fs.readFileSync("./world_cup_fallback.json", "utf-8"));
+        return res.json(fallbackData);
+      } catch (err) {
+        console.error("Failed to read world_cup_fallback.json in route:", err);
+      }
+    }
 
     const cacheKey = `comp_${fdCompId}_${activeProvider}_${reqSeason || "current"}`;
     const now = Date.now();
