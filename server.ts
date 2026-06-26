@@ -264,6 +264,76 @@ const mapStatusToFootballData = (apiStatus: string) => {
   return "TIMED";
 };
 
+function adjustMatchesDynamically(matches: any[]): any[] {
+  if (!Array.isArray(matches)) return [];
+  const now = Date.now();
+
+  return matches.map((m: any) => {
+    if (!m) return m;
+
+    const statusUpper = String(m.status || "").toUpperCase();
+    const isScheduled = ["TIMED", "SCHEDULED"].includes(statusUpper);
+
+    if (m.utcDate) {
+      const matchTime = new Date(m.utcDate).getTime();
+      if (!isNaN(matchTime)) {
+        if (now >= matchTime) {
+          if (isScheduled) {
+            // Less than 120 minutes since kickoff -> mark as IN_PLAY
+            if (now - matchTime < 120 * 60 * 1000) {
+              const updatedScore = m.score ? { ...m.score } : { fullTime: { home: 0, away: 0 } };
+              if (!updatedScore.fullTime) {
+                updatedScore.fullTime = { home: 0, away: 0 };
+              } else {
+                updatedScore.fullTime = {
+                  home: updatedScore.fullTime.home ?? 0,
+                  away: updatedScore.fullTime.away ?? 0
+                };
+              }
+              return {
+                ...m,
+                status: "IN_PLAY",
+                score: updatedScore
+              };
+            } else {
+              // More than 120 minutes since kickoff -> mark as FINISHED
+              const updatedScore = m.score ? { ...m.score } : { fullTime: { home: 0, away: 0 } };
+              if (!updatedScore.fullTime) {
+                updatedScore.fullTime = { home: 0, away: 0 };
+              } else {
+                updatedScore.fullTime = {
+                  home: updatedScore.fullTime.home ?? 0,
+                  away: updatedScore.fullTime.away ?? 0
+                };
+              }
+              return {
+                ...m,
+                status: "FINISHED",
+                score: updatedScore
+              };
+            }
+          } else if (statusUpper === "IN_PLAY") {
+            const updatedScore = m.score ? { ...m.score } : { fullTime: { home: 0, away: 0 } };
+            if (!updatedScore.fullTime) {
+              updatedScore.fullTime = { home: 0, away: 0 };
+            } else {
+              updatedScore.fullTime = {
+                home: updatedScore.fullTime.home ?? 0,
+                away: updatedScore.fullTime.away ?? 0
+              };
+            }
+            return {
+              ...m,
+              score: updatedScore
+            };
+          }
+        }
+      }
+    }
+    return m;
+  });
+}
+
 const getMockFriendlyMatchesForDate = (targetDate: string): any[] => {
   return [];
 };
@@ -584,6 +654,17 @@ async function startServer() {
   });
 
   app.get("/api/matches/today", async (req, res) => {
+    const originalJson = res.json.bind(res);
+    res.json = (body: any) => {
+      if (body && Array.isArray(body.matches)) {
+        body = {
+          ...body,
+          matches: adjustMatchesDynamically(body.matches)
+        };
+      }
+      return originalJson(body);
+    };
+
     const activeProvider = getActiveApiProvider();
     const targetDate = req.query.date ? String(req.query.date) : new Date().toISOString().split("T")[0];
     const cacheKey = `today_${activeProvider}_${targetDate}`;
@@ -776,6 +857,17 @@ async function startServer() {
   });
 
   app.get("/api/matches/:competitionId", async (req, res) => {
+    const originalJson = res.json.bind(res);
+    res.json = (body: any) => {
+      if (body && Array.isArray(body.matches)) {
+        body = {
+          ...body,
+          matches: adjustMatchesDynamically(body.matches)
+        };
+      }
+      return originalJson(body);
+    };
+
     const activeProvider = getActiveApiProvider();
     const fdCompId = Number(req.params.competitionId);
     const reqSeason = req.query.season ? Number(req.query.season) : null;
@@ -785,8 +877,36 @@ async function startServer() {
 
     try {
       const bypassCache = req.query.refresh === "true";
-      if (!bypassCache && apiCache[cacheKey] && (now - apiCache[cacheKey].timestamp < COMP_CACHE_TTL)) {
-        return res.json(apiCache[cacheKey].data);
+      if (!bypassCache && apiCache[cacheKey]) {
+        let currentTtl = COMP_CACHE_TTL;
+        const cachedData = apiCache[cacheKey].data;
+        if (cachedData && Array.isArray(cachedData.matches)) {
+          const todayStr = new Date().toISOString().split("T")[0];
+          const fourHoursAgo = now - 4 * 60 * 60 * 1000;
+          const fourHoursAhead = now + 4 * 60 * 60 * 1000;
+
+          const hasActiveOrTodayMatch = cachedData.matches.some((m: any) => {
+            const matchStatus = String(m.status || "").toUpperCase();
+            const isLive = ["IN_PLAY", "LIVE", "PAUSED", "LIVE_FIRST_HALF", "LIVE_SECOND_HALF", "HT", "1H", "2H"].includes(matchStatus);
+            if (isLive) return true;
+
+            if (m.utcDate) {
+              const matchTime = new Date(m.utcDate).getTime();
+              const isAroundNow = matchTime >= fourHoursAgo && matchTime <= fourHoursAhead;
+              const isToday = m.utcDate.startsWith(todayStr);
+              return isAroundNow || isToday;
+            }
+            return false;
+          });
+
+          if (hasActiveOrTodayMatch) {
+            currentTtl = TODAY_CACHE_TTL; // 60 seconds
+          }
+        }
+
+        if (now - apiCache[cacheKey].timestamp < currentTtl) {
+          return res.json(apiCache[cacheKey].data);
+        }
       }
 
       // Proactive rate limit protection
