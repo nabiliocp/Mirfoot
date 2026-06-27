@@ -34,70 +34,77 @@ import { BracketChallenge } from "./BracketChallenge";
 
 const isTeamsNotDefinedYet = (homeTeam?: { name?: string; shortName?: string }, awayTeam?: { name?: string; shortName?: string }) => {
   if (!homeTeam || !awayTeam) return true;
-  const homeName = homeTeam.name || homeTeam.shortName || "";
-  const awayName = awayTeam.name || awayTeam.shortName || "";
   
-  if (!homeName.trim() || !awayName.trim()) return true;
+  const isMatchPlaceholder = (n1?: string, n2?: string) => {
+    // Check if both provided names are placeholders
+    const checkName = (name?: string) => {
+      if (!name) return true;
+      const n = name.toLowerCase().trim();
+      if (
+        n === "" || 
+        n === "..." || 
+        n === "tbd" || 
+        n === "tbc" || 
+        n === "à définir" || 
+        n === "a definir" || 
+        n === "non deﬁni" || 
+        n === "non defini" || 
+        n === "non défini" || 
+        n === "qualifié" || 
+        n === "qualifie" ||
+        n === "aucun match" ||
+        n === "programmé"
+      ) return true;
 
-  const isMatchPlaceholder = (name: string) => {
-    const n = name.toLowerCase().trim();
-    if (
-      n === "" || 
-      n === "..." || 
-      n === "tbd" || 
-      n === "tbc" || 
-      n === "à définir" || 
-      n === "a definir" || 
-      n === "non deﬁni" || 
-      n === "non defini" || 
-      n === "non défini" || 
-      n === "qualifié" || 
-      n === "qualifie" ||
-      n === "aucun match" ||
-      n === "programmé"
-    ) return true;
+      // Direct prefix checks
+      if (
+        n.startsWith("vainqueur") || 
+        n.startsWith("winner") || 
+        n.startsWith("perdant") || 
+        n.startsWith("loser") || 
+        n.startsWith("groupe") || 
+        n.startsWith("group") ||
+        n.startsWith("v. match") ||
+        n.startsWith("p. match") ||
+        n.startsWith("v. ") ||
+        n.startsWith("p. ") ||
+        n.startsWith("w. ") ||
+        n.startsWith("l. ") ||
+        n.startsWith("w_") ||
+        n.startsWith("l_") ||
+        n.startsWith("tbd") ||
+        /^[wlp]\d+$/i.test(n) || // like w1, w12, l3, p5
+        /^(winner\s|loser\s|vainqueur\s|perdant\s)/i.test(n)
+      ) {
+        return true;
+      }
 
-    // Direct prefix checks
-    if (
-      n.startsWith("vainqueur") || 
-      n.startsWith("winner") || 
-      n.startsWith("perdant") || 
-      n.startsWith("loser") || 
-      n.startsWith("groupe") || 
-      n.startsWith("group") ||
-      n.startsWith("v. match") ||
-      n.startsWith("p. match") ||
-      n.startsWith("v. ") ||
-      n.startsWith("p. ") ||
-      n.startsWith("w. ") ||
-      n.startsWith("l. ") ||
-      n.startsWith("w_") ||
-      n.startsWith("l_") ||
-      n.startsWith("tbd") ||
-      /^[wlp]\d+$/i.test(n) || // like w1, w12, l3, p5
-      /^(winner\s|loser\s|vainqueur\s|perdant\s)/i.test(n)
-    ) {
-      return true;
-    }
+      // Checking broad keyword containment
+      if (
+        n.includes("vainqueur de") || 
+        n.includes("winner of") || 
+        n.includes("perdant de") || 
+        n.includes("loser of") ||
+        n.includes("tbd") ||
+        n.includes("tbc") ||
+        n.includes("à définir") ||
+        n.includes("a definir")
+      ) {
+        return true;
+      }
 
-    // Checking broad keyword containment
-    if (
-      n.includes("vainqueur de") || 
-      n.includes("winner of") || 
-      n.includes("perdant de") || 
-      n.includes("loser of") ||
-      n.includes("tbd") ||
-      n.includes("tbc") ||
-      n.includes("à définir") ||
-      n.includes("a definir")
-    ) {
-      return true;
-    }
-
-    return false;
+      return false;
+    };
+    
+    // If n1 is not a placeholder, then the team is known
+    if (n1 && !checkName(n1)) return false;
+    // If n2 is not a placeholder, then the team is known
+    if (n2 && !checkName(n2)) return false;
+    
+    return true; // Both names are placeholders (or undefined)
   };
 
-  return isMatchPlaceholder(homeName) || isMatchPlaceholder(awayName);
+  return isMatchPlaceholder(homeTeam.name, homeTeam.shortName) || isMatchPlaceholder(awayTeam.name, awayTeam.shortName);
 };
 
 // Imported calculateMatchPoints from ../lib/pointCalculation
@@ -1678,7 +1685,7 @@ export default function ChallengesView({
   const updateCompetitionPredictionForm = (
     challengeId: string,
     matchId: number,
-    updates: { homeScore?: number; awayScore?: number },
+    updates: { homeScore?: number; awayScore?: number; qualifies?: 'home' | 'away' },
   ) => {
     setPredictionForms((prev) => {
       const currentChallengeForm = prev[challengeId] || {};
@@ -3688,10 +3695,13 @@ export default function ChallengesView({
                     
                     const isBonusActive = formMatch?.bonus !== undefined ? formMatch.bonus : !!userPredMatch?.bonus;
                     const isSuperbonusActive = formMatch?.superbonus !== undefined ? formMatch.superbonus : !!userPredMatch?.superbonus;
+                    const qualifies = formMatch?.qualifies !== undefined ? formMatch.qualifies : userPredMatch?.qualifies;
+                    const isKnockout = m.stage ? translateStage(m.stage, m.group, m.matchday).isKnockout : false;
                     const hasSubmitted = userPredMatch?.homeScore !== undefined && userPredMatch?.awayScore !== undefined;
                     const hasFormChange = 
                       (formMatch?.homeScore !== undefined && formMatch.homeScore !== userPredMatch?.homeScore) || 
                       (formMatch?.awayScore !== undefined && formMatch.awayScore !== userPredMatch?.awayScore) ||
+                      (formMatch?.qualifies !== undefined && formMatch.qualifies !== userPredMatch?.qualifies) ||
                       (formMatch?.bonus !== undefined && formMatch.bonus !== !!userPredMatch?.bonus) ||
                       (formMatch?.superbonus !== undefined && formMatch.superbonus !== !!userPredMatch?.superbonus);
 
@@ -3767,24 +3777,40 @@ export default function ChallengesView({
                             <span className="font-bold text-center text-[11px] text-gray-800 truncate w-full">{m.homeTeam.shortName || m.homeTeam.name}</span>
                           </div>
 
-                          <div className="relative flex px-2 justify-center items-center gap-1.5">
-                            <input 
-                              type="number"
-                              min="0"
-                              value={scoreHome ?? ""}
-                              onChange={(e) => updateCompetitionPredictionForm(challengeId, m.id, { homeScore: parseInt(e.target.value) })}
-                              disabled={!isOpen}
-                              className="w-10 h-10 text-center text-sm font-bold border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 disabled:bg-gray-100 disabled:text-gray-400 select-none"
-                            />
-                            <span className="font-black text-gray-300 text-xs">VS</span>
-                            <input 
-                              type="number"
-                              min="0"
-                              value={scoreAway ?? ""}
-                              onChange={(e) => updateCompetitionPredictionForm(challengeId, m.id, { awayScore: parseInt(e.target.value) })}
-                              disabled={!isOpen}
-                              className="w-10 h-10 text-center text-sm font-bold border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 disabled:bg-gray-100 disabled:text-gray-400 select-none"
-                            />
+                          <div className="relative flex flex-col px-2 justify-center items-center gap-1.5">
+                            <div className="flex items-center gap-1.5">
+                              <input 
+                                type="number"
+                                min="0"
+                                value={scoreHome ?? ""}
+                                onChange={(e) => updateCompetitionPredictionForm(challengeId, m.id, { homeScore: parseInt(e.target.value) })}
+                                disabled={!isOpen}
+                                className="w-10 h-10 text-center text-sm font-bold border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 disabled:bg-gray-100 disabled:text-gray-400 select-none"
+                              />
+                              <span className="font-black text-gray-300 text-xs">VS</span>
+                              <input 
+                                type="number"
+                                min="0"
+                                value={scoreAway ?? ""}
+                                onChange={(e) => updateCompetitionPredictionForm(challengeId, m.id, { awayScore: parseInt(e.target.value) })}
+                                disabled={!isOpen}
+                                className="w-10 h-10 text-center text-sm font-bold border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 disabled:bg-gray-100 disabled:text-gray-400 select-none"
+                              />
+                            </div>
+                            {isKnockout && scoreHome !== undefined && scoreAway !== undefined && scoreHome === scoreAway && (
+                              <div className="w-full flex justify-center mt-1">
+                                <select 
+                                  value={qualifies || ""}
+                                  onChange={(e) => updateCompetitionPredictionForm(challengeId, m.id, { qualifies: e.target.value as "home" | "away" })}
+                                  disabled={!isOpen}
+                                  className="text-[9px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-lg px-2 py-1 outline-hidden"
+                                >
+                                  <option value="" disabled>Qui se qualifie ?</option>
+                                  <option value="home">{m.homeTeam.shortName || m.homeTeam.name}</option>
+                                  <option value="away">{m.awayTeam.shortName || m.awayTeam.name}</option>
+                                </select>
+                              </div>
+                            )}
                           </div>
 
                           <div className="flex flex-col items-center flex-1 min-w-0">
@@ -4962,10 +4988,13 @@ export default function ChallengesView({
                               
                               const isBonusActive = formMatch?.bonus !== undefined ? formMatch.bonus : !!userPredMatch?.bonus;
                               const isSuperbonusActive = formMatch?.superbonus !== undefined ? formMatch.superbonus : !!userPredMatch?.superbonus;
+                              const qualifies = formMatch?.qualifies !== undefined ? formMatch.qualifies : userPredMatch?.qualifies;
+                              const isKnockout = m.stage ? translateStage(m.stage, m.group, m.matchday).isKnockout : false;
                               const hasSubmitted = userPredMatch?.homeScore !== undefined && userPredMatch?.awayScore !== undefined;
                               const hasFormChange = 
                                 (formMatch?.homeScore !== undefined && formMatch.homeScore !== userPredMatch?.homeScore) || 
                                 (formMatch?.awayScore !== undefined && formMatch.awayScore !== userPredMatch?.awayScore) ||
+                                (formMatch?.qualifies !== undefined && formMatch.qualifies !== userPredMatch?.qualifies) ||
                                 (formMatch?.bonus !== undefined && formMatch.bonus !== !!userPredMatch?.bonus) ||
                                 (formMatch?.superbonus !== undefined && formMatch.superbonus !== !!userPredMatch?.superbonus);
 
@@ -5012,24 +5041,40 @@ export default function ChallengesView({
                                     </div>
                                     
                                     {/* VS Section */}
-                                    <div className="relative flex px-1.5 justify-center items-center gap-1">
-                                       <input 
-                                         type="number"
-                                         min="0"
-                                         value={scoreHome ?? ""}
-                                         onChange={(e) => updateCompetitionPredictionForm(challengeId, m.id, { homeScore: parseInt(e.target.value) })}
-                                         disabled={!isOpen}
-                                         className="w-9 h-9 text-center text-xs font-bold border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 disabled:bg-gray-100 disabled:text-gray-400 select-none animate-fade-in"
-                                       />
-                                       <span className="font-black text-gray-300 text-[10px]">VS</span>
-                                       <input 
-                                         type="number"
-                                         min="0"
-                                         value={scoreAway ?? ""}
-                                         onChange={(e) => updateCompetitionPredictionForm(challengeId, m.id, { awayScore: parseInt(e.target.value) })}
-                                         disabled={!isOpen}
-                                         className="w-9 h-9 text-center text-xs font-bold border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 disabled:bg-gray-100 disabled:text-gray-400 select-none animate-fade-in"
-                                       />
+                                    <div className="relative flex flex-col px-1.5 justify-center items-center gap-1">
+                                      <div className="flex items-center gap-1">
+                                         <input 
+                                           type="number"
+                                           min="0"
+                                           value={scoreHome ?? ""}
+                                           onChange={(e) => updateCompetitionPredictionForm(challengeId, m.id, { homeScore: parseInt(e.target.value) })}
+                                           disabled={!isOpen}
+                                           className="w-9 h-9 text-center text-xs font-bold border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 disabled:bg-gray-100 disabled:text-gray-400 select-none animate-fade-in"
+                                         />
+                                         <span className="font-black text-gray-300 text-[10px]">VS</span>
+                                         <input 
+                                           type="number"
+                                           min="0"
+                                           value={scoreAway ?? ""}
+                                           onChange={(e) => updateCompetitionPredictionForm(challengeId, m.id, { awayScore: parseInt(e.target.value) })}
+                                           disabled={!isOpen}
+                                           className="w-9 h-9 text-center text-xs font-bold border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 disabled:bg-gray-100 disabled:text-gray-400 select-none animate-fade-in"
+                                         />
+                                      </div>
+                                      {isKnockout && scoreHome !== undefined && scoreAway !== undefined && scoreHome === scoreAway && (
+                                        <div className="w-full flex justify-center mt-1">
+                                          <select 
+                                            value={qualifies || ""}
+                                            onChange={(e) => updateCompetitionPredictionForm(challengeId, m.id, { qualifies: e.target.value as "home" | "away" })}
+                                            disabled={!isOpen}
+                                            className="text-[8px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-md px-1.5 py-0.5 outline-hidden max-w-[80px] truncate"
+                                          >
+                                            <option value="" disabled>Qualifié ?</option>
+                                            <option value="home">{m.homeTeam.shortName || m.homeTeam.name}</option>
+                                            <option value="away">{m.awayTeam.shortName || m.awayTeam.name}</option>
+                                          </select>
+                                        </div>
+                                      )}
                                     </div>
                                     
                                     {/* Away Team */}
