@@ -1186,8 +1186,8 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
             <Lock className="w-2.5 h-2.5" /> Clôturé
           </div>
         ) : (!teamA || !teamB) ? (
-          <div className="absolute top-1.5 right-2 flex items-center gap-1 text-[9px] bg-slate-100 text-slate-500 font-bold px-1.5 py-0.5 rounded-full border border-slate-200">
-            <Lock className="w-2.5 h-2.5" /> Verrouillé
+          <div className="absolute top-1.5 right-2 flex items-center gap-1 text-[8px] bg-amber-50 text-amber-600 font-bold px-1.5 py-0.5 rounded border border-amber-100 uppercase tracking-wider">
+            Adversaire requis
           </div>
         ) : null}
         
