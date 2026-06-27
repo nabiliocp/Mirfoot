@@ -107,6 +107,7 @@ export default function ProfileEditModal({
 
   // Admin API config states
   const [activeApi, setActiveApi] = useState<"football-data" | "api-football">("football-data");
+  const [webSearchFallbackEnabled, setWebSearchFallbackEnabled] = useState(true);
   const [apiStatusMsg, setApiStatusMsg] = useState("");
 
   // Dropdown visibility states
@@ -138,8 +139,16 @@ export default function ProfileEditModal({
             setActiveApi(data.active_api);
           }
         }
+
+        const fallbackResponse = await fetch("/api/admin/web-search-config");
+        if (fallbackResponse.ok) {
+          const fallbackData = await fallbackResponse.json();
+          if (fallbackData.web_search_fallback !== undefined) {
+            setWebSearchFallbackEnabled(fallbackData.web_search_fallback);
+          }
+        }
       } catch (err) {
-        console.error("Error fetching API provider:", err);
+        console.error("Error fetching admin configurations:", err);
       }
     };
 
@@ -179,6 +188,34 @@ export default function ProfileEditModal({
         setTimeout(() => {
           window.location.reload();
         }, 1200);
+      } else {
+        const errData = await response.json();
+        setApiStatusMsg(`Erreur: ${errData.error || "Inconnue"}`);
+      }
+    } catch (err: any) {
+      setApiStatusMsg(`Erreur: ${err.message || err}`);
+    }
+  };
+
+  const handleToggleWebSearchFallback = async (enabled: boolean) => {
+    try {
+      setApiStatusMsg("Mise à jour de la recherche web...");
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token || "";
+
+      const response = await fetch("/api/admin/web-search-config", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({ enabled })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setWebSearchFallbackEnabled(data.web_search_fallback);
+        setApiStatusMsg(`Recherche web ${data.web_search_fallback ? "activée" : "désactivée"} avec succès !`);
       } else {
         const errData = await response.json();
         setApiStatusMsg(`Erreur: ${errData.error || "Inconnue"}`);
@@ -516,6 +553,33 @@ export default function ProfileEditModal({
                   <span className="text-[8px] text-gray-400">Premium Dashboard</span>
                 </button>
               </div>
+
+              {/* Web Search Fallback Configuration */}
+              <div className="mt-2.5 pt-2 border-t border-gray-100">
+                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1 flex items-center gap-1">
+                  🔍 Recherche Web Automatique (DDG Scraper)
+                </label>
+                <div className="flex items-center justify-between bg-gray-50/70 p-2 rounded-xl border border-gray-100">
+                  <div className="flex flex-col text-left">
+                    <span className="text-[10px] font-extrabold text-gray-700">Fallback Automatique</span>
+                    <span className="text-[8px] text-gray-400 leading-tight">Scrape les scores si API inactive (Toutes les 30s)</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleToggleWebSearchFallback(!webSearchFallbackEnabled)}
+                    className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                      webSearchFallbackEnabled ? 'bg-emerald-600' : 'bg-gray-200'
+                    }`}
+                  >
+                    <span
+                      className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-xs ring-0 transition duration-200 ease-in-out ${
+                        webSearchFallbackEnabled ? 'translate-x-4' : 'translate-x-0'
+                      }`}
+                    />
+                  </button>
+                </div>
+              </div>
+
               {apiStatusMsg && (
                 <span className="block mt-1 text-[9px] text-emerald-600 font-bold">
                   {apiStatusMsg}

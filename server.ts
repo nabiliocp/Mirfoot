@@ -4,6 +4,7 @@ import { createServer as createViteServer } from "vite";
 import { createClient } from "@supabase/supabase-js";
 import dotenv from "dotenv";
 import fs from "fs";
+import * as cheerio from "cheerio";
 
 dotenv.config();
 
@@ -79,6 +80,223 @@ function loadPersistentCacheWithTimestamp(key: string): { data: any, timestamp: 
     }
   } catch (err) {
     console.error(`Failed to load persistent cache with timestamp for ${key}:`, err);
+  }
+  return null;
+}
+
+// Web Search Fallback Configuration Helpers
+function isWebSearchFallbackEnabled(): boolean {
+  try {
+    if (fs.existsSync("./api_config.json")) {
+      const data = fs.readFileSync("./api_config.json", "utf-8");
+      const config = JSON.parse(data);
+      if (config.web_search_fallback !== undefined) {
+        return !!config.web_search_fallback;
+      }
+    }
+  } catch (err) {
+    console.error("Error reading api_config.json for web_search_fallback:", err);
+  }
+  return true; // Enabled by default!
+}
+
+function setWebSearchFallbackEnabled(enabled: boolean) {
+  try {
+    let currentConfig: any = {};
+    if (fs.existsSync("./api_config.json")) {
+      const data = fs.readFileSync("./api_config.json", "utf-8");
+      currentConfig = JSON.parse(data);
+    }
+    currentConfig.web_search_fallback = enabled;
+    fs.writeFileSync("./api_config.json", JSON.stringify(currentConfig), "utf-8");
+  } catch (err) {
+    console.error("Error writing web_search_fallback to api_config.json:", err);
+  }
+}
+
+// Team Synonyms & Score Parsing Helper Logic
+function getTeamSynonyms(name: string): string[] {
+  const norm = name.toLowerCase();
+  const synonyms: string[] = [];
+  synonyms.push(norm);
+
+  if (norm.includes("paris saint germain") || norm.includes("paris sg") || norm.includes("psg")) {
+    synonyms.push("psg");
+    synonyms.push("paris");
+  }
+  if (norm.includes("real madrid") || norm.includes("madrid cf")) {
+    synonyms.push("real madrid");
+    synonyms.push("madrid");
+  }
+  if (norm.includes("atletico madrid") || norm.includes("atletico de madrid")) {
+    synonyms.push("atletico");
+    synonyms.push("atm");
+  }
+  if (norm.includes("manchester united") || norm.includes("man united") || norm.includes("man utd")) {
+    synonyms.push("man united");
+    synonyms.push("man utd");
+    synonyms.push("manchester utd");
+  }
+  if (norm.includes("manchester city") || norm.includes("man city")) {
+    synonyms.push("man city");
+    synonyms.push("mancity");
+    synonyms.push("manchester city");
+  }
+  if (norm.includes("bayern munich") || norm.includes("bayern munchen")) {
+    synonyms.push("bayern");
+    synonyms.push("munich");
+  }
+  if (norm.includes("fc barcelona") || norm.includes("barcelona") || norm.includes("barca")) {
+    synonyms.push("barcelona");
+    synonyms.push("barca");
+  }
+  if (norm.includes("inter milan") || norm.includes("internazionale")) {
+    synonyms.push("inter");
+    synonyms.push("internazionale");
+  }
+  if (norm.includes("sporting cp") || norm.includes("sporting lisbon")) {
+    synonyms.push("sporting");
+  }
+  if (norm.includes("ac milan")) {
+    synonyms.push("milan");
+  }
+
+  return synonyms;
+}
+
+function normalizeTeam(name: string): string {
+  return name.toLowerCase()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .replace(/\b(fc|cf|ac|real|ud|rcd|sd|sc|afc|fk|bvb|sv|as|ol|olympique|juventus|club|de|la|os)\b/g, "")
+    .replace(/[^a-z0-9]/g, " ")
+    .trim()
+    .replace(/\s+/g, " ");
+}
+
+function extractScore(snippet: string, home: string, away: string): { homeScore: number, awayScore: number } | null {
+  const normalizedSnippet = snippet.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  
+  const homeSyns = getTeamSynonyms(home).map(s => normalizeTeam(s));
+  const awaySyns = getTeamSynonyms(away).map(s => normalizeTeam(s));
+
+  let matchedHomeSyn = "";
+  for (const syn of homeSyns) {
+    if (syn && normalizedSnippet.includes(syn)) {
+      matchedHomeSyn = syn;
+      break;
+    }
+  }
+
+  let matchedAwaySyn = "";
+  for (const syn of awaySyns) {
+    if (syn && normalizedSnippet.includes(syn)) {
+      matchedAwaySyn = syn;
+      break;
+    }
+  }
+
+  if (!matchedHomeSyn) {
+    const norm = normalizeTeam(home);
+    const words = norm.split(" ").filter(w => w.length > 2);
+    matchedHomeSyn = words[0] || norm;
+  }
+  if (!matchedAwaySyn) {
+    const norm = normalizeTeam(away);
+    const words = norm.split(" ").filter(w => w.length > 2);
+    matchedAwaySyn = words[0] || norm;
+  }
+
+  if (!matchedHomeSyn || !matchedAwaySyn) return null;
+
+  const scoreRegex = /(\d+)\s*[-–:]\s*(\d+)/g;
+  let match;
+  while ((match = scoreRegex.exec(normalizedSnippet)) !== null) {
+    const score1 = parseInt(match[1]);
+    const score2 = parseInt(match[2]);
+    if (score1 > 15 || score2 > 15) continue;
+
+    const scoreIndex = match.index;
+    const hIndex = normalizedSnippet.indexOf(matchedHomeSyn);
+    const aIndex = normalizedSnippet.indexOf(matchedAwaySyn);
+
+    if (hIndex !== -1 && aIndex !== -1) {
+      if (hIndex < aIndex) {
+        if (scoreIndex > hIndex && scoreIndex < aIndex + 80) {
+          return { homeScore: score1, awayScore: score2 };
+        }
+        if (scoreIndex > aIndex) {
+          return { homeScore: score1, awayScore: score2 };
+        }
+      } else {
+        if (scoreIndex > aIndex && scoreIndex < hIndex + 80) {
+          return { homeScore: score2, awayScore: score1 };
+        }
+        if (scoreIndex > hIndex) {
+          return { homeScore: score2, awayScore: score1 };
+        }
+      }
+    }
+  }
+
+  const hasHome = normalizedSnippet.includes(matchedHomeSyn);
+  const hasAway = normalizedSnippet.includes(matchedAwaySyn);
+  if (hasHome && hasAway) {
+    scoreRegex.lastIndex = 0;
+    const firstScoreMatch = scoreRegex.exec(normalizedSnippet);
+    if (firstScoreMatch) {
+      const score1 = parseInt(firstScoreMatch[1]);
+      const score2 = parseInt(firstScoreMatch[2]);
+      if (score1 <= 15 && score2 <= 15) {
+        const hIndex = normalizedSnippet.indexOf(matchedHomeSyn);
+        const aIndex = normalizedSnippet.indexOf(matchedAwaySyn);
+        if (hIndex < aIndex) {
+          return { homeScore: score1, awayScore: score2 };
+        } else {
+          return { homeScore: score2, awayScore: score1 };
+        }
+      }
+    }
+  }
+
+  return null;
+}
+
+// Scrape DuckDuckGo Search Results for Live scores
+async function scrapeDuckDuckGoScores(homeTeam: string, awayTeam: string, competitionName?: string): Promise<{ homeScore: number, awayScore: number } | null> {
+  const query = `${homeTeam} vs ${awayTeam} ${competitionName || ""} score 2026`;
+  const url = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`;
+  try {
+    const res = await fetch(url, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept-Language": "en-US,en;q=0.9,fr;q=0.8",
+      }
+    });
+    if (!res.ok) {
+      console.warn(`[WebScraper] DDG fetch failed with status ${res.status}`);
+      return null;
+    }
+    const html = await res.text();
+    const $ = cheerio.load(html);
+    const elements: string[] = [];
+    
+    $(".links_main").each((i, el) => {
+      const title = $(el).find(".result__title").text().trim();
+      const snippet = $(el).find(".result__snippet").text().trim();
+      if (title || snippet) {
+        elements.push(`${title} | ${snippet}`);
+      }
+    });
+
+    for (const text of elements) {
+      const score = extractScore(text, homeTeam, awayTeam);
+      if (score !== null) {
+        console.log(`[WebScraper] Found score ${score.homeScore}-${score.awayScore} for ${homeTeam} vs ${awayTeam}`);
+        return score;
+      }
+    }
+  } catch (err: any) {
+    console.error(`[WebScraper] Error scraping scores for ${homeTeam} vs ${awayTeam}:`, err.message);
   }
   return null;
 }
@@ -672,6 +890,59 @@ async function startServer() {
 
       setActiveApiProvider(provider);
       res.json({ success: true, active_api: provider });
+    } catch (err: any) {
+      console.error(err);
+      res.status(500).json({ error: "Erreur serveur : " + err.message });
+    }
+  });
+
+  // GET web search configuration (Admin only)
+  app.get("/api/admin/web-search-config", async (req, res) => {
+    res.json({ web_search_fallback: isWebSearchFallbackEnabled() });
+  });
+
+  // POST web search configuration (Admin only)
+  app.post("/api/admin/web-search-config", async (req, res) => {
+    if (!supabase)
+      return res
+        .status(500)
+        .json({ error: "Configuration Supabase manquante." });
+    try {
+      const authHeader = req.headers.authorization;
+      if (!authHeader) {
+        return res.status(401).json({ error: "Non autorisé: Jeton manquant." });
+      }
+
+      const token = authHeader.replace("Bearer ", "");
+      const {
+        data: { user },
+        error: authError,
+      } = await supabase.auth.getUser(token);
+
+      if (authError || !user) {
+        return res
+          .status(401)
+          .json({ error: "Session non valide ou expirée." });
+      }
+
+      const email = user.email || "";
+      const allowedEmails = [
+        "rouijel.nabil@gmail.com",
+        "rouijel.nabil.cp@gmail.com",
+      ];
+      if (!allowedEmails.includes(email.toLowerCase())) {
+        return res
+          .status(403)
+          .json({ error: "Accès refusé: Réservé aux administrateurs." });
+      }
+
+      const { enabled } = req.body;
+      if (typeof enabled !== "boolean") {
+        return res.status(400).json({ error: "Format 'enabled' non valide." });
+      }
+
+      setWebSearchFallbackEnabled(enabled);
+      res.json({ success: true, web_search_fallback: enabled });
     } catch (err: any) {
       console.error(err);
       res.status(500).json({ error: "Erreur serveur : " + err.message });
@@ -1506,6 +1777,101 @@ async function startServer() {
       return 0;
     }
   }
+
+  async function runWebScraperFallbackUpdates() {
+    const todayStr = new Date().toISOString().split("T")[0];
+    const now = Date.now();
+    const fourHours = 4 * 60 * 60 * 1000;
+
+    const matchesToUpdate: { cacheKey: string; compName: string; matchIndex: number; match: any }[] = [];
+
+    for (const cacheKey of Object.keys(apiCache)) {
+      const entry = apiCache[cacheKey];
+      if (entry && entry.data && Array.isArray(entry.data.matches)) {
+        entry.data.matches.forEach((m: any, idx: number) => {
+          const matchTime = m.utcDate ? new Date(m.utcDate).getTime() : 0;
+          const isToday = m.utcDate && m.utcDate.startsWith(todayStr);
+          const isAroundNow = matchTime && Math.abs(now - matchTime) < fourHours;
+          const isLive = ["IN_PLAY", "LIVE", "PAUSED", "HT", "1H", "2H"].includes(String(m.status || "").toUpperCase());
+
+          if (isToday || isAroundNow || isLive) {
+            const isFinished = String(m.status || "").toUpperCase() === "FINISHED";
+            if (!isFinished || m.score?.fullTime?.home === null || m.score?.fullTime?.away === null) {
+              matchesToUpdate.push({
+                cacheKey,
+                compName: entry.data.competition?.name || "",
+                matchIndex: idx,
+                match: m
+              });
+            }
+          }
+        });
+      }
+    }
+
+    if (matchesToUpdate.length === 0) {
+      return;
+    }
+
+    console.log(`[WebScraper] Found ${matchesToUpdate.length} candidate matches for web search update.`);
+
+    const limit = Math.min(matchesToUpdate.length, 3);
+    for (let i = 0; i < limit; i++) {
+      const item = matchesToUpdate[i];
+      const homeName = item.match.homeTeam?.name;
+      const awayName = item.match.awayTeam?.name;
+      if (!homeName || !awayName) continue;
+
+      console.log(`[WebScraper] Scraping web scores for: ${homeName} vs ${awayName}...`);
+      const scraped = await scrapeDuckDuckGoScores(homeName, awayName, item.compName);
+      if (scraped !== null) {
+        const entry = apiCache[item.cacheKey];
+        if (entry && entry.data && Array.isArray(entry.data.matches)) {
+          const m = entry.data.matches[item.matchIndex];
+          if (m) {
+            if (!m.score) m.score = {};
+            if (!m.score.fullTime) m.score.fullTime = { home: null, away: null };
+            if (!m.score.regularTime) m.score.regularTime = { home: null, away: null };
+
+            m.score.fullTime.home = scraped.homeScore;
+            m.score.fullTime.away = scraped.awayScore;
+            m.score.regularTime.home = scraped.homeScore;
+            m.score.regularTime.away = scraped.awayScore;
+
+            if (scraped.homeScore > scraped.awayScore) {
+              m.score.winner = "HOME_TEAM";
+            } else if (scraped.homeScore < scraped.awayScore) {
+              m.score.winner = "AWAY_TEAM";
+            } else {
+              m.score.winner = "DRAW";
+            }
+
+            const matchTime = m.utcDate ? new Date(m.utcDate).getTime() : 0;
+            if (matchTime && now - matchTime > 2 * 60 * 60 * 1000) {
+              m.status = "FINISHED";
+            } else {
+              m.status = "IN_PLAY";
+            }
+
+            console.log(`[WebScraper] Successfully updated cache for match: ${homeName} ${scraped.homeScore}-${scraped.awayScore} ${awayName} (Status: ${m.status})`);
+            savePersistentCache(item.cacheKey, entry.data);
+          }
+        }
+      }
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+  }
+
+  // Web Search Fallback score updater Interval (every 30 seconds)
+  setInterval(async () => {
+    try {
+      if (isWebSearchFallbackEnabled()) {
+        await runWebScraperFallbackUpdates();
+      }
+    } catch (err) {
+      console.error("[WebScraper Interval Error]:", err);
+    }
+  }, 30000);
 
   // Auto-resolve cron/interval running every 5 minutes
   setInterval(async () => {
