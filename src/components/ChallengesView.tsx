@@ -991,98 +991,103 @@ export default function ChallengesView({
 
   async function loadData() {
     if (!supabase) return;
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) return;
-
-    setUserId(user.id);
-    setUserEmail(user.email || null);
-
-    let challengesRes: any[] = [];
     try {
-      const res = await fetch(`/api/challenges/user/${user.id}`);
-      if (!res.ok) {
-        throw new Error(`HTTP error: ${res.status}`);
-      }
-      const data = await res.json();
-      challengesRes = data.challenges || [];
-    } catch (err) {
-      console.error("Error loading user challenges from backend:", err);
-      // Fallback
-      const { data: createdChallenges } = await supabase
-        .from("challenges")
-        .select("*")
-        .eq("creator_id", user.id);
-      challengesRes = createdChallenges || [];
-    }
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) return;
 
-    const sortedChallenges = [...challengesRes].sort(
-      (a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-    );
-    
-    // Fetch user's own bets and their own profile instead of fetching all profiles
-    const [betsRes, profileRes] = await Promise.all([
-      supabase.from("bets").select("*").eq("user_id", user.id),
-      supabase.from("profiles").select("id, username, avatar_type, avatar_value, points").eq("id", user.id).maybeSingle(),
-    ]);
+      setUserId(user.id);
+      setUserEmail(user.email || null);
 
-    if (profileRes.data) {
-      setCurrentUsername(profileRes.data.username);
-      // Ensure the user's profile is in allProfiles so they are recognized
-      setAllProfiles(prev => {
-        const next = [...prev];
-        if (!next.some(p => p.id === user.id)) {
-          next.push({
-            id: user.id,
-            username: profileRes.data.username,
-            avatar_type: profileRes.data.avatar_type,
-            avatar_value: profileRes.data.avatar_value,
-            points: profileRes.data.points
-          });
+      let challengesRes: any[] = [];
+      try {
+        const res = await fetch(`/api/challenges/user/${user.id}`);
+        if (!res.ok) {
+          throw new Error(`HTTP error: ${res.status}`);
         }
-        return next;
-      });
-    }
+        const data = await res.json();
+        challengesRes = data.challenges || [];
+      } catch (err) {
+        console.error("Error loading user challenges from backend:", err);
+        // Fallback
+        const { data: createdChallenges } = await supabase
+          .from("challenges")
+          .select("*")
+          .eq("creator_id", user.id);
+        challengesRes = createdChallenges || [];
+      }
 
-    if (sortedChallenges) {
-      const mapped = (Array.isArray(sortedChallenges) ? sortedChallenges : []).map((c: any) => ({
-        id: c.id,
-        competitionId: c.competition_id,
-        matchId: c.match_id,
-        matchHomeTeam: c.match_home_team,
-        matchAwayTeam: c.match_away_team,
-        matchDate: c.match_date,
-        creatorId: c.creator_id,
-        creatorUsername: c.creator_username || "Inconnu",
-        title: c.title,
-        rules: c.rules,
-        code: c.rules || c.id.substring(0, 8).toUpperCase(),
-        pointRules:
-          typeof c.point_rules === "string"
-            ? JSON.parse(c.point_rules)
-            : c.point_rules,
-        locked: c.locked,
-        resolved: c.resolved,
-        type: c.type,
-      }));
-      setChallenges(mapped);
+      const sortedChallenges = [...challengesRes].sort(
+        (a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      );
+      
+      // Fetch user's own bets and their own profile instead of fetching all profiles
+      const [betsRes, profileRes] = await Promise.all([
+        supabase.from("bets").select("*").eq("user_id", user.id),
+        supabase.from("profiles").select("id, username, avatar_type, avatar_value, points").eq("id", user.id).maybeSingle(),
+      ]);
 
-      // Removed automatic selection of challenged found from URL
-      // If there are invited challenge IDs, fetch those challenges too
-    }
+      if (profileRes.data) {
+        setCurrentUsername(profileRes.data.username);
+        // Ensure the user's profile is in allProfiles so they are recognized
+        setAllProfiles(prev => {
+          const next = [...prev];
+          if (!next.some(p => p.id === user.id)) {
+            next.push({
+              id: user.id,
+              username: profileRes.data.username,
+              avatar_type: profileRes.data.avatar_type,
+              avatar_value: profileRes.data.avatar_value,
+              points: profileRes.data.points
+            });
+          }
+          return next;
+        });
+      }
 
-    if (betsRes.data) {
-      const predMap: Record<string, Prediction> = {};
-      betsRes.data.forEach((bet: any) => {
-        predMap[bet.challenge_id] =
-          typeof bet.predictions === "string"
-            ? JSON.parse(bet.predictions)
-            : bet.predictions;
-      });
-      setUserPredictions(predMap);
+      if (sortedChallenges) {
+        const mapped = (Array.isArray(sortedChallenges) ? sortedChallenges : []).map((c: any) => ({
+          id: c.id,
+          competitionId: c.competition_id,
+          matchId: c.match_id,
+          matchHomeTeam: c.match_home_team,
+          matchAwayTeam: c.match_away_team,
+          matchDate: c.match_date,
+          creatorId: c.creator_id,
+          creatorUsername: c.creator_username || "Inconnu",
+          title: c.title,
+          rules: c.rules,
+          code: c.rules || c.id.substring(0, 8).toUpperCase(),
+          pointRules:
+            typeof c.point_rules === "string"
+              ? JSON.parse(c.point_rules)
+              : c.point_rules,
+          locked: c.locked,
+          resolved: c.resolved,
+          type: c.type,
+        }));
+        setChallenges(mapped);
+
+        // Removed automatic selection of challenged found from URL
+        // If there are invited challenge IDs, fetch those challenges too
+      }
+
+      if (betsRes.data) {
+        const predMap: Record<string, Prediction> = {};
+        betsRes.data.forEach((bet: any) => {
+          predMap[bet.challenge_id] =
+            typeof bet.predictions === "string"
+              ? JSON.parse(bet.predictions)
+              : bet.predictions;
+        });
+        setUserPredictions(predMap);
+      }
+    } catch (globalErr) {
+      console.error("Global error in loadData:", globalErr);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }
 
   const handleSearchByCode = async (e: FormEvent) => {
