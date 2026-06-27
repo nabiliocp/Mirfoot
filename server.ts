@@ -1289,9 +1289,9 @@ async function startServer() {
         }
         throw apiErr;
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("All fetch strategies failed for competition:", err);
-      res.status(500).json({ error: "Erreur réseau" });
+      res.status(500).json({ error: "Erreur réseau", details: err?.message || String(err) });
     }
   });
 
