@@ -1210,6 +1210,36 @@ async function startServer() {
     }
   });
 
+  app.post("/api/matches/:competitionId/backup", async (req, res) => {
+    try {
+      const fdCompId = Number(req.params.competitionId);
+      if (isNaN(fdCompId)) {
+        return res.status(400).json({ error: "competitionId non valide" });
+      }
+      const { matches } = req.body;
+      if (!matches || !Array.isArray(matches)) {
+        return res.status(400).json({ error: "Matches requis sous format tableau." });
+      }
+
+      console.log(`[Cache Backup] Received client backup for competition ${fdCompId} with ${matches.length} matches.`);
+
+      // Save to persistent cache under both potential providers to ensure failover matches are available
+      const providers = ["api-football", "football-data"];
+      const dataToSave = { matches };
+
+      for (const provider of providers) {
+        const cacheKey = `comp_${fdCompId}_${provider}_current`;
+        apiCache[cacheKey] = { data: dataToSave, timestamp: Date.now() };
+        savePersistentCache(cacheKey, dataToSave);
+      }
+
+      res.json({ success: true, message: "Sauvegarde du cache réussie." });
+    } catch (err: any) {
+      console.error("[Cache Backup] Failed to save backup:", err);
+      res.status(500).json({ error: "Erreur lors de la sauvegarde du cache", details: err?.message });
+    }
+  });
+
   // Helper to auto-resolve unresolved challenges
   async function runChallengeResolution() {
     if (!supabase) return 0;

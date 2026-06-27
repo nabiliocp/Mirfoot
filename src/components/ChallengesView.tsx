@@ -354,6 +354,36 @@ export default function ChallengesView({
     }
   }, [allMatchesByComp]);
 
+  // Proactive self-healing mechanism: upload localStorage matches to the server as a backup cache
+  useEffect(() => {
+    const keys = Object.keys(allMatchesByComp);
+    if (keys.length === 0) return;
+
+    const uploadBackups = async () => {
+      for (const compId of keys) {
+        const matches = allMatchesByComp[compId];
+        if (matches && Array.isArray(matches) && matches.length > 0) {
+          try {
+            const res = await fetch(`/api/matches/${compId}/backup`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ matches }),
+            });
+            if (res.ok) {
+              console.log(`[Self-Healing] Successfully uploaded matches backup for competition ${compId}`);
+            }
+          } catch (e) {
+            console.error(`[Self-Healing] Failed to upload backup for competition ${compId}:`, e);
+          }
+        }
+      }
+    };
+
+    // Small delay to let initial loads complete
+    const timeout = setTimeout(uploadBackups, 3000);
+    return () => clearTimeout(timeout);
+  }, [allMatchesByComp]);
+
   const isChallengeCompleted = (challenge: Challenge) => {
     if (challenge.resolved) return true;
     
@@ -850,10 +880,10 @@ export default function ChallengesView({
             if (!res.ok) {
               const errorData = await res.json();
               const isAdmin = userEmail === "rouijel.nabil@gmail.com" || userEmail === "rouijel.nabil.cp@gmail.com";
-              if (isAdmin && errorData.details) {
-                throw new Error(`Erreur technique: ${errorData.error} - ${errorData.details}`);
+              if (isAdmin) {
+                throw new Error(`⚠️ Alerte Admin : Clés d'API suspendues ou désactivées. Détails : ${errorData.error || ""} - ${errorData.details || ""}`);
               } else {
-                throw new Error("Données non disponibles");
+                throw new Error("⚽ Les données de football en direct sont temporairement inaccessibles (clés API suspendues par le fournisseur).");
               }
             }
             return res.json();
@@ -868,7 +898,7 @@ export default function ChallengesView({
           })
           .catch((err) => {
             console.error(err);
-            setApiError(err.message || "Erreur réseau");
+            setApiError(err.message || "Erreur de connexion réseau.");
             setLoadingMatches(false);
           });
       }
@@ -989,10 +1019,10 @@ export default function ChallengesView({
           if (!res.ok) {
             const errorData = await res.json();
             const isAdmin = userEmail === "rouijel.nabil@gmail.com" || userEmail === "rouijel.nabil.cp@gmail.com";
-            if (isAdmin && errorData.details) {
-              throw new Error(`Erreur technique: ${errorData.error} - ${errorData.details}`);
+            if (isAdmin) {
+              throw new Error(`⚠️ Alerte Admin : Les clés d'API configurées sur le serveur sont suspendues ou invalides. Veuillez les renouveler. Détails : ${errorData.error || ""} - ${errorData.details || ""}`);
             } else {
-              throw new Error("Données temporairement indisponibles.");
+              throw new Error("⚽ Les données en direct sont temporairement inaccessibles (clés API de l'application suspendues par le fournisseur).");
             }
           }
           const data = await res.json();
@@ -1247,16 +1277,20 @@ export default function ChallengesView({
       } else {
         const errorData = await res.json();
         const isAdmin = userEmail === "rouijel.nabil@gmail.com" || userEmail === "rouijel.nabil.cp@gmail.com";
-        if (isAdmin && errorData.details) {
-          setApiError(`Erreur technique: ${errorData.error} - ${errorData.details}`);
+        if (isAdmin) {
+          setApiError(`⚠️ Alerte Admin : Les clés d'API de football configurées sur le serveur sont suspendues ou invalides. Veuillez les renouveler dans vos variables d'environnement. Détails : ${errorData.error || ""} - ${errorData.details || ""}`);
         } else {
-          setApiError("Données non disponibles");
+          setApiError("⚽ Les données de football en direct sont temporairement indisponibles (clés API de l'application suspendues par le fournisseur).");
         }
       }
     } catch (e: any) {
       console.error(e);
       const isAdmin = userEmail === "rouijel.nabil@gmail.com" || userEmail === "rouijel.nabil.cp@gmail.com";
-      setApiError(isAdmin ? `Erreur réseau: ${e.message}` : "Données non disponibles");
+      if (isAdmin) {
+        setApiError(`⚠️ Erreur réseau Admin : ${e.message}. Veuillez vérifier l'état du serveur et de vos clés d'API.`);
+      } else {
+        setApiError("⚽ Impossible de charger les compétitions en direct pour le moment.");
+      }
     }
     setLoadingComps(false);
   };
@@ -1285,16 +1319,20 @@ export default function ChallengesView({
       } else {
         const errorData = await res.json();
         const isAdmin = userEmail === "rouijel.nabil@gmail.com" || userEmail === "rouijel.nabil.cp@gmail.com";
-        if (isAdmin && errorData.details) {
-          setApiError(`Erreur technique: ${errorData.error} - ${errorData.details}`);
+        if (isAdmin) {
+          setApiError(`⚠️ Alerte Admin : Les clés d'API configurées sur le serveur sont désactivées ou suspendues. Veuillez les renouveler dans vos secrets. Détails : ${errorData.error || ""} - ${errorData.details || ""}`);
         } else {
-          setApiError("Données non disponibles");
+          setApiError("⚽ Impossible de récupérer les matchs en direct (clés API de l'application suspendues par le fournisseur). Veuillez contacter l'administrateur.");
         }
       }
     } catch (e: any) {
       console.error(e);
       const isAdmin = userEmail === "rouijel.nabil@gmail.com" || userEmail === "rouijel.nabil.cp@gmail.com";
-      setApiError(isAdmin ? `Erreur réseau: ${e.message}` : "Données non disponibles");
+      if (isAdmin) {
+        setApiError(`⚠️ Erreur réseau Admin : ${e.message}. Veuillez vérifier l'état du serveur et de vos clés d'API.`);
+      } else {
+        setApiError("⚽ Impossible de charger les matchs en direct pour le moment.");
+      }
     }
     setLoadingMatches(false);
   };
