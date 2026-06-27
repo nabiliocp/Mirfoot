@@ -933,7 +933,6 @@ async function startServer() {
           matches: adjustMatchesDynamically(body.matches)
         };
       }
-      hasSentResponse = true;
       return originalJson(body);
     };
 
@@ -964,6 +963,7 @@ async function startServer() {
         return res.json(fallbackData);
       } catch (err) {
         console.error("Failed to read world_cup_fallback.json in route:", err);
+        return res.json({ matches: [] });
       }
     }
 
