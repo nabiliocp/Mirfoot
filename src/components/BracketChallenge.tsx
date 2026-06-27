@@ -561,14 +561,57 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
         const allComps = JSON.parse(savedMatches);
         const compMatches = allComps[String(challenge.competitionId)];
         if (compMatches && compMatches.length > 0) {
-          const r32RealMatches = compMatches.filter((m: any) => m.stage === "LAST_32" || m.stage === "ROUND_OF_32" || m.stage === "LAST_16" || m.stage === "ROUND_OF_16");
+          const r32RealMatches = compMatches.filter((m: any) => {
+            const s = (m.stage || "").toUpperCase().replace(/ /g, "_");
+            return s === "LAST_32" || s === "ROUND_OF_32" || s === "LAST_16" || s === "ROUND_OF_16" || s === "1ST_PHASE" || s === "8TH_FINALS";
+          });
           
           if (r32RealMatches.length > 0) {
             r32RealMatches.sort((a: any, b: any) => new Date(a.utcDate).getTime() - new Date(b.utcDate).getTime());
             
-            return defaultMatches.map((dm, idx) => {
-              if (idx < r32RealMatches.length) {
-                const realM = r32RealMatches[idx];
+            // Create a copy so we can remove matched ones
+            const remainingRealMatches = [...r32RealMatches];
+
+            return defaultMatches.map((dm) => {
+              const defaultHomeTeam = BRACKET_TEAMS[dm.homeId];
+              const defaultAwayTeam = BRACKET_TEAMS[dm.awayId];
+              
+              const dmHomeTla = dm.homeId;
+              const dmHomeName = (defaultHomeTeam?.name || "").toLowerCase();
+              const dmAwayTla = dm.awayId;
+              const dmAwayName = (defaultAwayTeam?.name || "").toLowerCase();
+              
+              const matchIdx = remainingRealMatches.findIndex((m: any) => {
+                const matchHomeTla = m.homeTeam?.tla || (m.homeTeam?.name ? m.homeTeam.name.substring(0,3).toUpperCase() : "");
+                const matchAwayTla = m.awayTeam?.tla || (m.awayTeam?.name ? m.awayTeam.name.substring(0,3).toUpperCase() : "");
+                
+                const matchHomeName = (m.homeTeam?.name || "").toLowerCase();
+                const matchAwayName = (m.awayTeam?.name || "").toLowerCase();
+                
+                // if either team matches the dm home or away team
+                if (matchHomeTla === dmHomeTla) return true;
+                if (matchAwayTla === dmHomeTla) return true;
+                if (matchHomeTla === dmAwayTla) return true;
+                if (matchAwayTla === dmAwayTla) return true;
+                
+                // name matching (only if name is meaningful, skip generic "1er", "2e", etc.)
+                if (dmHomeName && !dmHomeName.includes("groupe") && !dmHomeName.includes("meilleur")) {
+                  if (matchHomeName.includes(dmHomeName) || dmHomeName.includes(matchHomeName)) return true;
+                  if (matchAwayName.includes(dmHomeName) || dmHomeName.includes(matchAwayName)) return true;
+                }
+                if (dmAwayName && !dmAwayName.includes("groupe") && !dmAwayName.includes("meilleur")) {
+                  if (matchHomeName.includes(dmAwayName) || dmAwayName.includes(matchHomeName)) return true;
+                  if (matchAwayName.includes(dmAwayName) || dmAwayName.includes(matchAwayName)) return true;
+                }
+                
+                return false;
+              });
+
+              if (matchIdx !== -1) {
+                const realM = remainingRealMatches[matchIdx];
+                // Remove it from the remaining pool
+                remainingRealMatches.splice(matchIdx, 1);
+
                 const homeTla = realM.homeTeam?.tla || realM.homeTeam?.id?.toString() || dm.homeId;
                 const awayTla = realM.awayTeam?.tla || realM.awayTeam?.id?.toString() || dm.awayId;
                 

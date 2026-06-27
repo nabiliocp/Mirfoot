@@ -679,7 +679,7 @@ export default function ChallengesView({
   const translateStage = (stage?: string, group?: string, matchday?: number) => {
     if (!stage) return { name: "", type: "", isKnockout: false };
     
-    const cleanStage = stage.toUpperCase().trim();
+    const cleanStage = stage.toUpperCase().trim().replace(/ /g, "_");
     let stageName = "";
     let isKnockout = false;
     
@@ -688,6 +688,11 @@ export default function ChallengesView({
         stageName = group ? `Phase de Groupes (${group.replace("GROUP_", "Groupe ")})` : "Phase de Groupes";
         if (matchday) stageName += ` - Journée ${matchday}`;
         isKnockout = false;
+        break;
+      case "LAST_32":
+      case "ROUND_OF_32":
+        stageName = "Seizièmes de finale";
+        isKnockout = true;
         break;
       case "ROUND_OF_16":
       case "LAST_16":
