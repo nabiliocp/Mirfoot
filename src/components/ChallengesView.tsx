@@ -349,6 +349,10 @@ export default function ChallengesView({
   const isChallengeCompleted = (challenge: Challenge) => {
     if (challenge.resolved) return true;
     
+    if (challenge.type === "bracket") {
+      return false; // Bracket challenges are considered ongoing until resolved
+    }
+    
     // Check if we have the matches loaded for this competition
     const compMatches = allMatchesByComp[String(challenge.competitionId)];
     if (compMatches && compMatches.length > 0) {

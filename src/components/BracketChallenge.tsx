@@ -553,11 +553,56 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
     refreshQualifications(false);
   }, []);
 
-  const dynamicR32Matches = useMemo(() => {
-    // Keep the starting matches fully populated at all times so that the bracket is never empty,
-    // and let the dynamic "Qualifié" badge highlight officially qualified teams in real-time.
-    return STARTING_R32_MATCHES;
-  }, []);
+    const dynamicR32Matches = useMemo(() => {
+    const defaultMatches = [...STARTING_R32_MATCHES];
+    try {
+      const savedMatches = localStorage.getItem("mirfoot_matches_by_comp_v2");
+      if (savedMatches && challenge.competitionId) {
+        const allComps = JSON.parse(savedMatches);
+        const compMatches = allComps[String(challenge.competitionId)];
+        if (compMatches && compMatches.length > 0) {
+          const r32RealMatches = compMatches.filter((m: any) => m.stage === "LAST_32" || m.stage === "ROUND_OF_32" || m.stage === "LAST_16" || m.stage === "ROUND_OF_16");
+          
+          if (r32RealMatches.length > 0) {
+            r32RealMatches.sort((a: any, b: any) => new Date(a.utcDate).getTime() - new Date(b.utcDate).getTime());
+            
+            return defaultMatches.map((dm, idx) => {
+              if (idx < r32RealMatches.length) {
+                const realM = r32RealMatches[idx];
+                const homeTla = realM.homeTeam?.tla || realM.homeTeam?.id?.toString() || dm.homeId;
+                const awayTla = realM.awayTeam?.tla || realM.awayTeam?.id?.toString() || dm.awayId;
+                
+                if (realM.homeTeam && realM.homeTeam.name && !BRACKET_TEAMS[homeTla]) {
+                  BRACKET_TEAMS[homeTla] = {
+                    id: homeTla,
+                    name: realM.homeTeam.shortName || realM.homeTeam.name,
+                    flag: realM.homeTeam.crest || '❓'
+                  };
+                }
+                if (realM.awayTeam && realM.awayTeam.name && !BRACKET_TEAMS[awayTla]) {
+                  BRACKET_TEAMS[awayTla] = {
+                    id: awayTla,
+                    name: realM.awayTeam.shortName || realM.awayTeam.name,
+                    flag: realM.awayTeam.crest || '❓'
+                  };
+                }
+                
+                return {
+                  ...dm,
+                  homeId: realM.homeTeam?.name ? homeTla : dm.homeId,
+                  awayId: realM.awayTeam?.name ? awayTla : dm.awayId,
+                };
+              }
+              return dm;
+            });
+          }
+        }
+      }
+    } catch (err) {
+      console.error("Error applying real matches to bracket", err);
+    }
+    return defaultMatches;
+  }, [challenge.competitionId]);
 
   // State update helpers with localStorage persistence
   const updateTestMode = (val: boolean) => {
@@ -1108,6 +1153,12 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
     }
   };
 
+  const renderFlag = (flagStr: string | undefined) => {
+    if (!flagStr) return "❓";
+    if (flagStr.startsWith("http")) return <img src={flagStr} alt="" className="w-5 h-5 object-contain inline" onError={(e) => { e.currentTarget.src = "https://flagcdn.com/w80/un.png"; }} />;
+    return flagStr;
+  };
+
   // Render a single match box
   const renderMatchCard = (round: "r32" | "r16" | "r8" | "r4" | "r2", matchId: string, teamAId: string, teamBId: string) => {
     const teamA = BRACKET_TEAMS[teamAId];
@@ -1212,7 +1263,7 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
             }`}
           >
             <span className="flex items-center gap-1.5 min-w-0">
-              <span className="text-lg shrink-0">{teamA ? teamA.flag : "❓"}</span>
+              <span className="text-lg shrink-0">{teamA ? renderFlag(teamA.flag) : "❓"}</span>
               <span className="truncate">{teamA ? teamA.name : "À déterminer"}</span>
               {teamA && !isPlaceholderTeam(teamAId) && qualifiedTeams.has(teamAId) && (
                 <span className="bg-emerald-100 text-emerald-800 text-[8px] font-black px-1 py-0.5 rounded-sm shrink-0">
@@ -1246,7 +1297,7 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
             }`}
           >
             <span className="flex items-center gap-1.5 min-w-0">
-              <span className="text-lg shrink-0">{teamB ? teamB.flag : "❓"}</span>
+              <span className="text-lg shrink-0">{teamB ? renderFlag(teamB.flag) : "❓"}</span>
               <span className="truncate">{teamB ? teamB.name : "À déterminer"}</span>
               {teamB && !isPlaceholderTeam(teamBId) && qualifiedTeams.has(teamBId) && (
                 <span className="bg-emerald-100 text-emerald-800 text-[8px] font-black px-1 py-0.5 rounded-sm shrink-0">
@@ -1493,7 +1544,7 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
                       </>
                     ) : (
                       <>
-                        <span className="text-sm shrink-0">{teamA ? teamA.flag : "❓"}</span>
+                        <span className="text-sm shrink-0">{teamA ? renderFlag(teamA.flag) : "❓"}</span>
                         <span className="truncate">{teamA ? teamA.name : "À déterminer"}</span>
                         {showValidation && !maskPrediction && teamA && (
                           <>
@@ -1541,7 +1592,7 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
                       </>
                     ) : (
                       <>
-                        <span className="text-sm shrink-0">{teamB ? teamB.flag : "❓"}</span>
+                        <span className="text-sm shrink-0">{teamB ? renderFlag(teamB.flag) : "❓"}</span>
                         <span className="truncate">{teamB ? teamB.name : "À déterminer"}</span>
                         {showValidation && !maskPrediction && teamB && (
                           <>
@@ -1782,7 +1833,7 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
                       <div>
                         <div className="text-xs font-extrabold uppercase tracking-widest text-amber-900">Champion Prédit</div>
                         <div className="text-3xl font-black flex items-center justify-center gap-3 mt-3">
-                          <span className="text-4xl">{BRACKET_TEAMS[activePicks.winner]?.flag}</span>
+                          <span className="text-4xl">{BRACKET_TEAMS[activePicks.winner] ? renderFlag(BRACKET_TEAMS[activePicks.winner].flag) : "❓"}</span>
                           <span>{BRACKET_TEAMS[activePicks.winner]?.name}</span>
                         </div>
                       </div>
