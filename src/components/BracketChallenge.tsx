@@ -9,7 +9,8 @@ import {
   createEmptyBracketPredictions,
   BRACKET_MATCH_TIMES,
   generateRandomBracketPicks,
-  calculateBracketPoints
+  calculateBracketPoints,
+  isPlaceholderTeam
 } from "../bracketData";
 import { supabase } from "../lib/supabase";
 import { Check, Lock, Trophy, AlertTriangle, Sparkles, HelpCircle, RefreshCw } from "lucide-react";
@@ -1178,6 +1179,7 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
     }
 
     const locked = mode === "prediction" && isMatchLocked(matchId);
+    const missingOpponent = !teamA || !teamB || isPlaceholderTeam(teamAId) || isPlaceholderTeam(teamBId);
 
     return (
       <div className="bg-white border border-gray-150 rounded-2xl p-3 shadow-xs hover:shadow-md transition-all duration-300 relative overflow-hidden">
@@ -1185,7 +1187,7 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
           <div className="absolute top-1.5 right-2 flex items-center gap-1 text-[9px] bg-red-50 text-red-600 font-bold px-1.5 py-0.5 rounded-full border border-red-100">
             <Lock className="w-2.5 h-2.5" /> Clôturé
           </div>
-        ) : (!teamA || !teamB) ? (
+        ) : missingOpponent ? (
           <div className="absolute top-1.5 right-2 flex items-center gap-1 text-[8px] bg-amber-50 text-amber-600 font-bold px-1.5 py-0.5 rounded border border-amber-100 uppercase tracking-wider">
             Adversaire requis
           </div>
@@ -1195,12 +1197,12 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
           {/* Team A */}
           <button
             type="button"
-            disabled={locked || !teamA || !teamB}
-            onClick={() => teamA && teamB && handleSelectWinner(round, matchId, teamAId)}
+            disabled={locked || missingOpponent}
+            onClick={() => !missingOpponent && handleSelectWinner(round, matchId, teamAId)}
             className={`w-full flex items-center justify-between p-2 rounded-xl border text-sm font-bold transition-all ${
-              !teamA 
+              !teamA || isPlaceholderTeam(teamAId)
                 ? "bg-gray-55 border-dashed border-gray-200 text-gray-400 cursor-not-allowed"
-                : !teamB
+                : missingOpponent
                   ? "bg-gray-50/50 border-gray-150 text-gray-500 opacity-75 cursor-not-allowed"
                   : isSelectedA
                     ? "bg-emerald-50 border-emerald-500 text-emerald-950 shadow-sm"
@@ -1212,7 +1214,7 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
             <span className="flex items-center gap-1.5 min-w-0">
               <span className="text-lg shrink-0">{teamA ? teamA.flag : "❓"}</span>
               <span className="truncate">{teamA ? teamA.name : "À déterminer"}</span>
-              {teamA && qualifiedTeams.has(teamAId) && (
+              {teamA && !isPlaceholderTeam(teamAId) && qualifiedTeams.has(teamAId) && (
                 <span className="bg-emerald-100 text-emerald-800 text-[8px] font-black px-1 py-0.5 rounded-sm shrink-0">
                   QUALIFIÉ
                 </span>
@@ -1229,12 +1231,12 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
           {/* Team B */}
           <button
             type="button"
-            disabled={locked || !teamA || !teamB}
-            onClick={() => teamA && teamB && handleSelectWinner(round, matchId, teamBId)}
+            disabled={locked || missingOpponent}
+            onClick={() => !missingOpponent && handleSelectWinner(round, matchId, teamBId)}
             className={`w-full flex items-center justify-between p-2 rounded-xl border text-sm font-bold transition-all ${
-              !teamB 
+              !teamB || isPlaceholderTeam(teamBId)
                 ? "bg-gray-55 border-dashed border-gray-200 text-gray-400 cursor-not-allowed"
-                : !teamA
+                : missingOpponent
                   ? "bg-gray-50/50 border-gray-150 text-gray-500 opacity-75 cursor-not-allowed"
                   : isSelectedB
                     ? "bg-emerald-50 border-emerald-500 text-emerald-950 shadow-sm"
@@ -1246,7 +1248,7 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
             <span className="flex items-center gap-1.5 min-w-0">
               <span className="text-lg shrink-0">{teamB ? teamB.flag : "❓"}</span>
               <span className="truncate">{teamB ? teamB.name : "À déterminer"}</span>
-              {teamB && qualifiedTeams.has(teamBId) && (
+              {teamB && !isPlaceholderTeam(teamBId) && qualifiedTeams.has(teamBId) && (
                 <span className="bg-emerald-100 text-emerald-800 text-[8px] font-black px-1 py-0.5 rounded-sm shrink-0">
                   QUALIFIÉ
                 </span>
@@ -1335,6 +1337,7 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
     
     const isStarted = isMatchLocked(matchId);
     const locked = mode === "prediction" && (isStarted || isViewingOther);
+    const missingOpponent = !teamA || !teamB || isPlaceholderTeam(teamAId) || isPlaceholderTeam(teamBId);
 
     const isWinnerA = teamAId !== "" && teamBId !== "" && winnerId === teamAId;
     const isWinnerB = teamAId !== "" && teamBId !== "" && winnerId === teamBId;
@@ -1370,12 +1373,16 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
 
     return (
       <div className="relative w-full max-w-[200px] mx-auto bg-white border border-gray-200 rounded-2xl p-2.5 shadow-sm hover:shadow-md hover:border-slate-350 transition duration-300">
-        {isStarted && (
+        {isStarted ? (
           <div className="absolute -top-1.5 -right-1 flex items-center bg-red-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded-full border border-red-400 gap-0.5 shadow-xs">
             <Lock className="w-2.5 h-2.5" />
             <span>CLÔTURÉ</span>
           </div>
-        )}
+        ) : missingOpponent ? (
+          <div className="absolute -top-1.5 -right-1 flex items-center bg-amber-50 text-amber-600 text-[8px] font-black px-1.5 py-0.5 rounded-full border border-amber-200 gap-0.5 shadow-xs uppercase tracking-wider">
+            Adversaire requis
+          </div>
+        ) : null}
 
         <div className="text-[9px] text-gray-400 font-bold mb-1 px-1 flex justify-between">
           <span>{matchId.replace("R32_", "").replace("R16_", "").replace("R8_", "").replace("R4_", "")}</span>
@@ -1394,9 +1401,9 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
             const showValidation = testMode && simulatedResults && simWinnerId && activeSimulationTab !== "simulation";
 
             let btnClassA = "";
-            if (!teamA) {
+            if (!teamA || isPlaceholderTeam(teamAId)) {
               btnClassA = "bg-gray-55 border border-dashed border-gray-200 text-gray-400 cursor-not-allowed";
-            } else if (!teamB && !showValidation) {
+            } else if ((!teamB || isPlaceholderTeam(teamBId)) && !showValidation) {
               btnClassA = "bg-gray-50 border border-gray-150 text-gray-500 opacity-75 cursor-not-allowed";
             } else if (showValidation) {
               if (isWinnerA) {
@@ -1419,9 +1426,9 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
             }
 
             let btnClassB = "";
-            if (!teamB) {
+            if (!teamB || isPlaceholderTeam(teamBId)) {
               btnClassB = "bg-gray-55 border border-dashed border-gray-200 text-gray-400 cursor-not-allowed";
-            } else if (!teamA && !showValidation) {
+            } else if ((!teamA || isPlaceholderTeam(teamAId)) && !showValidation) {
               btnClassB = "bg-gray-50 border border-gray-150 text-gray-500 opacity-75 cursor-not-allowed";
             } else if (showValidation) {
               if (isWinnerB) {
@@ -1474,8 +1481,8 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
               <>
                 <button
                   type="button"
-                  disabled={locked || !teamA || !teamB}
-                  onClick={() => teamA && teamB && handleSelectWinner(round, matchId, teamAId)}
+                  disabled={locked || missingOpponent}
+                  onClick={() => !missingOpponent && handleSelectWinner(round, matchId, teamAId)}
                   className={`w-full flex items-center justify-between p-1.5 rounded-lg text-xs font-bold transition-all ${btnClassA}`}
                 >
                   <span className="flex items-center gap-1.5 truncate">
@@ -1522,8 +1529,8 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
 
                 <button
                   type="button"
-                  disabled={locked || !teamA || !teamB}
-                  onClick={() => teamA && teamB && handleSelectWinner(round, matchId, teamBId)}
+                  disabled={locked || missingOpponent}
+                  onClick={() => !missingOpponent && handleSelectWinner(round, matchId, teamBId)}
                   className={`w-full flex items-center justify-between p-1.5 rounded-lg text-xs font-bold transition-all ${btnClassB}`}
                 >
                   <span className="flex items-center gap-1.5 truncate">
