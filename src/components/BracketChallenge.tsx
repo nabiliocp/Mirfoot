@@ -532,7 +532,8 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
   const refreshQualifications = async (bypass = false) => {
     setLoadingQualifications(true);
     try {
-      const compId = challenge.competitionId || 2000;
+      const originalCompId = challenge.competitionId || 2000;
+      const compId = (originalCompId === 9999 || String(originalCompId) === "9999") ? 2000 : originalCompId;
       const url = bypass ? `/api/matches/${compId}?refresh=true` : `/api/matches/${compId}`;
       const res = await fetch(url);
       if (res.ok) {
@@ -553,13 +554,15 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
     refreshQualifications(false);
   }, []);
 
-    const dynamicR32Matches = useMemo(() => {
+  const dynamicR32Matches = useMemo(() => {
     const defaultMatches = [...STARTING_R32_MATCHES];
     try {
       const savedMatches = localStorage.getItem("mirfoot_matches_by_comp_v2");
       if (savedMatches && challenge.competitionId) {
         const allComps = JSON.parse(savedMatches);
-        const compMatches = allComps[String(challenge.competitionId)];
+        const originalCompId = challenge.competitionId;
+        const compId = (originalCompId === 9999 || String(originalCompId) === "9999") ? "2000" : String(originalCompId);
+        const compMatches = allComps[compId];
         if (compMatches && compMatches.length > 0) {
           const r32RealMatches = compMatches.filter((m: any) => {
             const s = (m.stage || "").toUpperCase().replace(/ /g, "_");
@@ -571,8 +574,10 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
             
             // Create a copy so we can remove matched ones
             const remainingRealMatches = [...r32RealMatches];
+            const matchedSlots = new Array(defaultMatches.length).fill(null);
 
-            return defaultMatches.map((dm) => {
+            // First pass: Match by strict TLA or Name
+            defaultMatches.forEach((dm, dmIdx) => {
               const defaultHomeTeam = BRACKET_TEAMS[dm.homeId];
               const defaultAwayTeam = BRACKET_TEAMS[dm.awayId];
               
@@ -609,9 +614,22 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
 
               if (matchIdx !== -1) {
                 const realM = remainingRealMatches[matchIdx];
-                // Remove it from the remaining pool
                 remainingRealMatches.splice(matchIdx, 1);
+                matchedSlots[dmIdx] = realM;
+              }
+            });
 
+            // Second pass: fill in any remaining unmatched slots with remaining real matches
+            defaultMatches.forEach((dm, dmIdx) => {
+              if (!matchedSlots[dmIdx] && remainingRealMatches.length > 0) {
+                const realM = remainingRealMatches.shift();
+                matchedSlots[dmIdx] = realM;
+              }
+            });
+
+            return defaultMatches.map((dm, dmIdx) => {
+              const realM = matchedSlots[dmIdx];
+              if (realM) {
                 const homeTla = realM.homeTeam?.tla || realM.homeTeam?.id?.toString() || dm.homeId;
                 const awayTla = realM.awayTeam?.tla || realM.awayTeam?.id?.toString() || dm.awayId;
                 

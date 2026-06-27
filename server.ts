@@ -904,7 +904,10 @@ async function startServer() {
     };
 
     const activeProvider = getActiveApiProvider();
-    const fdCompId = Number(req.params.competitionId);
+    let fdCompId = Number(req.params.competitionId);
+    if (fdCompId === 9999) {
+      fdCompId = 2000;
+    }
     const reqSeason = req.query.season ? Number(req.query.season) : null;
 
     const cacheKey = `comp_${fdCompId}_${activeProvider}_${reqSeason || "current"}`;

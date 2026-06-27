@@ -318,6 +318,7 @@ export default function ChallengesView({
   const [currentUsername, setCurrentUsername] = useState<string>("Moi");
   const [visibleMatchesCount, setVisibleMatchesCount] = useState<number>(4);
   const [activeTooltipId, setActiveTooltipId] = useState<number | null>(null);
+  const [matchValidationErrors, setMatchValidationErrors] = useState<Record<number, string>>({});
   const [upcomingMatchesByComp, setUpcomingMatchesByComp] = useState<Record<string, Match>>(() => {
     try {
       const saved = localStorage.getItem("mirfoot_upcoming_matches_v2");
@@ -1687,6 +1688,11 @@ export default function ChallengesView({
     matchId: number,
     updates: { homeScore?: number; awayScore?: number; qualifies?: 'home' | 'away' },
   ) => {
+    setMatchValidationErrors((prev) => {
+      const copy = { ...prev };
+      delete copy[matchId];
+      return copy;
+    });
     setPredictionForms((prev) => {
       const currentChallengeForm = prev[challengeId] || {};
       const currentMatches = currentChallengeForm.matches || {};
@@ -1995,12 +2001,28 @@ export default function ChallengesView({
       return;
     }
 
+    // Load matches to find if this is a knockout match
+    const compMatches = allMatchesByComp[String(challenge.competitionId)] || [];
+    const m = compMatches.find((x: Match) => x.id === matchId);
+    const isKnockout = m && m.stage ? translateStage(m.stage, m.group, m.matchday).isKnockout : false;
+
     // Capture the current predictions map from state if it exists
     const currentPreds = userPredictions[challenge.id] || {};
     const matchesPreds = currentPreds.matches || {};
     
     // Get bonus from predictionForms
     const formMatch = predictionForms[challenge.id]?.matches?.[matchId] || {};
+
+    if (isKnockout && hScore === aScore) {
+      const qVal = formMatch.qualifies !== undefined ? formMatch.qualifies : matchesPreds[matchId]?.qualifies;
+      if (!qVal) {
+        setMatchValidationErrors((prev) => ({
+          ...prev,
+          [matchId]: "⚠️ Égalité pronostiquée : Vous devez obligatoirement choisir qui se qualifie !",
+        }));
+        return;
+      }
+    }
 
     const updatedMatches = {
       ...matchesPreds,
@@ -2009,6 +2031,9 @@ export default function ChallengesView({
         awayScore: aScore,
         bonus: formMatch.bonus !== undefined ? formMatch.bonus : !!matchesPreds[matchId]?.bonus,
         superbonus: formMatch.superbonus !== undefined ? formMatch.superbonus : !!matchesPreds[matchId]?.superbonus,
+        qualifies: isKnockout && hScore === aScore 
+          ? (formMatch.qualifies !== undefined ? formMatch.qualifies : matchesPreds[matchId]?.qualifies)
+          : undefined,
       },
     };
 
@@ -3811,6 +3836,11 @@ export default function ChallengesView({
                                 </select>
                               </div>
                             )}
+                            {matchValidationErrors[m.id] && (
+                              <div className="w-full text-center mt-1 px-1.5 py-0.5 bg-rose-50 border border-rose-200 rounded-lg text-[9px] text-rose-600 font-extrabold animate-bounce leading-tight max-w-[120px]">
+                                {matchValidationErrors[m.id]}
+                              </div>
+                            )}
                           </div>
 
                           <div className="flex flex-col items-center flex-1 min-w-0">
@@ -5073,6 +5103,11 @@ export default function ChallengesView({
                                             <option value="home">{m.homeTeam.shortName || m.homeTeam.name}</option>
                                             <option value="away">{m.awayTeam.shortName || m.awayTeam.name}</option>
                                           </select>
+                                        </div>
+                                      )}
+                                      {matchValidationErrors[m.id] && (
+                                        <div className="w-full text-center mt-1 px-1 py-0.5 bg-rose-50 border border-rose-200 rounded text-[8px] text-rose-600 font-extrabold animate-bounce leading-tight max-w-[80px]">
+                                          {matchValidationErrors[m.id]}
                                         </div>
                                       )}
                                     </div>
