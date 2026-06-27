@@ -120,6 +120,78 @@ function getTeamSynonyms(name: string): string[] {
   const synonyms: string[] = [];
   synonyms.push(norm);
 
+  // Country Translations / Mappings (French, English, TLA, and short forms)
+  const translations: Record<string, string[]> = {
+    "croatie": ["croatia", "croatie", "cro"],
+    "croatia": ["croatia", "croatie", "cro"],
+    "ghana": ["ghana", "gha"],
+    "allemagne": ["germany", "allemagne", "deu", "ger"],
+    "germany": ["germany", "allemagne", "deu", "ger"],
+    "ecosse": ["scotland", "ecosse", "sco"],
+    "scotland": ["scotland", "ecosse", "sco"],
+    "france": ["france", "fra"],
+    "suede": ["sweden", "suede", "swe"],
+    "sweden": ["sweden", "suede", "swe"],
+    "coree du sud": ["south korea", "korea republic", "coree du sud", "kor"],
+    "south korea": ["south korea", "korea republic", "coree du sud", "kor"],
+    "suisse": ["switzerland", "suisse", "sui"],
+    "switzerland": ["switzerland", "suisse", "sui"],
+    "pays bas": ["netherlands", "pays bas", "holland", "ned"],
+    "netherlands": ["netherlands", "pays bas", "holland", "ned"],
+    "maroc": ["morocco", "maroc", "mar"],
+    "morocco": ["morocco", "maroc", "mar"],
+    "colombie": ["colombia", "colombie", "col"],
+    "colombia": ["colombia", "colombie", "col"],
+    "espagne": ["spain", "espagne", "esp"],
+    "spain": ["spain", "espagne", "esp"],
+    "autriche": ["austria", "autriche", "aut"],
+    "austria": ["austria", "autriche", "aut"],
+    "etats unis": ["usa", "united states", "etats unis"],
+    "usa": ["usa", "united states", "etats unis"],
+    "algerie": ["algeria", "algerie", "alg"],
+    "algeria": ["algeria", "algerie", "alg"],
+    "egypte": ["egypt", "egypte", "egy"],
+    "egypt": ["egypt", "egypte", "egy"],
+    "rep tcheque": ["czechia", "czech republic", "rep tcheque", "cze"],
+    "czechia": ["czechia", "czech republic", "rep tcheque", "cze"],
+    "bresil": ["brazil", "bresil", "bra"],
+    "brazil": ["brazil", "bresil", "bra"],
+    "japon": ["japan", "japon", "jpn"],
+    "japan": ["japan", "japon", "jpn"],
+    "cote d ivoire": ["ivory coast", "cote d ivoire", "civ"],
+    "ivory coast": ["ivory coast", "cote d ivoire", "civ"],
+    "norvege": ["norway", "norvege", "nor"],
+    "norway": ["norway", "norvege", "nor"],
+    "mexique": ["mexico", "mexique", "mex"],
+    "mexico": ["mexico", "mexique", "mex"],
+    "cap vert": ["cape verde", "cap vert", "cpv"],
+    "cape verde": ["cape verde", "cap vert", "cpv"],
+    "angleterre": ["england", "angleterre", "eng"],
+    "england": ["england", "angleterre", "eng"],
+    "rdc congo": ["dr congo", "congo dr", "rdc congo", "cod"],
+    "dr congo": ["dr congo", "congo dr", "rdc congo", "cod"],
+    "argentine": ["argentina", "argentine", "arg"],
+    "argentina": ["argentina", "argentine", "arg"],
+    "australie": ["australia", "australie", "aus"],
+    "australia": ["australia", "australie", "aus"],
+    "belgique": ["belgium", "belgique", "bel"],
+    "belgium": ["belgium", "belgique", "bel"],
+    "portugal": ["portugal", "por"],
+  };
+
+  const normalizedName = normalizeTeam(norm);
+  if (translations[normalizedName]) {
+    synonyms.push(...translations[normalizedName]);
+  }
+
+  // Also extract any matching keys from translation values if the input matches any synonyms
+  for (const [key, valueList] of Object.entries(translations)) {
+    if (valueList.some(v => norm.includes(v) || v.includes(norm))) {
+      synonyms.push(...valueList);
+      synonyms.push(key);
+    }
+  }
+
   if (norm.includes("paris saint germain") || norm.includes("paris sg") || norm.includes("psg")) {
     synonyms.push("psg");
     synonyms.push("paris");
@@ -161,7 +233,7 @@ function getTeamSynonyms(name: string): string[] {
     synonyms.push("milan");
   }
 
-  return synonyms;
+  return Array.from(new Set(synonyms));
 }
 
 function normalizeTeam(name: string): string {
@@ -259,45 +331,52 @@ function extractScore(snippet: string, home: string, away: string): { homeScore:
   }
 
   return null;
-}
-
-// Scrape DuckDuckGo Search Results for Live scores
+}// Scrape DuckDuckGo Search Results for Live scores
 async function scrapeDuckDuckGoScores(homeTeam: string, awayTeam: string, competitionName?: string): Promise<{ homeScore: number, awayScore: number } | null> {
-  const query = `${homeTeam} vs ${awayTeam} ${competitionName || ""} score 2026`;
-  const url = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`;
-  try {
-    const res = await fetch(url, {
-      headers: {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        "Accept-Language": "en-US,en;q=0.9,fr;q=0.8",
-      }
-    });
-    if (!res.ok) {
-      console.warn(`[WebScraper] DDG fetch failed with status ${res.status}`);
-      return null;
-    }
-    const html = await res.text();
-    const $ = cheerio.load(html);
-    const elements: string[] = [];
-    
-    $(".links_main").each((i, el) => {
-      const title = $(el).find(".result__title").text().trim();
-      const snippet = $(el).find(".result__snippet").text().trim();
-      if (title || snippet) {
-        elements.push(`${title} | ${snippet}`);
-      }
-    });
+  const queries = [
+    `${homeTeam} vs ${awayTeam} score 2026`,
+    `${homeTeam} vs ${awayTeam} score`,
+    `${homeTeam} vs ${awayTeam} match en direct score`
+  ];
 
-    for (const text of elements) {
-      const score = extractScore(text, homeTeam, awayTeam);
-      if (score !== null) {
-        console.log(`[WebScraper] Found score ${score.homeScore}-${score.awayScore} for ${homeTeam} vs ${awayTeam}`);
-        return score;
+  for (const query of queries) {
+    console.log(`[WebScraper] Querying DuckDuckGo: "${query}"`);
+    const url = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`;
+    try {
+      const res = await fetch(url, {
+        headers: {
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+          "Accept-Language": "en-US,en;q=0.9,fr;q=0.8",
+        }
+      });
+      if (!res.ok) {
+        console.warn(`[WebScraper] DDG fetch failed for "${query}" with status ${res.status}`);
+        continue;
       }
+      const html = await res.text();
+      const $ = cheerio.load(html);
+      const elements: string[] = [];
+      
+      $(".links_main").each((i, el) => {
+        const title = $(el).find(".result__title").text().trim();
+        const snippet = $(el).find(".result__snippet").text().trim();
+        if (title || snippet) {
+          elements.push(`${title} | ${snippet}`);
+        }
+      });
+
+      for (const text of elements) {
+        const score = extractScore(text, homeTeam, awayTeam);
+        if (score !== null) {
+          console.log(`[WebScraper] Found score ${score.homeScore}-${score.awayScore} for ${homeTeam} vs ${awayTeam}`);
+          return score;
+        }
+      }
+    } catch (err: any) {
+      console.error(`[WebScraper] Error querying "${query}":`, err.message);
     }
-  } catch (err: any) {
-    console.error(`[WebScraper] Error scraping scores for ${homeTeam} vs ${awayTeam}:`, err.message);
   }
+
   return null;
 }
 
@@ -1434,6 +1513,11 @@ async function startServer() {
             return res.json(persistentCache);
           }
 
+          if (fdCompId === 2000) {
+            console.log("[Fallback] API-Football failed for World Cup. Returning empty match list for self-healing backup...");
+            return res.json({ matches: [] });
+          }
+
           throw apiErr;
         }
       }
@@ -1477,6 +1561,10 @@ async function startServer() {
       }
     } catch (err: any) {
       console.error("All fetch strategies failed for competition:", err);
+      if (fdCompId === 2000) {
+        console.log("[Fallback] All APIs failed for World Cup. Returning empty match list for self-healing backup...");
+        return res.json({ matches: [] });
+      }
       res.status(500).json({ error: "Erreur réseau", details: err?.message || String(err) });
     }
   });
@@ -1793,8 +1881,10 @@ async function startServer() {
           const isToday = m.utcDate && m.utcDate.startsWith(todayStr);
           const isAroundNow = matchTime && Math.abs(now - matchTime) < fourHours;
           const isLive = ["IN_PLAY", "LIVE", "PAUSED", "HT", "1H", "2H"].includes(String(m.status || "").toUpperCase());
+          // Generously include matches scheduled within the last 3 days
+          const isRecentPassed = matchTime && (now - matchTime > 0) && (now - matchTime < 3 * 24 * 60 * 60 * 1000);
 
-          if (isToday || isAroundNow || isLive) {
+          if (isToday || isAroundNow || isLive || isRecentPassed) {
             const isFinished = String(m.status || "").toUpperCase() === "FINISHED";
             if (!isFinished || m.score?.fullTime?.home === null || m.score?.fullTime?.away === null) {
               matchesToUpdate.push({
