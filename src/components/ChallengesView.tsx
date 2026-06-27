@@ -313,15 +313,16 @@ export default function ChallengesView({
   const [activeTooltipId, setActiveTooltipId] = useState<number | null>(null);
   const [upcomingMatchesByComp, setUpcomingMatchesByComp] = useState<Record<string, Match>>(() => {
     try {
-      const saved = localStorage.getItem("mirfoot_upcoming_matches");
+      const saved = localStorage.getItem("mirfoot_upcoming_matches_v2");
       return saved ? JSON.parse(saved) : {};
     } catch (e) {
       return {};
     }
   });
+
   const [allMatchesByComp, setAllMatchesByComp] = useState<Record<string, Match[]>>(() => {
     try {
-      const saved = localStorage.getItem("mirfoot_matches_by_comp");
+      const saved = localStorage.getItem("mirfoot_matches_by_comp_v2");
       return saved ? JSON.parse(saved) : {};
     } catch (e) {
       return {};
@@ -331,7 +332,7 @@ export default function ChallengesView({
   // Persist matches and upcoming matches to localStorage on change
   useEffect(() => {
     try {
-      localStorage.setItem("mirfoot_upcoming_matches", JSON.stringify(upcomingMatchesByComp));
+      localStorage.setItem("mirfoot_upcoming_matches_v2", JSON.stringify(upcomingMatchesByComp));
     } catch (e) {
       console.error("Failed to save upcoming matches to localStorage", e);
     }
@@ -339,7 +340,7 @@ export default function ChallengesView({
 
   useEffect(() => {
     try {
-      localStorage.setItem("mirfoot_matches_by_comp", JSON.stringify(allMatchesByComp));
+      localStorage.setItem("mirfoot_matches_by_comp_v2", JSON.stringify(allMatchesByComp));
     } catch (e) {
       console.error("Failed to save all matches to localStorage", e);
     }
