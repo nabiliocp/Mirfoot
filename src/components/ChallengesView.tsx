@@ -829,7 +829,18 @@ export default function ChallengesView({
         
         setLoadingMatches(true);
         fetch(`/api/matches/${preselectedMatch.competitionId}`)
-          .then((res) => res.json())
+          .then(async (res) => {
+            if (!res.ok) {
+              const errorData = await res.json();
+              const isAdmin = userEmail === "rouijel.nabil@gmail.com" || userEmail === "rouijel.nabil.cp@gmail.com";
+              if (isAdmin && errorData.details) {
+                throw new Error(`Erreur technique: ${errorData.error} - ${errorData.details}`);
+              } else {
+                throw new Error("Données non disponibles");
+              }
+            }
+            return res.json();
+          })
           .then((data) => {
             const matchesData = data.matches || [];
             const upcomingMatches = Array.isArray(matchesData) 
@@ -840,6 +851,7 @@ export default function ChallengesView({
           })
           .catch((err) => {
             console.error(err);
+            setApiError(err.message || "Erreur réseau");
             setLoadingMatches(false);
           });
       }
@@ -957,7 +969,15 @@ export default function ChallengesView({
         setModalMatchesError(null);
         try {
           const res = await fetch(`/api/matches/${targetChallenge.competitionId}`);
-          if (!res.ok) throw new Error("Erreur api");
+          if (!res.ok) {
+            const errorData = await res.json();
+            const isAdmin = userEmail === "rouijel.nabil@gmail.com" || userEmail === "rouijel.nabil.cp@gmail.com";
+            if (isAdmin && errorData.details) {
+              throw new Error(`Erreur technique: ${errorData.error} - ${errorData.details}`);
+            } else {
+              throw new Error("Données temporairement indisponibles.");
+            }
+          }
           const data = await res.json();
           let fetchedMatches = data.matches || [];
           setAllMatchesByComp((prev) => ({
@@ -968,11 +988,11 @@ export default function ChallengesView({
             fetchedMatches = fetchedMatches.filter((m: Match) => String(m.id) === String(targetChallenge.matchId));
           }
           setModalMatches(fetchedMatches);
-        } catch (err) {
+        } catch (err: any) {
           console.error(err);
           // Only show error if we don't have any existing matches loaded
           if (!allMatchesByComp[String(targetChallenge.competitionId)]) {
-            setModalMatchesError("Données temporairement indisponibles.");
+            setModalMatchesError(err.message || "Données temporairement indisponibles.");
           }
         } finally {
           setLoadingModalMatches(false);
@@ -1209,11 +1229,17 @@ export default function ChallengesView({
         setCompetitions(Array.isArray(data.competitions) ? data.competitions : []);
       } else {
         const errorData = await res.json();
-        setApiError(errorData.error || "Erreur lors de la récupération des compétitions");
+        const isAdmin = userEmail === "rouijel.nabil@gmail.com" || userEmail === "rouijel.nabil.cp@gmail.com";
+        if (isAdmin && errorData.details) {
+          setApiError(`Erreur technique: ${errorData.error} - ${errorData.details}`);
+        } else {
+          setApiError("Données non disponibles");
+        }
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
-      setApiError("Erreur réseau");
+      const isAdmin = userEmail === "rouijel.nabil@gmail.com" || userEmail === "rouijel.nabil.cp@gmail.com";
+      setApiError(isAdmin ? `Erreur réseau: ${e.message}` : "Données non disponibles");
     }
     setLoadingComps(false);
   };
@@ -1241,11 +1267,17 @@ export default function ChallengesView({
         }
       } else {
         const errorData = await res.json();
-        setApiError(errorData.error || "Erreur lors de la récupération des matchs");
+        const isAdmin = userEmail === "rouijel.nabil@gmail.com" || userEmail === "rouijel.nabil.cp@gmail.com";
+        if (isAdmin && errorData.details) {
+          setApiError(`Erreur technique: ${errorData.error} - ${errorData.details}`);
+        } else {
+          setApiError("Données non disponibles");
+        }
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
-      setApiError("Erreur réseau");
+      const isAdmin = userEmail === "rouijel.nabil@gmail.com" || userEmail === "rouijel.nabil.cp@gmail.com";
+      setApiError(isAdmin ? `Erreur réseau: ${e.message}` : "Données non disponibles");
     }
     setLoadingMatches(false);
   };

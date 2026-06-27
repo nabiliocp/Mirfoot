@@ -150,25 +150,9 @@ interface CacheEntry {
 }
 const apiCache: Record<string, CacheEntry> = {};
 
-// Pre-populate memory cache on startup from local fallback and previously saved persistent disk caches
+// Pre-populate memory cache on startup from previously saved persistent disk caches
 try {
-  // 1. Seed World Cup from world_cup_fallback.json
-  const startupFallbackPath = path.join(process.cwd(), "world_cup_fallback.json");
-  if (fs.existsSync(startupFallbackPath)) {
-    const fallbackData = JSON.parse(fs.readFileSync(startupFallbackPath, "utf-8"));
-    const keys = [
-      "comp_2000_api-football_current",
-      "comp_2000_football-data_current",
-      "comp_2000_api-football_2026",
-      "comp_2000_football-data_2026"
-    ];
-    keys.forEach(k => {
-      apiCache[k] = { data: fallbackData, timestamp: Date.now() };
-    });
-    console.log("[Startup Cache] Seeded competition 2000 (World Cup) successfully from world_cup_fallback.json.");
-  }
-
-  // 2. Discover and seed previous caches from disk
+  // Discover and seed previous caches from disk
   const files = fs.readdirSync(process.cwd());
   let loadedDiskCaches = 0;
   files.forEach(file => {
@@ -806,22 +790,6 @@ async function startServer() {
             return res.json(persistentCache);
           }
 
-          // Try loading from World Cup fallback matches for today
-          try {
-            const fallbackPath = path.join(process.cwd(), "world_cup_fallback.json");
-            const fallbackData = JSON.parse(fs.readFileSync(fallbackPath, 'utf-8'));
-            const matches = fallbackData.matches || [];
-            const matchesToday = matches.filter((m: any) => m.utcDate.startsWith(targetDate));
-            if (matchesToday.length > 0) {
-              console.log(`Loaded ${matchesToday.length} fallback World Cup matches for date ${targetDate}`);
-              const fallbackResult = { matches: matchesToday };
-              apiCache[cacheKey] = { data: fallbackResult, timestamp: now };
-              return res.json(fallbackResult);
-            }
-          } catch (fallbackErr) {
-            console.error("Failed to load today's fallback World Cup matches:", fallbackErr);
-          }
-
           throw apiErr;
         }
       }
@@ -891,22 +859,6 @@ async function startServer() {
           return res.json(persistentCache);
         }
 
-        // Try loading from World Cup fallback matches for today
-        try {
-          const fallbackPath = path.join(process.cwd(), "world_cup_fallback.json");
-          const fallbackData = JSON.parse(fs.readFileSync(fallbackPath, 'utf-8'));
-          const matches = fallbackData.matches || [];
-          const matchesToday = matches.filter((m: any) => m.utcDate.startsWith(targetDate));
-          if (matchesToday.length > 0) {
-            console.log(`Loaded ${matchesToday.length} fallback World Cup matches for date ${targetDate} (FD fallback)`);
-            const fallbackResult = { matches: matchesToday };
-            apiCache[cacheKey] = { data: fallbackResult, timestamp: now };
-            return res.json(fallbackResult);
-          }
-        } catch (fallbackErr) {
-          console.error("Failed to load today's fallback World Cup matches (FD fallback):", fallbackErr);
-        }
-
         throw fdErr;
       }
     } catch (err) {
@@ -954,18 +906,6 @@ async function startServer() {
     const activeProvider = getActiveApiProvider();
     const fdCompId = Number(req.params.competitionId);
     const reqSeason = req.query.season ? Number(req.query.season) : null;
-
-    if (fdCompId === 2000) {
-      console.log("[World Cup Route] Returning fallback data immediately to guarantee instant loading.");
-      try {
-        const filePath = path.join(process.cwd(), "world_cup_fallback.json");
-        const fallbackData = JSON.parse(fs.readFileSync(filePath, "utf-8"));
-        return res.json(fallbackData);
-      } catch (err) {
-        console.error("Failed to read world_cup_fallback.json in route:", err);
-        return res.json({ matches: [] });
-      }
-    }
 
     const cacheKey = `comp_${fdCompId}_${activeProvider}_${reqSeason || "current"}`;
     const now = Date.now();
@@ -1210,13 +1150,6 @@ async function startServer() {
           const cachedResult = { matches: mappedMatches };
           apiCache[cacheKey] = { data: cachedResult, timestamp: now };
           savePersistentCache(cacheKey, cachedResult);
-          if (fdCompId === 2000) {
-            try {
-              const fallbackPath = path.join(process.cwd(), "world_cup_fallback.json");
-              fs.writeFileSync(fallbackPath, JSON.stringify(cachedResult, null, 2), 'utf-8');
-              console.log("Successfully updated world_cup_fallback.json with latest API-Football matches data.");
-            } catch (e) {}
-          }
           return res.json(cachedResult);
         } catch (apiErr) {
           console.error("API-Football error, trying fallback:", apiErr);
@@ -1227,13 +1160,6 @@ async function startServer() {
             return res.json(persistentCache);
           }
 
-          if (fdCompId === 2000) {
-            console.log("Using local fallback for World Cup (competition 2000) on API-Football error");
-            const fallbackPath = path.join(process.cwd(), "world_cup_fallback.json");
-            const fallbackData = JSON.parse(fs.readFileSync(fallbackPath, 'utf-8'));
-            apiCache[cacheKey] = { data: fallbackData, timestamp: now };
-            return res.json(fallbackData);
-          }
           throw apiErr;
         }
       }
@@ -1263,13 +1189,6 @@ async function startServer() {
 
         apiCache[cacheKey] = { data, timestamp: now };
         savePersistentCache(cacheKey, data);
-        if (fdCompId === 2000) {
-          try {
-            const fallbackPath = path.join(process.cwd(), "world_cup_fallback.json");
-            fs.writeFileSync(fallbackPath, JSON.stringify(data, null, 2), 'utf-8');
-            console.log("Successfully updated world_cup_fallback.json with latest Football-Data matches data.");
-          } catch (e) {}
-        }
         res.json(data);
       } catch (apiErr) {
         console.error("Football-Data API error, trying fallback:", apiErr);
@@ -1280,13 +1199,6 @@ async function startServer() {
           return res.json(persistentCache);
         }
 
-        if (fdCompId === 2000) {
-          console.log("Using local fallback for World Cup (competition 2000) on Football-Data error");
-          const fallbackPath = path.join(process.cwd(), "world_cup_fallback.json");
-          const fallbackData = JSON.parse(fs.readFileSync(fallbackPath, 'utf-8'));
-          apiCache[cacheKey] = { data: fallbackData, timestamp: now };
-          return res.json(fallbackData);
-        }
         throw apiErr;
       }
     } catch (err: any) {
