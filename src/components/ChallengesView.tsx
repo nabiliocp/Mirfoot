@@ -330,7 +330,7 @@ export default function ChallengesView({
 
   const [allMatchesByComp, setAllMatchesByComp] = useState<Record<string, Match[]>>(() => {
     try {
-      const saved = localStorage.getItem("mirfoot_matches_by_comp_v2");
+      const saved = localStorage.getItem("mirfoot_matches_by_comp_v3");
       return saved ? JSON.parse(saved) : {};
     } catch (e) {
       return {};
@@ -348,7 +348,7 @@ export default function ChallengesView({
 
   useEffect(() => {
     try {
-      localStorage.setItem("mirfoot_matches_by_comp_v2", JSON.stringify(allMatchesByComp));
+      localStorage.setItem("mirfoot_matches_by_comp_v3", JSON.stringify(allMatchesByComp));
     } catch (e) {
       console.error("Failed to save all matches to localStorage", e);
     }

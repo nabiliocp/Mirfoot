@@ -2378,23 +2378,23 @@ async function startServer() {
         };
 
         // 1. R32 to R16
-        picks.r16["R16_L1_H"] = pickRandom("GER", "SCO");
-        picks.r16["R16_L1_A"] = pickRandom("FRA", "SWE");
-        picks.r16["R16_L2_H"] = pickRandom("KOR", "SUI");
-        picks.r16["R16_L2_A"] = pickRandom("NED", "MAR");
-        picks.r16["R16_L3_H"] = pickRandom("COL", "GHA");
-        picks.r16["R16_L3_A"] = pickRandom("ESP", "AUT");
-        picks.r16["R16_L4_H"] = pickRandom("USA", "ALG");
-        picks.r16["R16_L4_A"] = pickRandom("EGY", "CZE");
+        picks.r16["R16_L1_H"] = pickRandom("BRA", "JPN");
+        picks.r16["R16_L1_A"] = pickRandom("CIV", "NOR");
+        picks.r16["R16_L2_H"] = pickRandom("MEX", "ECU");
+        picks.r16["R16_L2_A"] = pickRandom("ENG", "COD");
+        picks.r16["R16_L3_H"] = pickRandom("ARG", "CPV");
+        picks.r16["R16_L3_A"] = pickRandom("NZL", "EGY");
+        picks.r16["R16_L4_H"] = pickRandom("SUI", "ALG");
+        picks.r16["R16_L4_A"] = pickRandom("COL", "GHA");
 
-        picks.r16["R16_R1_H"] = pickRandom("BRA", "JPN");
-        picks.r16["R16_R1_A"] = pickRandom("CIV", "NOR");
-        picks.r16["R16_R2_H"] = pickRandom("MEX", "CPV");
-        picks.r16["R16_R2_A"] = pickRandom("ENG", "COD");
-        picks.r16["R16_R3_H"] = pickRandom("ARG", "URU");
-        picks.r16["R16_R3_A"] = pickRandom("AUS", "IRN");
-        picks.r16["R16_R4_H"] = pickRandom("CAN", "BEL");
-        picks.r16["R16_R4_A"] = pickRandom("POR", "PAR");
+        picks.r16["R16_R1_H"] = pickRandom("GER", "PAR");
+        picks.r16["R16_R1_A"] = pickRandom("FRA", "SWE");
+        picks.r16["R16_R2_H"] = pickRandom("RSA", "CAN");
+        picks.r16["R16_R2_A"] = pickRandom("NED", "MAR");
+        picks.r16["R16_R3_H"] = pickRandom("POR", "CRO");
+        picks.r16["R16_R3_A"] = pickRandom("ESP", "AUT");
+        picks.r16["R16_R4_H"] = pickRandom("USA", "BIH");
+        picks.r16["R16_R4_A"] = pickRandom("BEL", "SEN");
 
         // 2. R16 to R8
         picks.r8["R8_L1_H"] = pickRandom(picks.r16["R16_L1_H"], picks.r16["R16_L1_A"]);

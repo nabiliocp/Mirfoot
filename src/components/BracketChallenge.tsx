@@ -529,7 +529,7 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
   const [loadingQualifications, setLoadingQualifications] = useState<boolean>(false);
   const [realCompMatches, setRealCompMatches] = useState<any[]>(() => {
     try {
-      const savedMatches = localStorage.getItem("mirfoot_matches_by_comp_v2");
+      const savedMatches = localStorage.getItem("mirfoot_matches_by_comp_v3");
       if (savedMatches && challenge.competitionId) {
         const allComps = JSON.parse(savedMatches);
         const originalCompId = challenge.competitionId;
@@ -557,12 +557,12 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
           
           setRealCompMatches(data.matches);
           try {
-            const savedMatches = localStorage.getItem("mirfoot_matches_by_comp_v2");
+            const savedMatches = localStorage.getItem("mirfoot_matches_by_comp_v3");
             const allComps = savedMatches ? JSON.parse(savedMatches) : {};
             const originalCompId = challenge.competitionId;
             const compId = (originalCompId === 9999 || String(originalCompId) === "9999") ? "2000" : String(originalCompId);
             allComps[compId] = data.matches;
-            localStorage.setItem("mirfoot_matches_by_comp_v2", JSON.stringify(allComps));
+            localStorage.setItem("mirfoot_matches_by_comp_v3", JSON.stringify(allComps));
           } catch (e) {
             console.error("Error saving fetched matches to localStorage:", e);
           }
@@ -619,7 +619,7 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
               { id: "R32_L4", tA: ["FRA", "France"], tB: ["BEL", "Belgium", "Belgique"] },
               { id: "R32_R1", tA: ["SUI", "SWI", "Switzerland", "Suisse"], tB: ["ITA", "Italy", "Italie"] },
               { id: "R32_R2", tA: ["ENG", "England", "Angleterre"], tB: ["SVK", "Slovakia", "Slovaquie"] },
-              { id: "R32_R3", tA: ["AUT", "AUS", "Austria", "Autriche"], tB: ["TUR", "TÜR", "Turkey", "Türkiye", "Turquie"] },
+              { id: "R32_R3", tA: ["AUT", "Austria", "Autriche"], tB: ["TUR", "TÜR", "Turkey", "Türkiye", "Turquie"] },
               { id: "R32_R4", tA: ["ROM", "ROU", "Romania", "Roumanie"], tB: ["NED", "NET", "Netherlands", "Pays-Bas"] },
             ];
 
