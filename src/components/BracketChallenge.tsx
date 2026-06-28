@@ -589,7 +589,9 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
   onSaveSuccess,
   onShowRules,
   isSimulationMode = false,
-  detailTab = "matches"
+  detailTab = "matches",
+  isAdmin,
+  onKickParticipant
 }) => {
   const [picks, setPicks] = useState<BracketPredictions>(createEmptyBracketPredictions());
   const [loading, setLoading] = useState(false);
@@ -598,6 +600,7 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
   const [kickingParticipantId, setKickingParticipantId] = useState<string | null>(null);
 
   const handleKick = async (participantId: string, username: string) => {
+    console.log("Kick button clicked for:", participantId, username);
     if (!onKickParticipant) return;
     setKickingParticipantId(participantId);
     try {
