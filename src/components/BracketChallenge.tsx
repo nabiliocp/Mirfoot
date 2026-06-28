@@ -400,7 +400,7 @@ export function computeLiveActualResults(matches: any[], dynamicR32Matches: Brac
   return result;
 }
 
-export function computeRobustBracketState(picks: BracketPredictions, r32Matches: BracketMatch[]): RobustBracketState {
+export function computeRobustBracketState(picks: BracketPredictions, r32Matches: BracketMatch[], lockedMatches: Record<string, boolean> = {}, realResults: BracketPredictions | null = null): RobustBracketState {
   const r32Winners: Record<string, string> = {};
   
   const r32Mapping: Record<string, string> = {
@@ -419,7 +419,8 @@ export function computeRobustBracketState(picks: BracketPredictions, r32Matches:
     let winner = "";
     if (hasBothOpponents) {
       const slotKey = r32Mapping[m.id];
-      const pickedWinner = picks.r16?.[slotKey] || "";
+      const isLocked = lockedMatches[m.id];
+      const pickedWinner = (isLocked && realResults ? realResults.r16?.[slotKey] : picks.r16?.[slotKey]) || "";
       if (pickedWinner === m.homeId || pickedWinner === m.awayId) {
         winner = pickedWinner;
       }
@@ -451,7 +452,8 @@ export function computeRobustBracketState(picks: BracketPredictions, r32Matches:
     let winner = "";
     if (hasBothOpponents) {
       const slotKey = r16Mapping[m.id];
-      const pickedWinner = picks.r8?.[slotKey] || "";
+      const isLocked = lockedMatches[m.id];
+      const pickedWinner = (isLocked && realResults ? realResults.r8?.[slotKey] : picks.r8?.[slotKey]) || "";
       if (pickedWinner === m.homeId || pickedWinner === m.awayId) {
         winner = pickedWinner;
       }
@@ -478,7 +480,8 @@ export function computeRobustBracketState(picks: BracketPredictions, r32Matches:
     let winner = "";
     if (hasBothOpponents) {
       const slotKey = r8Mapping[m.id];
-      const pickedWinner = picks.r4?.[slotKey] || "";
+      const isLocked = lockedMatches[m.id];
+      const pickedWinner = (isLocked && realResults ? realResults.r4?.[slotKey] : picks.r4?.[slotKey]) || "";
       if (pickedWinner === m.homeId || pickedWinner === m.awayId) {
         winner = pickedWinner;
       }
@@ -502,7 +505,8 @@ export function computeRobustBracketState(picks: BracketPredictions, r32Matches:
     let winner = "";
     if (hasBothOpponents) {
       const slotKey = r4Mapping[m.id];
-      const pickedWinner = picks.r2?.[slotKey] || "";
+      const isLocked = lockedMatches[m.id];
+      const pickedWinner = (isLocked && realResults ? realResults.r2?.[slotKey] : picks.r2?.[slotKey]) || "";
       if (pickedWinner === m.homeId || pickedWinner === m.awayId) {
         winner = pickedWinner;
       }
@@ -521,7 +525,8 @@ export function computeRobustBracketState(picks: BracketPredictions, r32Matches:
   let winner = "";
   const hasBothFinalOpponents = finalMatch.homeId !== "" && finalMatch.awayId !== "";
   if (hasBothFinalOpponents) {
-    const pickedWinner = picks.winner || "";
+    const isLocked = lockedMatches[finalMatch.id];
+    const pickedWinner = (isLocked && realResults ? realResults.winner : picks.winner) || "";
     if (pickedWinner === finalMatch.homeId || pickedWinner === finalMatch.awayId) {
       winner = pickedWinner;
     }
@@ -1138,6 +1143,18 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
     loadData();
   }, [challengeId, pointRulesStr, userId, mode]);
 
+  const realResults = useMemo(() => computeLiveActualResults(realCompMatches, dynamicR32Matches), [realCompMatches, dynamicR32Matches]);
+
+  const lockedMatches = useMemo(() => {
+    const locked: Record<string, boolean> = {};
+    dynamicR32Matches.forEach(m => {
+      locked[m.id] = isMatchLocked(m.id);
+    });
+    return locked;
+  }, [dynamicR32Matches, realCompMatches]); // Need to ensure isMatchLocked depends on dynamicR32Matches
+  
+  // Actually isMatchLocked depends on BRACKET_MATCH_TIMES and dynamicR32Matches, which seem stable.
+
   // Determine which predictions are currently active for the bracket tree
   const isViewingOther = selectedParticipant !== null && selectedParticipant.user_id !== userId;
   const activePicks = (testMode && activeSimulationTab === "simulation" && simulatedResults)
@@ -1145,7 +1162,7 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
     : (selectedParticipant ? selectedParticipant.predictions : picks);
 
   // Compute the current state of matches in later rounds based on active predictions
-  const bracketState = computeRobustBracketState(activePicks, dynamicR32Matches);
+  const bracketState = computeRobustBracketState(activePicks, dynamicR32Matches, lockedMatches, realResults);
 
   // Determine slot progression mapping
   // maps previous round winner to subsequent round position key
