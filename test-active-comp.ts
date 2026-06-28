@@ -11,19 +11,13 @@ async function run() {
     return;
   }
   const supabase = createClient(supabaseUrl, supabaseKey);
-  const { data: bets, error } = await supabase.from("bets").select("*");
+  const { data: challenges, error } = await supabase.from("challenges").select("*");
   if (error) {
-    console.error("Error fetching bets:", error);
+    console.error("Error fetching challenges:", error);
     return;
   }
-  
-  bets.forEach(b => {
-    const preds = b.predictions || {};
-    if (preds.r16 || preds.r8 || preds.winner) {
-      console.log(`Bracket Bet ID: ${b.id}, User: ${b.user_id}, Challenge ID: ${b.challenge_id}`);
-      console.log(`- r16 keys count:`, Object.keys(preds.r16 || {}).length);
-      console.log(`- r16:`, JSON.stringify(preds.r16));
-    }
+  challenges.forEach(c => {
+    console.log(`Challenge ID: ${c.id}, Name: ${c.name}, Competition ID: ${c.competition_id}, Match ID: ${c.match_id}, Resolved: ${c.resolved}`);
   });
 }
 

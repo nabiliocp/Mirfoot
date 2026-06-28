@@ -678,11 +678,89 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
             });
           }
 
-          // Second pass: fill in any remaining unmatched slots with remaining real matches
+          // Second pass: fill in any remaining unmatched slots with remaining real matches, respecting Left/Right bracket divisions
+          const leftEmptyIndexes: number[] = [];
+          const rightEmptyIndexes: number[] = [];
+          
           defaultMatches.forEach((dm, dmIdx) => {
-            if (!matchedSlots[dmIdx] && remainingRealMatches.length > 0) {
-              const realM = remainingRealMatches.shift();
-              matchedSlots[dmIdx] = realM;
+            if (!matchedSlots[dmIdx]) {
+              if (dm.id.startsWith("R32_L")) {
+                leftEmptyIndexes.push(dmIdx);
+              } else {
+                rightEmptyIndexes.push(dmIdx);
+              }
+            }
+          });
+
+          // Sort remaining real matches into Left-leaning and Right-leaning
+          const leftRealMatches: any[] = [];
+          const rightRealMatches: any[] = [];
+          const neutralRealMatches: any[] = [];
+
+          const getTeamSide = (tla: string): "L" | "R" => {
+            const leftTeams = [
+              "ARG", "ESP", "FRA", "BRA", "ENG", "USA", "MEX", "CAN", 
+              "COL", "URU", "PAR", "AUS", "CIV", "COD", "GHA", "CPV"
+            ];
+            return leftTeams.includes(tla) ? "L" : "R";
+          };
+
+          const getMatchLean = (m: any): "L" | "R" | "N" => {
+            const homeTla = m.homeTeam?.tla || (m.homeTeam?.name ? m.homeTeam.name.substring(0,3).toUpperCase() : "");
+            const awayTla = m.awayTeam?.tla || (m.awayTeam?.name ? m.awayTeam.name.substring(0,3).toUpperCase() : "");
+            
+            let score = 0;
+            if (homeTla) {
+              if (getTeamSide(homeTla) === "L") score += 1;
+              else score -= 1;
+            }
+            if (awayTla) {
+              if (getTeamSide(awayTla) === "L") score += 1;
+              else score -= 1;
+            }
+            
+            if (score > 0) return "L";
+            if (score < 0) return "R";
+            
+            // If score is 0, check if either is explicitly left/right
+            if (homeTla && getTeamSide(homeTla) === "L") return "L";
+            if (awayTla && getTeamSide(awayTla) === "L") return "L";
+            if (homeTla && getTeamSide(homeTla) === "R") return "R";
+            if (awayTla && getTeamSide(awayTla) === "R") return "R";
+            
+            return "N";
+          };
+
+          remainingRealMatches.forEach(m => {
+            const lean = getMatchLean(m);
+            if (lean === "L") {
+              leftRealMatches.push(m);
+            } else if (lean === "R") {
+              rightRealMatches.push(m);
+            } else {
+              neutralRealMatches.push(m);
+            }
+          });
+
+          // Fill Left empty slots first with Left real matches, then Neutral, then any Right as fallback
+          leftEmptyIndexes.forEach(dmIdx => {
+            if (leftRealMatches.length > 0) {
+              matchedSlots[dmIdx] = leftRealMatches.shift();
+            } else if (neutralRealMatches.length > 0) {
+              matchedSlots[dmIdx] = neutralRealMatches.shift();
+            } else if (rightRealMatches.length > 0) {
+              matchedSlots[dmIdx] = rightRealMatches.shift();
+            }
+          });
+
+          // Fill Right empty slots first with Right real matches, then Neutral, then any Left as fallback
+          rightEmptyIndexes.forEach(dmIdx => {
+            if (rightRealMatches.length > 0) {
+              matchedSlots[dmIdx] = rightRealMatches.shift();
+            } else if (neutralRealMatches.length > 0) {
+              matchedSlots[dmIdx] = neutralRealMatches.shift();
+            } else if (leftRealMatches.length > 0) {
+              matchedSlots[dmIdx] = leftRealMatches.shift();
             }
           });
 
