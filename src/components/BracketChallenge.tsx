@@ -1484,28 +1484,38 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
     const stats = isStarted ? getMatchStats(matchId, teamAId, teamBId) : null;
 
     return (
-      <div className="relative w-full max-w-[200px] mx-auto bg-white border border-gray-200 rounded-2xl p-2.5 shadow-sm hover:shadow-md hover:border-slate-350 transition duration-300">
+      <div className={`relative w-full max-w-[200px] mx-auto transition duration-300 ${
+        round === "r32" 
+          ? "bg-transparent sm:bg-white border-0 sm:border border-gray-200 rounded-lg sm:rounded-2xl p-0.5 sm:p-2.5 shadow-none sm:shadow-sm" 
+          : "bg-white border border-gray-200 rounded-2xl p-2 sm:p-2.5 shadow-sm hover:shadow-md hover:border-slate-350"
+      }`}>
         {isStarted ? (
-          <div className="absolute -top-1.5 -right-1 flex items-center bg-red-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded-full border border-red-400 gap-0.5 shadow-xs">
-            <Lock className="w-2.5 h-2.5" />
-            <span>CLÔTURÉ</span>
+          <div className={`absolute flex items-center bg-red-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded-full border border-red-400 gap-0.5 shadow-xs z-20 ${round === "r32" ? "-top-1 -right-1 sm:-top-1.5 sm:-right-1" : "-top-1.5 -right-1"}`}>
+            <Lock className="w-2 h-2 sm:w-2.5 sm:h-2.5" />
+            <span className="hidden xs:inline">CLÔTURÉ</span>
           </div>
         ) : missingOpponent ? (
-          <div className="absolute -top-1.5 -right-1 flex items-center bg-amber-50 text-amber-600 text-[8px] font-black px-1.5 py-0.5 rounded-full border border-amber-200 gap-0.5 shadow-xs uppercase tracking-wider">
+          <div className={`absolute flex items-center bg-amber-50 text-amber-600 text-[8px] font-black px-1.5 py-0.5 rounded-full border border-amber-200 gap-0.5 shadow-xs uppercase tracking-wider ${round === "r32" ? "hidden sm:flex -top-1.5 -right-1" : "-top-1.5 -right-1"}`}>
             Adversaire requis
           </div>
         ) : null}
 
-        <div className="text-[9px] text-gray-400 font-bold mb-1 px-1 flex justify-between">
-          <span>{matchId.replace("R32_", "").replace("R16_", "").replace("R8_", "").replace("R4_", "")}</span>
-          {BRACKET_MATCH_TIMES[matchId] && round === "r32" && (
-            <span className="text-[8px] text-gray-400">
-              {new Date(BRACKET_MATCH_TIMES[matchId]).toLocaleDateString("fr-FR", {day: "numeric", month: "short"})}
-            </span>
-          )}
-        </div>
+        {round === "r32" ? (
+          <div className="hidden sm:flex text-[9px] text-gray-400 font-bold mb-1 px-1 justify-between">
+            <span>{matchId.replace("R32_", "")}</span>
+            {BRACKET_MATCH_TIMES[matchId] && (
+              <span className="text-[8px] text-gray-400">
+                {new Date(BRACKET_MATCH_TIMES[matchId]).toLocaleDateString("fr-FR", {day: "numeric", month: "short"})}
+              </span>
+            )}
+          </div>
+        ) : (
+          <div className="text-[9px] text-gray-400 font-bold mb-1 px-1 flex justify-between">
+            <span>{matchId.replace("R16_", "").replace("R8_", "").replace("R4_", "")}</span>
+          </div>
+        )}
 
-        <div className="space-y-1">
+        <div className={round === "r32" ? "space-y-0.5 sm:space-y-1" : "space-y-1"}>
           {(() => {
             const simWinnerId = (testMode && simulatedResults) ? getSelectedWinnerForPredictions(simulatedResults, matchId) : "";
             const isSimWinnerA = simWinnerId === teamAId && teamAId !== "";
@@ -1595,9 +1605,13 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
                   type="button"
                   disabled={locked || missingOpponent}
                   onClick={() => !missingOpponent && handleSelectWinner(round, matchId, teamAId)}
-                  className={`w-full flex items-center justify-between p-1.5 rounded-lg text-xs font-bold transition-all ${btnClassA}`}
+                  className={`w-full flex items-center justify-between transition-all ${
+                    round === "r32" 
+                      ? "p-1 sm:p-1.5 rounded-md sm:rounded-lg text-[10px] sm:text-xs font-black sm:font-bold" 
+                      : "p-1.5 rounded-lg text-xs font-bold"
+                  } ${btnClassA}`}
                 >
-                  <span className="flex items-center gap-1.5 truncate">
+                  <span className={`flex items-center truncate ${round === "r32" ? "gap-1 sm:gap-1.5" : "gap-1.5"}`}>
                     {maskPrediction ? (
                       <>
                         <span className="text-xs shrink-0">🔒</span>
@@ -1643,9 +1657,13 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
                   type="button"
                   disabled={locked || missingOpponent}
                   onClick={() => !missingOpponent && handleSelectWinner(round, matchId, teamBId)}
-                  className={`w-full flex items-center justify-between p-1.5 rounded-lg text-xs font-bold transition-all ${btnClassB}`}
+                  className={`w-full flex items-center justify-between transition-all ${
+                    round === "r32" 
+                      ? "p-1 sm:p-1.5 rounded-md sm:rounded-lg text-[10px] sm:text-xs font-black sm:font-bold" 
+                      : "p-1.5 rounded-lg text-xs font-bold"
+                  } ${btnClassB}`}
                 >
-                  <span className="flex items-center gap-1.5 truncate">
+                  <span className={`flex items-center truncate ${round === "r32" ? "gap-1 sm:gap-1.5" : "gap-1.5"}`}>
                     {maskPrediction ? (
                       <>
                         <span className="text-xs shrink-0">🔒</span>
@@ -1805,16 +1823,16 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
             
             {currentPhase === "r32" && (
               <>
-                <div className="flex-1 min-w-0 space-y-4 bg-gray-50/80 border border-gray-150 rounded-2xl p-2 sm:p-4 shadow-sm">
-                  <div className="text-[10px] text-gray-500 font-black tracking-widest uppercase text-center mb-4 leading-tight">1/16 Finales (G)</div>
-                  <div className="grid grid-cols-1 gap-4">
+                <div className="flex-1 min-w-0 space-y-2 sm:space-y-4 bg-transparent sm:bg-gray-50/80 border-0 sm:border border-gray-150 rounded-2xl p-0 sm:p-4 shadow-none sm:shadow-sm">
+                  <div className="text-[10px] text-gray-500 font-black tracking-widest uppercase text-center mb-2 sm:mb-4 leading-tight">1/16 Finales (G)</div>
+                  <div className="grid grid-cols-1 gap-1.5 sm:gap-4">
                     {r32Left.map(m => <div key={m.id} className="relative">{renderTreeMatchNode("r32", m.id, m.homeId, m.awayId, "center")}</div>)}
                   </div>
                 </div>
                 <div className="hidden md:block w-px bg-gray-200"></div>
-                <div className="flex-1 min-w-0 space-y-4 bg-gray-50/80 border border-gray-150 rounded-2xl p-2 sm:p-4 shadow-sm">
-                  <div className="text-[10px] text-gray-500 font-black tracking-widest uppercase text-center mb-4 leading-tight">1/16 Finales (D)</div>
-                  <div className="grid grid-cols-1 gap-4">
+                <div className="flex-1 min-w-0 space-y-2 sm:space-y-4 bg-transparent sm:bg-gray-50/80 border-0 sm:border border-gray-150 rounded-2xl p-0 sm:p-4 shadow-none sm:shadow-sm">
+                  <div className="text-[10px] text-gray-500 font-black tracking-widest uppercase text-center mb-2 sm:mb-4 leading-tight">1/16 Finales (D)</div>
+                  <div className="grid grid-cols-1 gap-1.5 sm:gap-4">
                     {r32Right.map(m => <div key={m.id} className="relative">{renderTreeMatchNode("r32", m.id, m.homeId, m.awayId, "center")}</div>)}
                   </div>
                 </div>

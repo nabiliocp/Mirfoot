@@ -641,7 +641,8 @@ function adjustMatchesDynamically(matches: any[]): any[] {
               return {
                 ...m,
                 status: "FINISHED",
-                score: updatedScore
+                score: updatedScore,
+                isDynamicallyFinished: true
               };
             }
           } else if (statusUpper === "IN_PLAY") {
@@ -1886,7 +1887,12 @@ async function startServer() {
 
           if (isToday || isAroundNow || isLive || isRecentPassed) {
             const isFinished = String(m.status || "").toUpperCase() === "FINISHED";
-            if (!isFinished || m.score?.fullTime?.home === null || m.score?.fullTime?.away === null) {
+            const needsScrape = !isFinished || 
+                                m.score?.fullTime?.home === null || 
+                                m.score?.fullTime?.away === null || 
+                                m.isDynamicallyFinished === true;
+            
+            if (needsScrape && !m.verifiedByScraper) {
               matchesToUpdate.push({
                 cacheKey,
                 compName: entry.data.competition?.name || "",
@@ -1942,6 +1948,9 @@ async function startServer() {
             } else {
               m.status = "IN_PLAY";
             }
+
+            m.isDynamicallyFinished = false;
+            m.verifiedByScraper = true;
 
             console.log(`[WebScraper] Successfully updated cache for match: ${homeName} ${scraped.homeScore}-${scraped.awayScore} ${awayName} (Status: ${m.status})`);
             savePersistentCache(item.cacheKey, entry.data);
