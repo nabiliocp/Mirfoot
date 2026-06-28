@@ -310,8 +310,8 @@ export function computeLiveActualResults(matches: any[], dynamicR32Matches: Brac
     const name = (apiTeam.name || "").toLowerCase();
     
     for (const match of dynamicR32Matches) {
-      if (match.teamAId && (match.teamAId.toUpperCase() === tla || name.includes(match.teamAId.toLowerCase()))) return match.teamAId;
-      if (match.teamBId && (match.teamBId.toUpperCase() === tla || name.includes(match.teamBId.toLowerCase()))) return match.teamBId;
+      if (match.homeId && (match.homeId.toUpperCase() === tla || name.includes(match.homeId.toLowerCase()))) return match.homeId;
+      if (match.awayId && (match.awayId.toUpperCase() === tla || name.includes(match.awayId.toLowerCase()))) return match.awayId;
     }
     return null; // fallback
   };
@@ -366,17 +366,20 @@ export function computeLiveActualResults(matches: any[], dynamicR32Matches: Brac
   };
 
   for (const [teamId, wins] of teamWins.entries()) {
-    const match = dynamicR32Matches.find(m => m.teamAId === teamId || m.teamBId === teamId);
+    console.log("Team Wins:", teamId, wins);
+    const match = dynamicR32Matches.find(m => m.homeId === teamId || m.awayId === teamId);
     if (!match) continue;
 
     let currentSlot = match.id;
     if (wins >= 1) {
       const next = r32Mapping[currentSlot];
       if (next) { result.r16[next] = teamId; currentSlot = next.replace(/_A|_B|_H$/, ""); }
+      console.log("Wins >= 1, next:", next, "currentSlot:", currentSlot);
     }
     if (wins >= 2) {
       const next = r16Mapping[currentSlot];
       if (next) { result.r8[next] = teamId; currentSlot = next.replace(/_A|_B|_H$/, ""); }
+      console.log("Wins >= 2, next:", next, "currentSlot:", currentSlot);
     }
     if (wins >= 3) {
       const next = r8Mapping[currentSlot];
@@ -392,8 +395,7 @@ export function computeLiveActualResults(matches: any[], dynamicR32Matches: Brac
     result.winner = finalWinner;
   }
 
-  // Sanitize to auto-fill dummy rounds for 16-team tournaments
-  return sanitizePredictions(result, dynamicR32Matches);
+  return result;
 }
 
 export function computeRobustBracketState(picks: BracketPredictions, r32Matches: BracketMatch[]): RobustBracketState {
@@ -2612,7 +2614,7 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
                     return (
                       <div 
                         key={p.id || p.user_id} 
-                        className={`flex items-center justify-between p-3.5 rounded-xl border transition-all ${
+                        className={`flex items-center justify-between gap-2 p-3 rounded-xl border transition-all ${
                           isCurrentUser 
                             ? "bg-emerald-50/50 border-emerald-300 shadow-sm" 
                             : index === 0 
@@ -2622,8 +2624,8 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
                                 : "bg-white border-gray-100 hover:border-gray-200"
                         }`}
                       >
-                        <div className="flex items-center gap-3 min-w-0">
-                          <span className={`w-6 text-center font-black text-xs ${index === 0 ? 'text-yellow-600' : 'text-gray-400'}`}>
+                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                          <span className={`w-5 text-center font-black text-xs shrink-0 ${index === 0 ? 'text-yellow-600' : 'text-gray-400'}`}>
                             {rank === 1 ? "🥇" : rank === 2 ? "🥈" : rank === 3 ? "🥉" : `#${rank}`}
                           </span>
                           
@@ -2637,9 +2639,9 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
                             )}
                           </div>
                           
-                          <div className="min-w-0">
-                            <span className={`text-xs font-bold flex items-center gap-1.5 flex-wrap ${isCurrentUser ? "text-emerald-950 font-black" : "text-gray-800"}`}>
-                              <span className="truncate">{p.username || "Joueur"}</span>
+                          <div className="min-w-0 flex-1">
+                            <div className={`text-xs font-bold flex items-center gap-1 flex-wrap ${isCurrentUser ? "text-emerald-950 font-black" : "text-gray-800"}`}>
+                              <span className="truncate max-w-[80px] sm:max-w-[120px]">{p.username || "Joueur"}</span>
                               {isCurrentUser && (
                                 <span className="font-black text-[9px] bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded shrink-0">Moi</span>
                               )}
@@ -2664,32 +2666,32 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
                                   </div>
                                 )}
                               </div>
-                            </span>
-                            <div className="text-[10px] text-gray-400 font-semibold mt-0.5">
-                              {totalC}/31 pronostics complétés
+                            </div>
+                            <div className="text-[10px] text-gray-400 font-semibold mt-0.5 whitespace-nowrap">
+                              {totalC}/31 pronos
                             </div>
                           </div>
                         </div>
                         
-                        <div className="flex items-center gap-3 shrink-0">
+                        <div className="flex items-center gap-2 shrink-0 ml-1">
                           <div className="text-right">
-                            <div className="text-xs font-extrabold text-emerald-800 flex items-center gap-1">
+                            <div className="text-xs font-extrabold text-emerald-800 flex items-center justify-end gap-1 whitespace-nowrap">
                               <span>{displayPoints} pts</span>
                               {testMode && simulatedResults && (
                                 <span className="text-[8px] bg-amber-100 text-amber-800 px-1 py-0.2 rounded font-extrabold">Simulé</span>
                               )}
                             </div>
-                            <div className="text-[9px] text-gray-400 font-bold">
-                              Score Général : {(p.profile_points || 0) + ((!challenge.resolved || (testMode && simulatedResults)) ? displayPoints : 0)} pts
+                            <div className="text-[9px] text-gray-400 font-bold whitespace-nowrap">
+                              Général : {(p.profile_points || 0) + ((!challenge.resolved || (testMode && simulatedResults)) ? displayPoints : 0)}
                             </div>
                           </div>
                           
                           <button
                             type="button"
                             onClick={() => setSelectedParticipant(p)}
-                            className="bg-white hover:bg-gray-150 text-gray-750 border border-gray-200 font-black text-[11px] px-3 py-1.5 rounded-xl transition cursor-pointer flex items-center gap-1 shadow-xs"
+                            className="bg-white hover:bg-gray-150 text-gray-750 border border-gray-200 font-black text-[10px] px-2 py-1.5 rounded-lg transition cursor-pointer flex items-center shadow-xs shrink-0"
                           >
-                            👁️ Voir
+                            👁️
                           </button>
                         </div>
                       </div>
