@@ -592,53 +592,91 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
         
         if (r32RealMatches.length > 0) {
           r32RealMatches.sort((a: any, b: any) => new Date(a.utcDate).getTime() - new Date(b.utcDate).getTime());
-          
-          // Create a copy so we can remove matched ones
-          const remainingRealMatches = [...r32RealMatches];
+
+          const isEuro = String(challenge.competitionId) === "2018" || challenge.competitionId === 2018;
           const matchedSlots = new Array(defaultMatches.length).fill(null);
+          const remainingRealMatches = [...r32RealMatches];
 
-          // First pass: Match by strict TLA or Name
-          defaultMatches.forEach((dm, dmIdx) => {
-            const defaultHomeTeam = BRACKET_TEAMS[dm.homeId];
-            const defaultAwayTeam = BRACKET_TEAMS[dm.awayId];
-            
-            const dmHomeTla = dm.homeId;
-            const dmHomeName = (defaultHomeTeam?.name || "").toLowerCase();
-            const dmAwayTla = dm.awayId;
-            const dmAwayName = (defaultAwayTeam?.name || "").toLowerCase();
-            
-            const matchIdx = remainingRealMatches.findIndex((m: any) => {
-              const matchHomeTla = m.homeTeam?.tla || (m.homeTeam?.name ? m.homeTeam.name.substring(0,3).toUpperCase() : "");
-              const matchAwayTla = m.awayTeam?.tla || (m.awayTeam?.name ? m.awayTeam.name.substring(0,3).toUpperCase() : "");
-              
-              const matchHomeName = (m.homeTeam?.name || "").toLowerCase();
-              const matchAwayName = (m.awayTeam?.name || "").toLowerCase();
-              
-              // if either team matches the dm home or away team
-              if (matchHomeTla === dmHomeTla) return true;
-              if (matchAwayTla === dmHomeTla) return true;
-              if (matchHomeTla === dmAwayTla) return true;
-              if (matchAwayTla === dmAwayTla) return true;
-              
-              // name matching (only if name is meaningful, skip generic "1er", "2e", etc.)
-              if (dmHomeName && !dmHomeName.includes("groupe") && !dmHomeName.includes("meilleur")) {
-                if (matchHomeName.includes(dmHomeName) || dmHomeName.includes(matchHomeName)) return true;
-                if (matchAwayName.includes(dmHomeName) || dmHomeName.includes(matchAwayName)) return true;
+          if (isEuro) {
+            const matchHasTeams = (m: any, teamAIds: string[], teamBIds: string[]): boolean => {
+              const hTla = (m.homeTeam?.tla || "").toUpperCase();
+              const hName = (m.homeTeam?.name || "").toLowerCase();
+              const aTla = (m.awayTeam?.tla || "").toUpperCase();
+              const aName = (m.awayTeam?.name || "").toLowerCase();
+
+              const isHomeA = teamAIds.some(id => hTla === id.toUpperCase() || hName.includes(id.toLowerCase()));
+              const isAwayB = teamBIds.some(id => aTla === id.toUpperCase() || aName.includes(id.toLowerCase()));
+              const isHomeB = teamBIds.some(id => hTla === id.toUpperCase() || hName.includes(id.toLowerCase()));
+              const isAwayA = teamAIds.some(id => aTla === id.toUpperCase() || aName.includes(id.toLowerCase()));
+
+              return (isHomeA && isAwayB) || (isHomeB && isAwayA);
+            };
+
+            const euroMapping = [
+              { id: "R32_L1", tA: ["ESP", "SPA", "Spain", "Espagne"], tB: ["GEO", "Georgia", "Géorgie"] },
+              { id: "R32_L2", tA: ["GER", "Germany", "Allemagne"], tB: ["DEN", "Denmark", "Danemark"] },
+              { id: "R32_L3", tA: ["POR", "Portugal"], tB: ["SLO", "Slovenia", "Slovénie"] },
+              { id: "R32_L4", tA: ["FRA", "France"], tB: ["BEL", "Belgium", "Belgique"] },
+              { id: "R32_R1", tA: ["SUI", "SWI", "Switzerland", "Suisse"], tB: ["ITA", "Italy", "Italie"] },
+              { id: "R32_R2", tA: ["ENG", "England", "Angleterre"], tB: ["SVK", "Slovakia", "Slovaquie"] },
+              { id: "R32_R3", tA: ["AUT", "AUS", "Austria", "Autriche"], tB: ["TUR", "TÜR", "Turkey", "Türkiye", "Turquie"] },
+              { id: "R32_R4", tA: ["ROM", "ROU", "Romania", "Roumanie"], tB: ["NED", "NET", "Netherlands", "Pays-Bas"] },
+            ];
+
+            euroMapping.forEach(mapping => {
+              const matchIdx = remainingRealMatches.findIndex(m => matchHasTeams(m, mapping.tA, mapping.tB));
+              if (matchIdx !== -1) {
+                const dmIdx = defaultMatches.findIndex(dm => dm.id === mapping.id);
+                if (dmIdx !== -1) {
+                  matchedSlots[dmIdx] = remainingRealMatches[matchIdx];
+                  remainingRealMatches.splice(matchIdx, 1);
+                }
               }
-              if (dmAwayName && !dmAwayName.includes("groupe") && !dmAwayName.includes("meilleur")) {
-                if (matchHomeName.includes(dmAwayName) || dmAwayName.includes(matchHomeName)) return true;
-                if (matchAwayName.includes(dmAwayName) || dmAwayName.includes(matchAwayName)) return true;
-              }
-              
-              return false;
             });
+          } else {
+            // First pass: Match by strict TLA or Name for general competitions
+            defaultMatches.forEach((dm, dmIdx) => {
+              const defaultHomeTeam = BRACKET_TEAMS[dm.homeId];
+              const defaultAwayTeam = BRACKET_TEAMS[dm.awayId];
+              
+              const dmHomeTla = dm.homeId;
+              const dmHomeName = (defaultHomeTeam?.name || "").toLowerCase();
+              const dmAwayTla = dm.awayId;
+              const dmAwayName = (defaultAwayTeam?.name || "").toLowerCase();
+              
+              const matchIdx = remainingRealMatches.findIndex((m: any) => {
+                const matchHomeTla = m.homeTeam?.tla || (m.homeTeam?.name ? m.homeTeam.name.substring(0,3).toUpperCase() : "");
+                const matchAwayTla = m.awayTeam?.tla || (m.awayTeam?.name ? m.awayTeam.name.substring(0,3).toUpperCase() : "");
+                
+                const matchHomeName = (m.homeTeam?.name || "").toLowerCase();
+                const matchAwayName = (m.awayTeam?.name || "").toLowerCase();
+                
+                // if either team matches the dm home or away team
+                if (matchHomeTla === dmHomeTla) return true;
+                if (matchAwayTla === dmHomeTla) return true;
+                if (matchHomeTla === dmAwayTla) return true;
+                if (matchAwayTla === dmAwayTla) return true;
+                
+                // name matching (only if name is meaningful, skip generic "1er", "2e", etc.)
+                if (dmHomeName && !dmHomeName.includes("groupe") && !dmHomeName.includes("meilleur")) {
+                  if (matchHomeName.includes(dmHomeName) || dmHomeName.includes(matchHomeName)) return true;
+                  if (matchAwayName.includes(dmHomeName) || dmHomeName.includes(matchAwayName)) return true;
+                }
+                if (dmAwayName && !dmAwayName.includes("groupe") && !dmAwayName.includes("meilleur")) {
+                  if (matchHomeName.includes(dmAwayName) || dmAwayName.includes(matchAwayName)) return true;
+                  if (matchAwayName.includes(dmAwayName) || dmAwayName.includes(matchAwayName)) return true;
+                }
+                
+                return false;
+              });
 
-            if (matchIdx !== -1) {
-              const realM = remainingRealMatches[matchIdx];
-              remainingRealMatches.splice(matchIdx, 1);
-              matchedSlots[dmIdx] = realM;
-            }
-          });
+              if (matchIdx !== -1) {
+                const realM = remainingRealMatches[matchIdx];
+                remainingRealMatches.splice(matchIdx, 1);
+                matchedSlots[dmIdx] = realM;
+              }
+            });
+          }
 
           // Second pass: fill in any remaining unmatched slots with remaining real matches
           defaultMatches.forEach((dm, dmIdx) => {
