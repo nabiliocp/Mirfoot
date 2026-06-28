@@ -1486,7 +1486,7 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
     return (
       <div className={`relative w-full max-w-[200px] mx-auto transition duration-300 ${
         round === "r32" 
-          ? "bg-transparent sm:bg-white border-0 sm:border border-gray-200 rounded-lg sm:rounded-2xl p-0.5 sm:p-2.5 shadow-none sm:shadow-sm" 
+          ? "bg-white border border-gray-150 sm:border-gray-200 rounded-xl sm:rounded-2xl p-1 sm:p-2.5 shadow-2xs sm:shadow-sm" 
           : "bg-white border border-gray-200 rounded-2xl p-2 sm:p-2.5 shadow-sm hover:shadow-md hover:border-slate-350"
       }`}>
         {isStarted ? (
@@ -1825,14 +1825,14 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
               <>
                 <div className="flex-1 min-w-0 space-y-2 sm:space-y-4 bg-transparent sm:bg-gray-50/80 border-0 sm:border border-gray-150 rounded-2xl p-0 sm:p-4 shadow-none sm:shadow-sm">
                   <div className="text-[10px] text-gray-500 font-black tracking-widest uppercase text-center mb-2 sm:mb-4 leading-tight">1/16 Finales (G)</div>
-                  <div className="grid grid-cols-1 gap-1.5 sm:gap-4">
+                  <div className="grid grid-cols-1 gap-2.5 sm:gap-4">
                     {r32Left.map(m => <div key={m.id} className="relative">{renderTreeMatchNode("r32", m.id, m.homeId, m.awayId, "center")}</div>)}
                   </div>
                 </div>
                 <div className="hidden md:block w-px bg-gray-200"></div>
                 <div className="flex-1 min-w-0 space-y-2 sm:space-y-4 bg-transparent sm:bg-gray-50/80 border-0 sm:border border-gray-150 rounded-2xl p-0 sm:p-4 shadow-none sm:shadow-sm">
                   <div className="text-[10px] text-gray-500 font-black tracking-widest uppercase text-center mb-2 sm:mb-4 leading-tight">1/16 Finales (D)</div>
-                  <div className="grid grid-cols-1 gap-1.5 sm:gap-4">
+                  <div className="grid grid-cols-1 gap-2.5 sm:gap-4">
                     {r32Right.map(m => <div key={m.id} className="relative">{renderTreeMatchNode("r32", m.id, m.homeId, m.awayId, "center")}</div>)}
                   </div>
                 </div>
