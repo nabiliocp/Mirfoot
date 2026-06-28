@@ -12,7 +12,7 @@ import {
   isPlaceholderTeam
 } from "../bracketData";
 import { supabase } from "../lib/supabase";
-import { Check, Lock, Trophy, AlertTriangle, Sparkles, HelpCircle, RefreshCw } from "lucide-react";
+import { Check, Lock, Trophy, AlertTriangle, Sparkles, HelpCircle, RefreshCw, Trash2 } from "lucide-react";
 
 interface BracketChallengeProps {
   challenge: any;
@@ -22,6 +22,8 @@ interface BracketChallengeProps {
   onShowRules?: () => void;
   isSimulationMode?: boolean;
   detailTab?: "matches" | "leaderboard" | "participants" | "results";
+  isAdmin?: boolean;
+  onKickParticipant?: (targetUserId: string, targetUsername: string) => void;
 }
 
 const getFlagUrl = (teamName: string) => {
@@ -593,6 +595,19 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [kickingParticipantId, setKickingParticipantId] = useState<string | null>(null);
+
+  const handleKick = async (participantId: string, username: string) => {
+    if (!onKickParticipant) return;
+    setKickingParticipantId(participantId);
+    try {
+      await onKickParticipant(participantId, username);
+      // It might trigger a reload via parent, but let's also reload locally
+      await loadParticipants();
+    } finally {
+      setKickingParticipantId(null);
+    }
+  };
 
   // Participant list and selected participant for viewing bracket
   const [participants, setParticipants] = useState<any[]>([]);
@@ -2641,13 +2656,30 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
                             </div>
                           </div>
                           
-                          <button
-                            type="button"
-                            onClick={() => setSelectedParticipant(p)}
-                            className="bg-white hover:bg-gray-150 text-gray-750 border border-gray-200 font-black text-[10px] px-2 py-1.5 rounded-lg transition cursor-pointer flex items-center shadow-xs shrink-0"
-                          >
-                            👁️
-                          </button>
+                          <div className="flex items-center gap-1">
+                            {(challenge.creatorId === userId || isAdmin) && p.user_id !== userId && (
+                              <button
+                                type="button"
+                                onClick={() => handleKick(p.user_id, p.username || "Participant")}
+                                disabled={kickingParticipantId === p.user_id}
+                                className="bg-white hover:bg-red-50 text-gray-400 hover:text-red-500 border border-gray-200 hover:border-red-200 p-1.5 rounded-lg transition cursor-pointer flex items-center shadow-xs shrink-0"
+                                title="Retirer ce participant du défi"
+                              >
+                                {kickingParticipantId === p.user_id ? (
+                                  <div className="w-3.5 h-3.5 border-2 border-red-500 border-t-transparent rounded-full animate-spin"></div>
+                                ) : (
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                )}
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => setSelectedParticipant(p)}
+                              className="bg-white hover:bg-gray-150 text-gray-750 border border-gray-200 font-black text-[10px] px-2 py-1.5 rounded-lg transition cursor-pointer flex items-center shadow-xs shrink-0"
+                            >
+                              👁️
+                            </button>
+                          </div>
                         </div>
                       </div>
                     );

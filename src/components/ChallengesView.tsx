@@ -3646,6 +3646,8 @@ export default function ChallengesView({
                   onSaveSuccess={() => {
                     refreshChallengeBets();
                   }}
+                  isAdmin={isAdmin}
+                  onKickParticipant={performKick}
                 />
               ) : (
                 <>
@@ -4257,6 +4259,8 @@ export default function ChallengesView({
                   onSaveSuccess={() => {
                     refreshChallengeBets();
                   }}
+                  isAdmin={isAdmin}
+                  onKickParticipant={performKick}
                 />
               ) : (
                 <>
@@ -4387,6 +4391,8 @@ export default function ChallengesView({
                   onSaveSuccess={() => {
                     refreshChallengeBets();
                   }}
+                  isAdmin={isAdmin}
+                  onKickParticipant={performKick}
                 />
               ) : (
                 <>
@@ -4538,6 +4544,8 @@ export default function ChallengesView({
                       refreshChallengeBets();
                       loadData();
                     }}
+                    isAdmin={isAdmin}
+                    onKickParticipant={performKick}
                   />
                 ) : (
                   <div>
@@ -4553,6 +4561,8 @@ export default function ChallengesView({
                       userId={userId || ""}
                       mode="prediction"
                       onShowRules={() => setActiveModal({ type: 'rules', challenge })}
+                      isAdmin={isAdmin}
+                      onKickParticipant={performKick}
                     />
                   </div>
                 )
