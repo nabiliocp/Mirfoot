@@ -594,24 +594,25 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
           r32RealMatches.sort((a: any, b: any) => new Date(a.utcDate).getTime() - new Date(b.utcDate).getTime());
 
           const isEuro = String(challenge.competitionId) === "2018" || challenge.competitionId === 2018;
+          const isWorldCup = String(challenge.competitionId) === "2000" || challenge.competitionId === 2000 || String(challenge.competitionId) === "9999" || challenge.competitionId === 9999;
           const matchedSlots = new Array(defaultMatches.length).fill(null);
           const remainingRealMatches = [...r32RealMatches];
 
+          const matchHasTeams = (m: any, teamAIds: string[], teamBIds: string[]): boolean => {
+            const hTla = (m.homeTeam?.tla || "").toUpperCase();
+            const hName = (m.homeTeam?.name || "").toLowerCase();
+            const aTla = (m.awayTeam?.tla || "").toUpperCase();
+            const aName = (m.awayTeam?.name || "").toLowerCase();
+
+            const isHomeA = teamAIds.some(id => hTla === id.toUpperCase() || hName.includes(id.toLowerCase()));
+            const isAwayB = teamBIds.some(id => aTla === id.toUpperCase() || aName.includes(id.toLowerCase()));
+            const isHomeB = teamBIds.some(id => hTla === id.toUpperCase() || hName.includes(id.toLowerCase()));
+            const isAwayA = teamAIds.some(id => aTla === id.toUpperCase() || aName.includes(id.toLowerCase()));
+
+            return (isHomeA && isAwayB) || (isHomeB && isAwayA);
+          };
+
           if (isEuro) {
-            const matchHasTeams = (m: any, teamAIds: string[], teamBIds: string[]): boolean => {
-              const hTla = (m.homeTeam?.tla || "").toUpperCase();
-              const hName = (m.homeTeam?.name || "").toLowerCase();
-              const aTla = (m.awayTeam?.tla || "").toUpperCase();
-              const aName = (m.awayTeam?.name || "").toLowerCase();
-
-              const isHomeA = teamAIds.some(id => hTla === id.toUpperCase() || hName.includes(id.toLowerCase()));
-              const isAwayB = teamBIds.some(id => aTla === id.toUpperCase() || aName.includes(id.toLowerCase()));
-              const isHomeB = teamBIds.some(id => hTla === id.toUpperCase() || hName.includes(id.toLowerCase()));
-              const isAwayA = teamAIds.some(id => aTla === id.toUpperCase() || aName.includes(id.toLowerCase()));
-
-              return (isHomeA && isAwayB) || (isHomeB && isAwayA);
-            };
-
             const euroMapping = [
               { id: "R32_L1", tA: ["ESP", "SPA", "Spain", "Espagne"], tB: ["GEO", "Georgia", "Géorgie"] },
               { id: "R32_L2", tA: ["GER", "Germany", "Allemagne"], tB: ["DEN", "Denmark", "Danemark"] },
@@ -624,6 +625,37 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
             ];
 
             euroMapping.forEach(mapping => {
+              const matchIdx = remainingRealMatches.findIndex(m => matchHasTeams(m, mapping.tA, mapping.tB));
+              if (matchIdx !== -1) {
+                const dmIdx = defaultMatches.findIndex(dm => dm.id === mapping.id);
+                if (dmIdx !== -1) {
+                  matchedSlots[dmIdx] = remainingRealMatches[matchIdx];
+                  remainingRealMatches.splice(matchIdx, 1);
+                }
+              }
+            });
+          } else if (isWorldCup) {
+            const wcMapping = [
+              { id: "R32_L1", tA: ["BRA", "Brazil", "Brésil"], tB: ["JPN", "Japan", "Japon"] },
+              { id: "R32_L2", tA: ["CIV", "Côte d'Ivoire", "Ivory Coast"], tB: ["NOR", "Norway", "Norvège"] },
+              { id: "R32_L3", tA: ["MEX", "Mexico", "Mexique"], tB: ["ECU", "Ecuador", "Équateur"] },
+              { id: "R32_L4", tA: ["ENG", "England", "Angleterre"], tB: ["COD", "RDC", "Congo", "DR Congo"] },
+              { id: "R32_L5", tA: ["ARG", "Argentina", "Argentine"], tB: ["CPV", "Cape Verde", "Cap-Vert"] },
+              { id: "R32_L6", tA: ["AUS", "Australia", "Australie"], tB: ["EGY", "Egypt", "Égypte"] },
+              { id: "R32_L7", tA: ["SUI", "Switzerland", "Suisse"], tB: ["ALG", "Algeria", "Algérie"] },
+              { id: "R32_L8", tA: ["COL", "Colombia", "Colombie"], tB: ["GHA", "Ghana"] },
+
+              { id: "R32_R1", tA: ["GER", "Germany", "Allemagne"], tB: ["PAR", "Paraguay"] },
+              { id: "R32_R2", tA: ["FRA", "France"], tB: ["SWE", "Sweden", "Suède"] },
+              { id: "R32_R3", tA: ["RSA", "South Africa", "Afrique du Sud"], tB: ["CAN", "Canada"] },
+              { id: "R32_R4", tA: ["NED", "Netherlands", "Pays-Bas"], tB: ["MAR", "Morocco", "Maroc"] },
+              { id: "R32_R5", tA: ["POR", "Portugal"], tB: ["CRO", "Croatia", "Croatie"] },
+              { id: "R32_R6", tA: ["ESP", "Spain", "Espagne"], tB: ["AUT", "Austria", "Autriche"] },
+              { id: "R32_R7", tA: ["USA", "United States", "États-Unis"], tB: ["BIH", "Bosnia", "Bosnie"] },
+              { id: "R32_R8", tA: ["BEL", "Belgium", "Belgique"], tB: ["SEN", "Senegal", "Sénégal"] },
+            ];
+
+            wcMapping.forEach(mapping => {
               const matchIdx = remainingRealMatches.findIndex(m => matchHasTeams(m, mapping.tA, mapping.tB));
               if (matchIdx !== -1) {
                 const dmIdx = defaultMatches.findIndex(dm => dm.id === mapping.id);
@@ -699,8 +731,8 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
 
           const getTeamSide = (tla: string): "L" | "R" => {
             const leftTeams = [
-              "ARG", "ESP", "FRA", "BRA", "ENG", "USA", "MEX", "CAN", 
-              "COL", "URU", "PAR", "AUS", "CIV", "COD", "GHA", "CPV"
+              "BRA", "JPN", "CIV", "NOR", "MEX", "ECU", "ENG", "COD",
+              "ARG", "CPV", "AUS", "EGY", "SUI", "ALG", "COL", "GHA"
             ];
             return leftTeams.includes(tla) ? "L" : "R";
           };

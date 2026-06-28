@@ -5,6 +5,11 @@ export interface BracketTeam {
 }
 
 export const BRACKET_TEAMS: Record<string, BracketTeam> = {
+  ECU: { id: 'ECU', name: 'Équateur', flag: '🇪🇨' },
+  RSA: { id: 'RSA', name: 'Afrique du Sud', flag: '🇿🇦' },
+  CRO: { id: 'CRO', name: 'Croatie', flag: '🇭🇷' },
+  BIH: { id: 'BIH', name: 'Bosnie-Herzégovine', flag: '🇧🇦' },
+  SEN: { id: 'SEN', name: 'Sénégal', flag: '🇸🇳' },
   GER: { id: 'GER', name: 'Allemagne', flag: '🇩🇪' },
   SCO: { id: 'SCO', name: 'Écosse', flag: '🏴󠁧󠁢󠁳󠁣󠁴󠁿' },
   FRA: { id: 'FRA', name: 'France', flag: '🇫🇷' },
@@ -81,39 +86,39 @@ export interface BracketMatch {
 
 export const BRACKET_MATCH_TIMES: Record<string, string> = {
   // R32
-  "R32_L1": "2026-06-28T18:00:00Z",
-  "R32_L2": "2026-06-28T21:00:00Z",
-  "R32_L3": "2026-06-29T15:00:00Z",
-  "R32_L4": "2026-06-29T18:00:00Z",
-  "R32_L5": "2026-06-29T21:00:00Z",
-  "R32_L6": "2026-06-30T15:00:00Z",
-  "R32_L7": "2026-06-30T18:00:00Z",
-  "R32_L8": "2026-06-30T21:00:00Z",
-  "R32_R1": "2026-07-01T15:00:00Z",
-  "R32_R2": "2026-07-01T18:00:00Z",
-  "R32_R3": "2026-07-01T21:00:00Z",
-  "R32_R4": "2026-07-02T15:00:00Z",
-  "R32_R5": "2026-07-02T18:00:00Z",
-  "R32_R6": "2026-07-02T21:00:00Z",
-  "R32_R7": "2026-07-03T18:00:00Z",
-  "R32_R8": "2026-07-03T21:00:00Z",
+  "R32_L1": "2026-06-29T18:00:00Z",
+  "R32_L2": "2026-06-30T21:00:00Z",
+  "R32_L3": "2026-07-01T15:00:00Z",
+  "R32_L4": "2026-07-01T18:00:00Z",
+  "R32_L5": "2026-07-04T21:00:00Z",
+  "R32_L6": "2026-07-03T15:00:00Z",
+  "R32_L7": "2026-07-03T18:00:00Z",
+  "R32_L8": "2026-07-04T21:00:00Z",
+  "R32_R1": "2026-06-29T15:00:00Z",
+  "R32_R2": "2026-07-01T21:00:00Z",
+  "R32_R3": "2026-06-28T18:00:00Z",
+  "R32_R4": "2026-06-30T15:00:00Z",
+  "R32_R5": "2026-07-06T18:00:00Z",
+  "R32_R6": "2026-07-02T15:00:00Z",
+  "R32_R7": "2026-07-02T21:00:00Z",
+  "R32_R8": "2026-07-01T18:00:00Z",
   // R16
-  "R16_L1": "2026-07-04T18:00:00Z",
-  "R16_L2": "2026-07-04T21:00:00Z",
-  "R16_L3": "2026-07-05T18:00:00Z",
-  "R16_L4": "2026-07-05T21:00:00Z",
-  "R16_R1": "2026-07-06T18:00:00Z",
-  "R16_R2": "2026-07-06T21:00:00Z",
-  "R16_R3": "2026-07-07T18:00:00Z",
+  "R16_L1": "2026-07-05T18:00:00Z",
+  "R16_L2": "2026-07-06T21:00:00Z",
+  "R16_L3": "2026-07-07T18:00:00Z",
+  "R16_L4": "2026-07-07T21:00:00Z",
+  "R16_R1": "2026-07-05T21:00:00Z",
+  "R16_R2": "2026-07-04T18:00:00Z",
+  "R16_R3": "2026-07-06T18:00:00Z",
   "R16_R4": "2026-07-07T21:00:00Z",
   // R8 (Quarterfinals)
-  "R8_L1": "2026-07-09T18:00:00Z",
-  "R8_L2": "2026-07-09T21:00:00Z",
-  "R8_R1": "2026-07-10T18:00:00Z",
-  "R8_R2": "2026-07-11T21:00:00Z",
+  "R8_L1": "2026-07-12T18:00:00Z",
+  "R8_L2": "2026-07-12T21:00:00Z",
+  "R8_R1": "2026-07-09T18:00:00Z",
+  "R8_R2": "2026-07-10T21:00:00Z",
   // R4 (Semifinals)
-  "R4_L1": "2026-07-14T20:00:00Z",
-  "R4_R1": "2026-07-15T20:00:00Z",
+  "R4_L1": "2026-07-15T20:00:00Z",
+  "R4_R1": "2026-07-14T20:00:00Z",
   // R2 (Final)
   "R2_F1": "2026-07-19T20:00:00Z",
 };
@@ -125,24 +130,24 @@ export const isBracketMatchStarted = (matchId: string): boolean => {
 };
 
 export const STARTING_R32_MATCHES: BracketMatch[] = [
-  // Left Bracket
-  { id: 'R32_L1', homeId: 'ARG', awayId: '3rd1', matchTime: BRACKET_MATCH_TIMES['R32_L1'] },
-  { id: 'R32_L2', homeId: '2B', awayId: 'ESP', matchTime: BRACKET_MATCH_TIMES['R32_L2'] },
-  { id: 'R32_L3', homeId: 'FRA', awayId: '3rd2', matchTime: BRACKET_MATCH_TIMES['R32_L3'] },
-  { id: 'R32_L4', homeId: '1H', awayId: '2J', matchTime: BRACKET_MATCH_TIMES['R32_L4'] },
-  { id: 'R32_L5', homeId: 'BRA', awayId: '3rd3', matchTime: BRACKET_MATCH_TIMES['R32_L5'] },
-  { id: 'R32_L6', homeId: '2G', awayId: '2H', matchTime: BRACKET_MATCH_TIMES['R32_L6'] },
-  { id: 'R32_L7', homeId: 'ENG', awayId: '3rd4', matchTime: BRACKET_MATCH_TIMES['R32_L7'] },
-  { id: 'R32_L8', homeId: '1I', awayId: '2K', matchTime: BRACKET_MATCH_TIMES['R32_L8'] },
-  // Right Bracket
-  { id: 'R32_R1', homeId: 'POR', awayId: '3rd5', matchTime: BRACKET_MATCH_TIMES['R32_R1'] },
-  { id: 'R32_R2', homeId: '2A', awayId: '2F', matchTime: BRACKET_MATCH_TIMES['R32_R2'] },
-  { id: 'R32_R3', homeId: 'NED', awayId: '3rd6', matchTime: BRACKET_MATCH_TIMES['R32_R3'] },
-  { id: 'R32_R4', homeId: '1J', awayId: '2L', matchTime: BRACKET_MATCH_TIMES['R32_R4'] },
-  { id: 'R32_R5', homeId: 'GER', awayId: '3rd7', matchTime: BRACKET_MATCH_TIMES['R32_R5'] },
-  { id: 'R32_R6', homeId: '2C', awayId: '2D', matchTime: BRACKET_MATCH_TIMES['R32_R6'] },
-  { id: 'R32_R7', homeId: 'BEL', awayId: '3rd8', matchTime: BRACKET_MATCH_TIMES['R32_R7'] },
-  { id: 'R32_R8', homeId: '1L', awayId: '2I', matchTime: BRACKET_MATCH_TIMES['R32_R8'] },
+  // Left Bracket (L1 to L8)
+  { id: 'R32_L1', homeId: 'BRA', awayId: 'JPN', matchTime: BRACKET_MATCH_TIMES['R32_L1'] },
+  { id: 'R32_L2', homeId: 'CIV', awayId: 'NOR', matchTime: BRACKET_MATCH_TIMES['R32_L2'] },
+  { id: 'R32_L3', homeId: 'MEX', awayId: 'ECU', matchTime: BRACKET_MATCH_TIMES['R32_L3'] },
+  { id: 'R32_L4', homeId: 'ENG', awayId: 'COD', matchTime: BRACKET_MATCH_TIMES['R32_L4'] },
+  { id: 'R32_L5', homeId: 'ARG', awayId: 'CPV', matchTime: BRACKET_MATCH_TIMES['R32_L5'] },
+  { id: 'R32_L6', homeId: 'AUS', awayId: 'EGY', matchTime: BRACKET_MATCH_TIMES['R32_L6'] },
+  { id: 'R32_L7', homeId: 'SUI', awayId: 'ALG', matchTime: BRACKET_MATCH_TIMES['R32_L7'] },
+  { id: 'R32_L8', homeId: 'COL', awayId: 'GHA', matchTime: BRACKET_MATCH_TIMES['R32_L8'] },
+  // Right Bracket (R1 to R8)
+  { id: 'R32_R1', homeId: 'GER', awayId: 'PAR', matchTime: BRACKET_MATCH_TIMES['R32_R1'] },
+  { id: 'R32_R2', homeId: 'FRA', awayId: 'SWE', matchTime: BRACKET_MATCH_TIMES['R32_R2'] },
+  { id: 'R32_R3', homeId: 'RSA', awayId: 'CAN', matchTime: BRACKET_MATCH_TIMES['R32_R3'] },
+  { id: 'R32_R4', homeId: 'NED', awayId: 'MAR', matchTime: BRACKET_MATCH_TIMES['R32_R4'] },
+  { id: 'R32_R5', homeId: 'POR', awayId: 'CRO', matchTime: BRACKET_MATCH_TIMES['R32_R5'] },
+  { id: 'R32_R6', homeId: 'ESP', awayId: 'AUT', matchTime: BRACKET_MATCH_TIMES['R32_R6'] },
+  { id: 'R32_R7', homeId: 'USA', awayId: 'BIH', matchTime: BRACKET_MATCH_TIMES['R32_R7'] },
+  { id: 'R32_R8', homeId: 'BEL', awayId: 'SEN', matchTime: BRACKET_MATCH_TIMES['R32_R8'] },
 ];
 
 export interface BracketPredictions {
