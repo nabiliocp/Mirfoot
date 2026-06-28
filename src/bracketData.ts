@@ -37,6 +37,7 @@ export const BRACKET_TEAMS: Record<string, BracketTeam> = {
   ARG: { id: 'ARG', name: 'Argentine', flag: '🇦🇷' },
   URU: { id: 'URU', name: 'Uruguay', flag: '🇺🇾' },
   AUS: { id: 'AUS', name: 'Australie', flag: '🇦🇺' },
+  NZL: { id: 'NZL', name: 'Nouvelle-Zélande', flag: '🇳🇿' },
   IRN: { id: 'IRN', name: 'Iran', flag: '🇮🇷' },
   CAN: { id: 'CAN', name: 'Canada', flag: '🇨🇦' },
   BEL: { id: 'BEL', name: 'Belgique', flag: '🇧🇪' },
@@ -136,7 +137,7 @@ export const STARTING_R32_MATCHES: BracketMatch[] = [
   { id: 'R32_L3', homeId: 'MEX', awayId: 'ECU', matchTime: BRACKET_MATCH_TIMES['R32_L3'] },
   { id: 'R32_L4', homeId: 'ENG', awayId: 'COD', matchTime: BRACKET_MATCH_TIMES['R32_L4'] },
   { id: 'R32_L5', homeId: 'ARG', awayId: 'CPV', matchTime: BRACKET_MATCH_TIMES['R32_L5'] },
-  { id: 'R32_L6', homeId: 'AUS', awayId: 'EGY', matchTime: BRACKET_MATCH_TIMES['R32_L6'] },
+  { id: 'R32_L6', homeId: 'NZL', awayId: 'EGY', matchTime: BRACKET_MATCH_TIMES['R32_L6'] },
   { id: 'R32_L7', homeId: 'SUI', awayId: 'ALG', matchTime: BRACKET_MATCH_TIMES['R32_L7'] },
   { id: 'R32_L8', homeId: 'COL', awayId: 'GHA', matchTime: BRACKET_MATCH_TIMES['R32_L8'] },
   // Right Bracket (R1 to R8)

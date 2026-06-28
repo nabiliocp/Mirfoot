@@ -636,23 +636,23 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
             });
           } else if (isWorldCup) {
             const wcMapping = [
-              { id: "R32_L1", tA: ["BRA", "Brazil", "Brésil"], tB: ["JPN", "Japan", "Japon"] },
-              { id: "R32_L2", tA: ["CIV", "Côte d'Ivoire", "Ivory Coast"], tB: ["NOR", "Norway", "Norvège"] },
-              { id: "R32_L3", tA: ["MEX", "Mexico", "Mexique"], tB: ["ECU", "Ecuador", "Équateur"] },
-              { id: "R32_L4", tA: ["ENG", "England", "Angleterre"], tB: ["COD", "RDC", "Congo", "DR Congo"] },
-              { id: "R32_L5", tA: ["ARG", "Argentina", "Argentine"], tB: ["CPV", "Cape Verde", "Cap-Vert"] },
-              { id: "R32_L6", tA: ["AUS", "Australia", "Australie"], tB: ["EGY", "Egypt", "Égypte"] },
-              { id: "R32_L7", tA: ["SUI", "Switzerland", "Suisse"], tB: ["ALG", "Algeria", "Algérie"] },
+              { id: "R32_L1", tA: ["BRA", "Brazil", "Brésil", "Brasil", "Bresil"], tB: ["JPN", "Japan", "Japon", "Japón"] },
+              { id: "R32_L2", tA: ["CIV", "Côte d'Ivoire", "Cote d'Ivoire", "Ivory Coast", "Côte d’Ivoire"], tB: ["NOR", "Norway", "Norvège", "Norvege", "Noruega"] },
+              { id: "R32_L3", tA: ["MEX", "Mexico", "Mexique", "México", "Mexic"], tB: ["ECU", "Ecuador", "Équateur", "Equateur", "Equador"] },
+              { id: "R32_L4", tA: ["ENG", "England", "Angleterre", "Inglaterra"], tB: ["COD", "RDC", "Congo", "DR Congo", "Democratic Republic of the Congo", "République Démocratique du Congo"] },
+              { id: "R32_L5", tA: ["ARG", "Argentina", "Argentine"], tB: ["CPV", "Cape Verde", "Cap-Vert", "Cap Vert", "Cabo Verde"] },
+              { id: "R32_L6", tA: ["NZL", "New Zealand", "Nouvelle-Zélande", "Nouvelle-Zelande", "Nueva Zelanda"], tB: ["EGY", "Egypt", "Égypte", "Egypte", "Egipto"] },
+              { id: "R32_L7", tA: ["SUI", "Switzerland", "Suisse", "Suiza", "CH"], tB: ["ALG", "Algeria", "Algérie", "Algerie", "Argelia"] },
               { id: "R32_L8", tA: ["COL", "Colombia", "Colombie"], tB: ["GHA", "Ghana"] },
 
-              { id: "R32_R1", tA: ["GER", "Germany", "Allemagne"], tB: ["PAR", "Paraguay"] },
-              { id: "R32_R2", tA: ["FRA", "France"], tB: ["SWE", "Sweden", "Suède"] },
-              { id: "R32_R3", tA: ["RSA", "South Africa", "Afrique du Sud"], tB: ["CAN", "Canada"] },
-              { id: "R32_R4", tA: ["NED", "Netherlands", "Pays-Bas"], tB: ["MAR", "Morocco", "Maroc"] },
-              { id: "R32_R5", tA: ["POR", "Portugal"], tB: ["CRO", "Croatia", "Croatie"] },
-              { id: "R32_R6", tA: ["ESP", "Spain", "Espagne"], tB: ["AUT", "Austria", "Autriche"] },
-              { id: "R32_R7", tA: ["USA", "United States", "États-Unis"], tB: ["BIH", "Bosnia", "Bosnie"] },
-              { id: "R32_R8", tA: ["BEL", "Belgium", "Belgique"], tB: ["SEN", "Senegal", "Sénégal"] },
+              { id: "R32_R1", tA: ["GER", "Germany", "Allemagne", "Deutschland", "Alemania"], tB: ["PAR", "Paraguay"] },
+              { id: "R32_R2", tA: ["FRA", "France", "Francia"], tB: ["SWE", "Sweden", "Suède", "Suede", "Suecia"] },
+              { id: "R32_R3", tA: ["RSA", "South Africa", "Afrique du Sud", "Sudáfrica", "Sudafrique"], tB: ["CAN", "Canada"] },
+              { id: "R32_R4", tA: ["NED", "Netherlands", "Pays-Bas", "Pays Bas", "Hollande", "Holland", "Países Bajos"], tB: ["MAR", "Morocco", "Maroc", "Marruecos"] },
+              { id: "R32_R5", tA: ["POR", "Portugal"], tB: ["CRO", "Croatia", "Croatie", "Croacia"] },
+              { id: "R32_R6", tA: ["ESP", "Spain", "Espagne", "España", "Espana"], tB: ["AUT", "Austria", "Autriche", "Österreich", "Oesterreich"] },
+              { id: "R32_R7", tA: ["USA", "United States", "États-Unis", "Etats-Unis", "United States of America", "US"], tB: ["BIH", "Bosnia", "Bosnie", "Bosnia & Herzegovina", "Bosnia-Herzegovina", "Bosnie-Herzégovine", "Bosnie Herzégovine", "BOS"] },
+              { id: "R32_R8", tA: ["BEL", "Belgium", "Belgique", "Bélgica"], tB: ["SEN", "Senegal", "Sénégal"] },
             ];
 
             wcMapping.forEach(mapping => {
@@ -732,7 +732,7 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
           const getTeamSide = (tla: string): "L" | "R" => {
             const leftTeams = [
               "BRA", "JPN", "CIV", "NOR", "MEX", "ECU", "ENG", "COD",
-              "ARG", "CPV", "AUS", "EGY", "SUI", "ALG", "COL", "GHA"
+              "ARG", "CPV", "NZL", "EGY", "SUI", "ALG", "COL", "GHA"
             ];
             return leftTeams.includes(tla) ? "L" : "R";
           };
