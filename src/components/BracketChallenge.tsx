@@ -8,7 +8,6 @@ import {
   BracketMatch,
   createEmptyBracketPredictions,
   BRACKET_MATCH_TIMES,
-  generateRandomBracketPicks,
   calculateBracketPoints,
   isPlaceholderTeam
 } from "../bracketData";
@@ -1198,14 +1197,8 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
   };
 
   const handleFillRandomPicks = () => {
-    try {
-      const randomPicks = generateRandomBracketPicks();
-      setPicks(randomPicks);
-      setMessage({ type: "success", text: "Pronostics aléatoires générés dans le tableau ! N'oubliez pas d'enregistrer." });
-    } catch (err: any) {
-      console.error(err);
-      setMessage({ type: "error", text: "Erreur lors de la génération : " + err.message });
-    }
+    handleSimulatePhase("all");
+    setMessage({ type: "success", text: "Pronostics aléatoires générés dans le tableau ! N'oubliez pas d'enregistrer." });
   };
 
   const handleSimulatePhase = (phase: "all" | "r32" | "r16" | "r8" | "r4" | "r2") => {

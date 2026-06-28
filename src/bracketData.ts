@@ -278,57 +278,7 @@ export function calculateBracketPoints(userPicks: BracketPredictions, actualResu
   return points;
 }
 
-export function generateRandomBracketPicks(): BracketPredictions {
-  const picks = createEmptyBracketPredictions();
 
-  // Helper to pick randomly from two options
-  const pickRandom = (teamA: string, teamB: string) => (Math.random() < 0.5 ? teamA : teamB);
-
-  // 1. R32 to R16
-  picks.r16["R16_L1_H"] = pickRandom("GER", "SCO");
-  picks.r16["R16_L1_A"] = pickRandom("FRA", "SWE");
-  picks.r16["R16_L2_H"] = pickRandom("KOR", "SUI");
-  picks.r16["R16_L2_A"] = pickRandom("NED", "MAR");
-  picks.r16["R16_L3_H"] = pickRandom("COL", "GHA");
-  picks.r16["R16_L3_A"] = pickRandom("ESP", "AUT");
-  picks.r16["R16_L4_H"] = pickRandom("USA", "ALG");
-  picks.r16["R16_L4_A"] = pickRandom("EGY", "CZE");
-
-  picks.r16["R16_R1_H"] = pickRandom("BRA", "JPN");
-  picks.r16["R16_R1_A"] = pickRandom("CIV", "NOR");
-  picks.r16["R16_R2_H"] = pickRandom("MEX", "CPV");
-  picks.r16["R16_R2_A"] = pickRandom("ENG", "COD");
-  picks.r16["R16_R3_H"] = pickRandom("ARG", "URU");
-  picks.r16["R16_R3_A"] = pickRandom("AUS", "IRN");
-  picks.r16["R16_R4_H"] = pickRandom("CAN", "BEL");
-  picks.r16["R16_R4_A"] = pickRandom("POR", "PAR");
-
-  // 2. R16 to R8
-  picks.r8["R8_L1_H"] = pickRandom(picks.r16["R16_L1_H"] || "GER", picks.r16["R16_L1_A"] || "FRA");
-  picks.r8["R8_L1_A"] = pickRandom(picks.r16["R16_L2_H"] || "KOR", picks.r16["R16_L2_A"] || "NED");
-  picks.r8["R8_L2_H"] = pickRandom(picks.r16["R16_L3_H"] || "COL", picks.r16["R16_L3_A"] || "ESP");
-  picks.r8["R8_L2_A"] = pickRandom(picks.r16["R16_L4_H"] || "USA", picks.r16["R16_L4_A"] || "EGY");
-
-  picks.r8["R8_R1_H"] = pickRandom(picks.r16["R16_R1_H"] || "BRA", picks.r16["R16_R1_A"] || "CIV");
-  picks.r8["R8_R1_A"] = pickRandom(picks.r16["R16_R2_H"] || "MEX", picks.r16["R16_R2_A"] || "ENG");
-  picks.r8["R8_R2_H"] = pickRandom(picks.r16["R16_R3_H"] || "ARG", picks.r16["R16_R3_A"] || "AUS");
-  picks.r8["R8_R2_A"] = pickRandom(picks.r16["R16_R4_H"] || "CAN", picks.r16["R16_R4_A"] || "POR");
-
-  // 3. R8 to R4
-  picks.r4["R4_L1_H"] = pickRandom(picks.r8["R8_L1_H"] || "GER", picks.r8["R8_L1_A"] || "KOR");
-  picks.r4["R4_L1_A"] = pickRandom(picks.r8["R8_L2_H"] || "COL", picks.r8["R8_L2_A"] || "USA");
-  picks.r4["R4_R1_H"] = pickRandom(picks.r8["R8_R1_H"] || "BRA", picks.r8["R8_R1_A"] || "MEX");
-  picks.r4["R4_R1_A"] = pickRandom(picks.r8["R8_R2_H"] || "ARG", picks.r8["R8_R2_A"] || "CAN");
-
-  // 4. R4 to R2
-  picks.r2["R2_L1_H"] = pickRandom(picks.r4["R4_L1_H"] || "GER", picks.r4["R4_L1_A"] || "COL");
-  picks.r2["R2_L1_A"] = pickRandom(picks.r4["R4_R1_H"] || "BRA", picks.r4["R4_R1_A"] || "ARG");
-
-  // 5. R2 to Winner
-  picks.winner = pickRandom(picks.r2["R2_L1_H"] || "GER", picks.r2["R2_L1_A"] || "BRA");
-
-  return picks;
-}
 
 
 export const isPlaceholderTeam = (teamId: string): boolean => {
