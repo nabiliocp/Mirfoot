@@ -36,7 +36,7 @@ export const BRACKET_TEAMS: Record<string, BracketTeam> = {
   COD: { id: 'COD', name: 'RDC Congo', flag: '🇨🇩' },
   ARG: { id: 'ARG', name: 'Argentine', flag: '🇦🇷' },
   URU: { id: 'URU', name: 'Uruguay', flag: '🇺🇾' },
-  AUS: { id: 'AUS', name: 'Australie', flag: '🇦🇺' },
+  AUS: { id: 'AUS', name: 'Nouvelle-Zélande', flag: '🇳🇿' },
   NZL: { id: 'NZL', name: 'Nouvelle-Zélande', flag: '🇳🇿' },
   IRN: { id: 'IRN', name: 'Iran', flag: '🇮🇷' },
   CAN: { id: 'CAN', name: 'Canada', flag: '🇨🇦' },

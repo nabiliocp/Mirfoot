@@ -1899,18 +1899,7 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
           })()}
         </div>
 
-        {stats && (
-          <div className="mt-1.5 pt-1.5 border-t border-gray-100 flex flex-col gap-0.5">
-            <div className="flex justify-between text-[7.5px] font-bold text-gray-400">
-              <span>{stats.percentA}% {teamA?.flag}</span>
-              <span>{stats.percentB}% {teamB?.flag}</span>
-            </div>
-            <div className="w-full h-1 bg-gray-100 rounded-full overflow-hidden flex">
-              <div className="bg-emerald-500 h-full" style={{ width: `${stats.percentA}%` }}></div>
-              <div className="bg-blue-400 h-full" style={{ width: `${stats.percentB}%` }}></div>
-            </div>
-          </div>
-        )}
+
 
         {direction === "left" && (
           <div className={`absolute right-[-16px] top-1/2 -translate-y-1/2 w-4 h-[2px] transition ${
