@@ -640,7 +640,7 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
               { id: "R32_L3", tA: ["MEX", "Mexico", "Mexique", "México", "Mexic"], tB: ["ECU", "Ecuador", "Équateur", "Equateur", "Equador"] },
               { id: "R32_L4", tA: ["ENG", "England", "Angleterre", "Inglaterra"], tB: ["COD", "RDC", "Congo", "DR Congo", "Democratic Republic of the Congo", "République Démocratique du Congo"] },
               { id: "R32_L5", tA: ["ARG", "Argentina", "Argentine"], tB: ["CPV", "Cape Verde", "Cap-Vert", "Cap Vert", "Cabo Verde"] },
-              { id: "R32_L6", tA: ["NZL", "New Zealand", "Nouvelle-Zélande", "Nouvelle-Zelande", "Nueva Zelanda"], tB: ["EGY", "Egypt", "Égypte", "Egypte", "Egipto"] },
+              { id: "R32_L6", tA: ["AUS", "Australia", "Australie"], tB: ["EGY", "Egypt", "Égypte", "Egypte", "Egipto"] },
               { id: "R32_L7", tA: ["SUI", "Switzerland", "Suisse", "Suiza", "CH"], tB: ["ALG", "Algeria", "Algérie", "Algerie", "Argelia"] },
               { id: "R32_L8", tA: ["COL", "Colombia", "Colombie"], tB: ["GHA", "Ghana"] },
 
@@ -731,7 +731,7 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
           const getTeamSide = (tla: string): "L" | "R" => {
             const leftTeams = [
               "BRA", "JPN", "CIV", "NOR", "MEX", "ECU", "ENG", "COD",
-              "ARG", "CPV", "NZL", "EGY", "SUI", "ALG", "COL", "GHA"
+              "ARG", "CPV", "AUS", "EGY", "SUI", "ALG", "COL", "GHA"
             ];
             return leftTeams.includes(tla) ? "L" : "R";
           };
@@ -907,16 +907,11 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
     return BRACKET_MATCH_TIMES[matchId] || "";
   };
 
-  const isMatchStarted = (matchId: string): boolean => {
+  const isMatchLocked = (matchId: string): boolean => {
     if (forceLockMatches) return true;
     const kickOffStr = getMatchTime(matchId);
     if (!kickOffStr) return false;
     return new Date().getTime() >= new Date(kickOffStr).getTime();
-  };
-
-  const isMatchLocked = (matchId: string): boolean => {
-    if (forceLockMatches) return true;
-    return false; // User requested to unlock matches even if they started
   };
 
   const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -1124,6 +1119,9 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
       updateSimulatedResults(updatedPicks);
     } else {
       setPicks(updatedPicks);
+      if (mode === "prediction") {
+        handleSavePredictions(updatedPicks);
+      }
     }
   };
 
@@ -1145,11 +1143,11 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
     if (updatedPicks.winner === teamId) updatedPicks.winner = "";
   };
 
-  const handleSavePredictions = async () => {
+  const handleSavePredictions = async (picksToSave: BracketPredictions = picks) => {
     setSaving(true);
     setMessage(null);
     try {
-      const sanitized = sanitizePredictions(picks, dynamicR32Matches);
+      const sanitized = sanitizePredictions(picksToSave, dynamicR32Matches);
       const response = await fetch("/api/bets/upsert", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -1472,7 +1470,11 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
 
     return (
       <div className="bg-white border border-gray-150 rounded-2xl p-3 shadow-xs hover:shadow-md transition-all duration-300 relative overflow-hidden">
-        {missingOpponent ? (
+        {locked ? (
+          <div className="absolute top-1.5 right-2 flex items-center gap-1 text-[9px] bg-red-50 text-red-600 font-bold px-1.5 py-0.5 rounded-full border border-red-100">
+            <Lock className="w-2.5 h-2.5" /> Clôturé
+          </div>
+        ) : missingOpponent ? (
           <div className="absolute top-1.5 right-2 flex items-center gap-1 text-[8px] bg-amber-50 text-amber-600 font-bold px-1.5 py-0.5 rounded border border-amber-100 uppercase tracking-wider">
             Adversaire requis
           </div>
@@ -1620,8 +1622,8 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
 
     const winnerId = getSelectedWinnerForPredictions(currentPicks, matchId);
     
-    const isStarted = isMatchStarted(matchId);
-    const locked = mode === "prediction" && (isMatchLocked(matchId) || isViewingOther);
+    const isStarted = isMatchLocked(matchId);
+    const locked = mode === "prediction" && (isStarted || isViewingOther);
     const missingOpponent = !teamA || !teamB || isPlaceholderTeam(teamAId) || isPlaceholderTeam(teamBId);
 
     const isWinnerA = teamAId !== "" && teamBId !== "" && winnerId === teamAId;
@@ -1662,7 +1664,12 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
           ? "bg-white border border-gray-150 sm:border-gray-200 rounded-xl sm:rounded-2xl p-1 sm:p-2.5 shadow-2xs sm:shadow-sm" 
           : "bg-white border border-gray-200 rounded-2xl p-2 sm:p-2.5 shadow-sm hover:shadow-md hover:border-slate-350"
       }`}>
-        {missingOpponent ? (
+        {isStarted ? (
+          <div className={`absolute flex items-center bg-red-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded-full border border-red-400 gap-0.5 shadow-xs z-20 ${round === "r32" ? "-top-1 -right-1 sm:-top-1.5 sm:-right-1" : "-top-1.5 -right-1"}`}>
+            <Lock className="w-2 h-2 sm:w-2.5 sm:h-2.5" />
+            <span className="hidden xs:inline">CLÔTURÉ</span>
+          </div>
+        ) : missingOpponent ? (
           <div className={`absolute flex items-center bg-amber-50 text-amber-600 text-[8px] font-black px-1.5 py-0.5 rounded-full border border-amber-200 gap-0.5 shadow-xs uppercase tracking-wider ${round === "r32" ? "hidden sm:flex -top-1.5 -right-1" : "-top-1.5 -right-1"}`}>
             Adversaire requis
           </div>
@@ -2617,8 +2624,8 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
           )}
 
           {/* Action Buttons */}
-          <div className="pt-4 border-t border-gray-100 flex justify-end">
-            {mode === "results" ? (
+          <div className="pt-4 flex justify-end">
+            {mode === "results" && (
               <button
                 type="button"
                 disabled={saving}
@@ -2634,27 +2641,13 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
                   <>🎯 Enregistrer les résultats officiels & Résoudre le défi</>
                 )}
               </button>
-            ) : (
-              <button
-                type="button"
-                disabled={saving}
-                onClick={handleSavePredictions}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white font-black px-6 py-3.5 rounded-2xl shadow-sm transition disabled:opacity-50 disabled:cursor-not-allowed text-sm flex items-center gap-2 cursor-pointer"
-              >
-                {saving ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    Enregistrement...
-                  </>
-                ) : (
-                  <>💾 Enregistrer mes pronostics ({totalCompletedPicks}/{totalSlots})</>
-                )}
-              </button>
             )}
           </div>
-          <p className="text-[11px] text-gray-400 font-bold text-right mt-1">
-            * Vous pouvez enregistrer vos pronostics à tout moment et modifier vos choix pour tous les matchs non débutés.
-          </p>
+          {mode === "prediction" && (
+             <p className="text-[11px] text-gray-400 font-bold text-right mt-1">
+               * Vos pronostics sont sauvegardés automatiquement à chaque sélection.
+             </p>
+          )}
         </>
       )}
     </div>

@@ -1259,13 +1259,6 @@ async function startServer() {
     if (fdCompId === 9999) {
       fdCompId = 2000;
     }
-
-    if (fdCompId === 2000) {
-      // Force empty match list for World Cup 2026 to ensure the front-end falls back to the pure mock bracket.
-      // This prevents past World Cup 2022 matches (like Argentina vs Australia) from leaking into the 2026 bracket.
-      return res.json({ matches: [] });
-    }
-
     const reqSeason = req.query.season ? Number(req.query.season) : null;
 
     const cacheKey = `comp_${fdCompId}_${activeProvider}_${reqSeason || "current"}`;
@@ -2390,7 +2383,7 @@ async function startServer() {
         picks.r16["R16_L2_H"] = pickRandom("MEX", "ECU");
         picks.r16["R16_L2_A"] = pickRandom("ENG", "COD");
         picks.r16["R16_L3_H"] = pickRandom("ARG", "CPV");
-        picks.r16["R16_L3_A"] = pickRandom("NZL", "EGY");
+        picks.r16["R16_L3_A"] = pickRandom("AUS", "EGY");
         picks.r16["R16_L4_H"] = pickRandom("SUI", "ALG");
         picks.r16["R16_L4_A"] = pickRandom("COL", "GHA");
 
