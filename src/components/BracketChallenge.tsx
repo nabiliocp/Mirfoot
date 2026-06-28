@@ -528,6 +528,20 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
 
   const [qualifiedTeams, setQualifiedTeams] = useState<Set<string>>(new Set());
   const [loadingQualifications, setLoadingQualifications] = useState<boolean>(false);
+  const [realCompMatches, setRealCompMatches] = useState<any[]>(() => {
+    try {
+      const savedMatches = localStorage.getItem("mirfoot_matches_by_comp_v2");
+      if (savedMatches && challenge.competitionId) {
+        const allComps = JSON.parse(savedMatches);
+        const originalCompId = challenge.competitionId;
+        const compId = (originalCompId === 9999 || String(originalCompId) === "9999") ? "2000" : String(originalCompId);
+        return allComps[compId] || [];
+      }
+    } catch (e) {
+      console.error("Error reading initial bracket matches:", e);
+    }
+    return [];
+  });
 
   const refreshQualifications = async (bypass = false) => {
     setLoadingQualifications(true);
@@ -541,6 +555,18 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
         if (data && data.matches) {
           const qualified = getOfficialQualifiedTeams(data.matches);
           setQualifiedTeams(qualified);
+          
+          setRealCompMatches(data.matches);
+          try {
+            const savedMatches = localStorage.getItem("mirfoot_matches_by_comp_v2");
+            const allComps = savedMatches ? JSON.parse(savedMatches) : {};
+            const originalCompId = challenge.competitionId;
+            const compId = (originalCompId === 9999 || String(originalCompId) === "9999") ? "2000" : String(originalCompId);
+            allComps[compId] = data.matches;
+            localStorage.setItem("mirfoot_matches_by_comp_v2", JSON.stringify(allComps));
+          } catch (e) {
+            console.error("Error saving fetched matches to localStorage:", e);
+          }
         }
       }
     } catch (err) {
@@ -557,113 +583,108 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
   const dynamicR32Matches = useMemo(() => {
     const defaultMatches = [...STARTING_R32_MATCHES];
     try {
-      const savedMatches = localStorage.getItem("mirfoot_matches_by_comp_v2");
-      if (savedMatches && challenge.competitionId) {
-        const allComps = JSON.parse(savedMatches);
-        const originalCompId = challenge.competitionId;
-        const compId = (originalCompId === 9999 || String(originalCompId) === "9999") ? "2000" : String(originalCompId);
-        const compMatches = allComps[compId];
-        if (compMatches && compMatches.length > 0) {
-          const r32RealMatches = compMatches.filter((m: any) => {
-            const s = (m.stage || "").toUpperCase().replace(/ /g, "_");
-            return s === "LAST_32" || s === "ROUND_OF_32" || s === "LAST_16" || s === "ROUND_OF_16" || s === "1ST_PHASE" || s === "8TH_FINALS";
-          });
+      const compMatches = realCompMatches;
+      if (compMatches && compMatches.length > 0) {
+        const r32RealMatches = compMatches.filter((m: any) => {
+          const s = (m.stage || "").toUpperCase().replace(/ /g, "_");
+          return s === "LAST_32" || s === "ROUND_OF_32" || s === "LAST_16" || s === "ROUND_OF_16" || s === "1ST_PHASE" || s === "8TH_FINALS";
+        });
+        
+        if (r32RealMatches.length > 0) {
+          r32RealMatches.sort((a: any, b: any) => new Date(a.utcDate).getTime() - new Date(b.utcDate).getTime());
           
-          if (r32RealMatches.length > 0) {
-            r32RealMatches.sort((a: any, b: any) => new Date(a.utcDate).getTime() - new Date(b.utcDate).getTime());
+          // Create a copy so we can remove matched ones
+          const remainingRealMatches = [...r32RealMatches];
+          const matchedSlots = new Array(defaultMatches.length).fill(null);
+
+          // First pass: Match by strict TLA or Name
+          defaultMatches.forEach((dm, dmIdx) => {
+            const defaultHomeTeam = BRACKET_TEAMS[dm.homeId];
+            const defaultAwayTeam = BRACKET_TEAMS[dm.awayId];
             
-            // Create a copy so we can remove matched ones
-            const remainingRealMatches = [...r32RealMatches];
-            const matchedSlots = new Array(defaultMatches.length).fill(null);
-
-            // First pass: Match by strict TLA or Name
-            defaultMatches.forEach((dm, dmIdx) => {
-              const defaultHomeTeam = BRACKET_TEAMS[dm.homeId];
-              const defaultAwayTeam = BRACKET_TEAMS[dm.awayId];
+            const dmHomeTla = dm.homeId;
+            const dmHomeName = (defaultHomeTeam?.name || "").toLowerCase();
+            const dmAwayTla = dm.awayId;
+            const dmAwayName = (defaultAwayTeam?.name || "").toLowerCase();
+            
+            const matchIdx = remainingRealMatches.findIndex((m: any) => {
+              const matchHomeTla = m.homeTeam?.tla || (m.homeTeam?.name ? m.homeTeam.name.substring(0,3).toUpperCase() : "");
+              const matchAwayTla = m.awayTeam?.tla || (m.awayTeam?.name ? m.awayTeam.name.substring(0,3).toUpperCase() : "");
               
-              const dmHomeTla = dm.homeId;
-              const dmHomeName = (defaultHomeTeam?.name || "").toLowerCase();
-              const dmAwayTla = dm.awayId;
-              const dmAwayName = (defaultAwayTeam?.name || "").toLowerCase();
+              const matchHomeName = (m.homeTeam?.name || "").toLowerCase();
+              const matchAwayName = (m.awayTeam?.name || "").toLowerCase();
               
-              const matchIdx = remainingRealMatches.findIndex((m: any) => {
-                const matchHomeTla = m.homeTeam?.tla || (m.homeTeam?.name ? m.homeTeam.name.substring(0,3).toUpperCase() : "");
-                const matchAwayTla = m.awayTeam?.tla || (m.awayTeam?.name ? m.awayTeam.name.substring(0,3).toUpperCase() : "");
-                
-                const matchHomeName = (m.homeTeam?.name || "").toLowerCase();
-                const matchAwayName = (m.awayTeam?.name || "").toLowerCase();
-                
-                // if either team matches the dm home or away team
-                if (matchHomeTla === dmHomeTla) return true;
-                if (matchAwayTla === dmHomeTla) return true;
-                if (matchHomeTla === dmAwayTla) return true;
-                if (matchAwayTla === dmAwayTla) return true;
-                
-                // name matching (only if name is meaningful, skip generic "1er", "2e", etc.)
-                if (dmHomeName && !dmHomeName.includes("groupe") && !dmHomeName.includes("meilleur")) {
-                  if (matchHomeName.includes(dmHomeName) || dmHomeName.includes(matchHomeName)) return true;
-                  if (matchAwayName.includes(dmHomeName) || dmHomeName.includes(matchAwayName)) return true;
-                }
-                if (dmAwayName && !dmAwayName.includes("groupe") && !dmAwayName.includes("meilleur")) {
-                  if (matchHomeName.includes(dmAwayName) || dmAwayName.includes(matchHomeName)) return true;
-                  if (matchAwayName.includes(dmAwayName) || dmAwayName.includes(matchAwayName)) return true;
-                }
-                
-                return false;
-              });
-
-              if (matchIdx !== -1) {
-                const realM = remainingRealMatches[matchIdx];
-                remainingRealMatches.splice(matchIdx, 1);
-                matchedSlots[dmIdx] = realM;
+              // if either team matches the dm home or away team
+              if (matchHomeTla === dmHomeTla) return true;
+              if (matchAwayTla === dmHomeTla) return true;
+              if (matchHomeTla === dmAwayTla) return true;
+              if (matchAwayTla === dmAwayTla) return true;
+              
+              // name matching (only if name is meaningful, skip generic "1er", "2e", etc.)
+              if (dmHomeName && !dmHomeName.includes("groupe") && !dmHomeName.includes("meilleur")) {
+                if (matchHomeName.includes(dmHomeName) || dmHomeName.includes(matchHomeName)) return true;
+                if (matchAwayName.includes(dmHomeName) || dmHomeName.includes(matchAwayName)) return true;
               }
+              if (dmAwayName && !dmAwayName.includes("groupe") && !dmAwayName.includes("meilleur")) {
+                if (matchHomeName.includes(dmAwayName) || dmAwayName.includes(matchHomeName)) return true;
+                if (matchAwayName.includes(dmAwayName) || dmAwayName.includes(matchAwayName)) return true;
+              }
+              
+              return false;
             });
 
-            // Second pass: fill in any remaining unmatched slots with remaining real matches
-            defaultMatches.forEach((dm, dmIdx) => {
-              if (!matchedSlots[dmIdx] && remainingRealMatches.length > 0) {
-                const realM = remainingRealMatches.shift();
-                matchedSlots[dmIdx] = realM;
-              }
-            });
+            if (matchIdx !== -1) {
+              const realM = remainingRealMatches[matchIdx];
+              remainingRealMatches.splice(matchIdx, 1);
+              matchedSlots[dmIdx] = realM;
+            }
+          });
 
-            return defaultMatches.map((dm, dmIdx) => {
-              const realM = matchedSlots[dmIdx];
-              if (realM) {
-                const homeTla = realM.homeTeam?.tla || realM.homeTeam?.id?.toString() || dm.homeId;
-                const awayTla = realM.awayTeam?.tla || realM.awayTeam?.id?.toString() || dm.awayId;
-                
-                if (realM.homeTeam && realM.homeTeam.name && !BRACKET_TEAMS[homeTla]) {
-                  BRACKET_TEAMS[homeTla] = {
-                    id: homeTla,
-                    name: realM.homeTeam.shortName || realM.homeTeam.name,
-                    flag: realM.homeTeam.crest || '❓'
-                  };
-                }
-                if (realM.awayTeam && realM.awayTeam.name && !BRACKET_TEAMS[awayTla]) {
-                  BRACKET_TEAMS[awayTla] = {
-                    id: awayTla,
-                    name: realM.awayTeam.shortName || realM.awayTeam.name,
-                    flag: realM.awayTeam.crest || '❓'
-                  };
-                }
-                
-                return {
-                  ...dm,
-                  homeId: realM.homeTeam?.name ? homeTla : dm.homeId,
-                  awayId: realM.awayTeam?.name ? awayTla : dm.awayId,
+          // Second pass: fill in any remaining unmatched slots with remaining real matches
+          defaultMatches.forEach((dm, dmIdx) => {
+            if (!matchedSlots[dmIdx] && remainingRealMatches.length > 0) {
+              const realM = remainingRealMatches.shift();
+              matchedSlots[dmIdx] = realM;
+            }
+          });
+
+          return defaultMatches.map((dm, dmIdx) => {
+            const realM = matchedSlots[dmIdx];
+            if (realM) {
+              const homeTla = realM.homeTeam?.tla || realM.homeTeam?.id?.toString() || dm.homeId;
+              const awayTla = realM.awayTeam?.tla || realM.awayTeam?.id?.toString() || dm.awayId;
+              
+              if (realM.homeTeam && realM.homeTeam.name && !BRACKET_TEAMS[homeTla]) {
+                BRACKET_TEAMS[homeTla] = {
+                  id: homeTla,
+                  name: realM.homeTeam.shortName || realM.homeTeam.name,
+                  flag: realM.homeTeam.crest || '❓'
                 };
               }
-              return dm;
-            });
-          }
+              if (realM.awayTeam && realM.awayTeam.name && !BRACKET_TEAMS[awayTla]) {
+                BRACKET_TEAMS[awayTla] = {
+                  id: awayTla,
+                  name: realM.awayTeam.shortName || realM.awayTeam.name,
+                  flag: realM.awayTeam.crest || '❓'
+                };
+              }
+              
+              return {
+                ...dm,
+                homeId: realM.homeTeam?.name ? homeTla : dm.homeId,
+                awayId: realM.awayTeam?.name ? awayTla : dm.awayId,
+                matchTime: realM.utcDate || dm.matchTime,
+              };
+            }
+            return dm;
+          });
         }
       }
     } catch (err) {
       console.error("Error applying real matches to bracket", err);
     }
     return defaultMatches;
-  }, [challenge.competitionId]);
+  }, [challenge.competitionId, realCompMatches]);
 
   // State update helpers with localStorage persistence
   const updateTestMode = (val: boolean) => {
@@ -731,9 +752,19 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
   const [startX, setStartX] = useState(0);
   const [scrollLeft, setScrollLeft] = useState(0);
 
+  const getMatchTime = (matchId: string): string => {
+    const dynamicMatch = dynamicR32Matches.find(m => m.id === matchId);
+    if (dynamicMatch && dynamicMatch.matchTime) {
+      return dynamicMatch.matchTime;
+    }
+    return BRACKET_MATCH_TIMES[matchId] || "";
+  };
+
   const isMatchLocked = (matchId: string): boolean => {
     if (forceLockMatches) return true;
-    return isBracketMatchStarted(matchId);
+    const kickOffStr = getMatchTime(matchId);
+    if (!kickOffStr) return false;
+    return new Date().getTime() >= new Date(kickOffStr).getTime();
   };
 
   const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -1503,9 +1534,9 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
         {round === "r32" ? (
           <div className="flex text-[9px] text-gray-400 font-bold mb-1 px-1 justify-between">
             <span>{matchId.replace("R32_", "")}</span>
-            {BRACKET_MATCH_TIMES[matchId] && (
+            {getMatchTime(matchId) && (
               <span className="text-[8px] text-gray-400">
-                {new Date(BRACKET_MATCH_TIMES[matchId]).toLocaleDateString("fr-FR", {day: "numeric", month: "short"})}
+                {new Date(getMatchTime(matchId)).toLocaleDateString("fr-FR", {day: "numeric", month: "short"})}
               </span>
             )}
           </div>
