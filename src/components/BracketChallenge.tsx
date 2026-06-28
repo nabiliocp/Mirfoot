@@ -907,11 +907,16 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
     return BRACKET_MATCH_TIMES[matchId] || "";
   };
 
-  const isMatchLocked = (matchId: string): boolean => {
+  const isMatchStarted = (matchId: string): boolean => {
     if (forceLockMatches) return true;
     const kickOffStr = getMatchTime(matchId);
     if (!kickOffStr) return false;
     return new Date().getTime() >= new Date(kickOffStr).getTime();
+  };
+
+  const isMatchLocked = (matchId: string): boolean => {
+    if (forceLockMatches) return true;
+    return false; // User requested to unlock matches even if they started
   };
 
   const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -1467,11 +1472,7 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
 
     return (
       <div className="bg-white border border-gray-150 rounded-2xl p-3 shadow-xs hover:shadow-md transition-all duration-300 relative overflow-hidden">
-        {locked ? (
-          <div className="absolute top-1.5 right-2 flex items-center gap-1 text-[9px] bg-red-50 text-red-600 font-bold px-1.5 py-0.5 rounded-full border border-red-100">
-            <Lock className="w-2.5 h-2.5" /> Clôturé
-          </div>
-        ) : missingOpponent ? (
+        {missingOpponent ? (
           <div className="absolute top-1.5 right-2 flex items-center gap-1 text-[8px] bg-amber-50 text-amber-600 font-bold px-1.5 py-0.5 rounded border border-amber-100 uppercase tracking-wider">
             Adversaire requis
           </div>
@@ -1619,8 +1620,8 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
 
     const winnerId = getSelectedWinnerForPredictions(currentPicks, matchId);
     
-    const isStarted = isMatchLocked(matchId);
-    const locked = mode === "prediction" && (isStarted || isViewingOther);
+    const isStarted = isMatchStarted(matchId);
+    const locked = mode === "prediction" && (isMatchLocked(matchId) || isViewingOther);
     const missingOpponent = !teamA || !teamB || isPlaceholderTeam(teamAId) || isPlaceholderTeam(teamBId);
 
     const isWinnerA = teamAId !== "" && teamBId !== "" && winnerId === teamAId;
@@ -1661,12 +1662,7 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
           ? "bg-white border border-gray-150 sm:border-gray-200 rounded-xl sm:rounded-2xl p-1 sm:p-2.5 shadow-2xs sm:shadow-sm" 
           : "bg-white border border-gray-200 rounded-2xl p-2 sm:p-2.5 shadow-sm hover:shadow-md hover:border-slate-350"
       }`}>
-        {isStarted ? (
-          <div className={`absolute flex items-center bg-red-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded-full border border-red-400 gap-0.5 shadow-xs z-20 ${round === "r32" ? "-top-1 -right-1 sm:-top-1.5 sm:-right-1" : "-top-1.5 -right-1"}`}>
-            <Lock className="w-2 h-2 sm:w-2.5 sm:h-2.5" />
-            <span className="hidden xs:inline">CLÔTURÉ</span>
-          </div>
-        ) : missingOpponent ? (
+        {missingOpponent ? (
           <div className={`absolute flex items-center bg-amber-50 text-amber-600 text-[8px] font-black px-1.5 py-0.5 rounded-full border border-amber-200 gap-0.5 shadow-xs uppercase tracking-wider ${round === "r32" ? "hidden sm:flex -top-1.5 -right-1" : "-top-1.5 -right-1"}`}>
             Adversaire requis
           </div>
