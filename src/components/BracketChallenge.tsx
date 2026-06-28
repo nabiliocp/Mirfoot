@@ -295,6 +295,107 @@ export interface RobustBracketState {
   winner: string;
 }
 
+export function computeLiveActualResults(matches: any[], dynamicR32Matches: BracketMatch[]): BracketPredictions {
+  const result: BracketPredictions = { r16: {}, r8: {}, r4: {}, r2: {}, winner: "" };
+  if (!matches || !matches.length) return result;
+
+  const knockoutMatches = matches.filter(m => {
+    const s = (m.stage || "").toUpperCase();
+    return !s.includes("GROUP") && !s.includes("REGULAR") && s !== "THIRD_PLACE";
+  }).sort((a, b) => new Date(a.utcDate).getTime() - new Date(b.utcDate).getTime());
+
+  const getBracketTeamId = (apiTeam: any): string | null => {
+    if (!apiTeam) return null;
+    const tla = (apiTeam.tla || "").toUpperCase();
+    const name = (apiTeam.name || "").toLowerCase();
+    
+    for (const match of dynamicR32Matches) {
+      if (match.teamAId && (match.teamAId.toUpperCase() === tla || name.includes(match.teamAId.toLowerCase()))) return match.teamAId;
+      if (match.teamBId && (match.teamBId.toUpperCase() === tla || name.includes(match.teamBId.toLowerCase()))) return match.teamBId;
+    }
+    return null; // fallback
+  };
+
+  const teamWins = new Map<string, number>();
+  let finalWinner = "";
+
+  knockoutMatches.forEach(m => {
+    if (m.status !== "FINISHED" && m.status !== "IN_PLAY" && m.status !== "PAUSED" && m.status !== "AWARDED") return;
+
+    const homeId = getBracketTeamId(m.homeTeam);
+    const awayId = getBracketTeamId(m.awayTeam);
+    if (!homeId && !awayId) return;
+    
+    let currentWinner = "";
+    if (m.status === "FINISHED" || m.status === "AWARDED") {
+       if (m.score?.winner === "HOME_TEAM") currentWinner = homeId || "";
+       else if (m.score?.winner === "AWAY_TEAM") currentWinner = awayId || "";
+    } else if (m.status === "IN_PLAY" || m.status === "PAUSED") {
+       const hScore = (m.score?.fullTime?.home !== undefined && m.score?.fullTime?.home !== null) ? m.score.fullTime.home : (m.score?.halfTime?.home || 0);
+       const aScore = (m.score?.fullTime?.away !== undefined && m.score?.fullTime?.away !== null) ? m.score.fullTime.away : (m.score?.halfTime?.away || 0);
+       if (hScore > aScore) currentWinner = homeId || "";
+       else if (aScore > hScore) currentWinner = awayId || "";
+    }
+
+    if (currentWinner) {
+      teamWins.set(currentWinner, (teamWins.get(currentWinner) || 0) + 1);
+      if ((m.stage || "").toUpperCase() === "FINAL") {
+        finalWinner = currentWinner;
+      }
+    }
+  });
+
+  const r32Mapping: Record<string, string> = {
+    R32_L1: "R16_L1_H", R32_L2: "R16_L1_A", R32_L3: "R16_L2_H", R32_L4: "R16_L2_A",
+    R32_L5: "R16_L3_H", R32_L6: "R16_L3_A", R32_L7: "R16_L4_H", R32_L8: "R16_L4_A",
+    R32_R1: "R16_R1_H", R32_R2: "R16_R1_A", R32_R3: "R16_R2_H", R32_R4: "R16_R2_A",
+    R32_R5: "R16_R3_H", R32_R6: "R16_R3_A", R32_R7: "R16_R4_H", R32_R8: "R16_R4_A",
+  };
+
+  const r16Mapping: Record<string, string> = {
+    R16_L1: "R8_L1_H", R16_L2: "R8_L1_A", R16_L3: "R8_L2_H", R16_L4: "R8_L2_A",
+    R16_R1: "R8_R1_H", R16_R2: "R8_R1_A", R16_R3: "R8_R2_H", R16_R4: "R8_R2_A",
+  };
+
+  const r8Mapping: Record<string, string> = {
+    R8_L1: "R4_L1_H", R8_L2: "R4_L1_A", R8_R1: "R4_R1_H", R8_R2: "R4_R1_A",
+  };
+
+  const r4Mapping: Record<string, string> = {
+    R4_L1: "R2_L1_H", R4_R1: "R2_L1_A",
+  };
+
+  for (const [teamId, wins] of teamWins.entries()) {
+    const match = dynamicR32Matches.find(m => m.teamAId === teamId || m.teamBId === teamId);
+    if (!match) continue;
+
+    let currentSlot = match.id;
+    if (wins >= 1) {
+      const next = r32Mapping[currentSlot];
+      if (next) { result.r16[next] = teamId; currentSlot = next.replace(/_A|_B|_H$/, ""); }
+    }
+    if (wins >= 2) {
+      const next = r16Mapping[currentSlot];
+      if (next) { result.r8[next] = teamId; currentSlot = next.replace(/_A|_B|_H$/, ""); }
+    }
+    if (wins >= 3) {
+      const next = r8Mapping[currentSlot];
+      if (next) { result.r4[next] = teamId; currentSlot = next.replace(/_A|_B|_H$/, ""); }
+    }
+    if (wins >= 4) {
+      const next = r4Mapping[currentSlot];
+      if (next) { result.r2[next] = teamId; }
+    }
+  }
+
+  if (finalWinner) {
+    result.winner = finalWinner;
+  }
+
+  // Sanitize to auto-fill dummy rounds for 16-team tournaments
+  return sanitizePredictions(result, dynamicR32Matches);
+}
+
 export function computeRobustBracketState(picks: BracketPredictions, r32Matches: BracketMatch[]): RobustBracketState {
   const r32Winners: Record<string, string> = {};
   
@@ -833,6 +934,10 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
     return defaultMatches;
   }, [challenge.competitionId, realCompMatches]);
 
+  const liveActualResults = useMemo(() => {
+    return computeLiveActualResults(realCompMatches, dynamicR32Matches);
+  }, [realCompMatches, dynamicR32Matches]);
+
   // State update helpers with localStorage persistence
   const updateTestMode = (val: boolean) => {
     setTestMode(val);
@@ -961,6 +1066,14 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
   const pointRulesStr = typeof challenge.pointRules === "string" 
     ? challenge.pointRules 
     : JSON.stringify(challenge.pointRules || {});
+    
+  const parsedPointRules = useMemo(() => {
+    try {
+      return pointRulesStr ? JSON.parse(pointRulesStr) : {};
+    } catch {
+      return {};
+    }
+  }, [pointRulesStr]);
 
   useEffect(() => {
     const loadData = async () => {
@@ -1121,6 +1234,8 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
       setPicks(updatedPicks);
       if (mode === "prediction") {
         handleSavePredictions(updatedPicks);
+      } else if (mode === "results") {
+        handleResolveChallenge(updatedPicks);
       }
     }
   };
@@ -1360,7 +1475,7 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
     }
   };
 
-  const handleResolveChallenge = async () => {
+  const handleResolveChallenge = async (picksToSave: BracketPredictions = picks) => {
     setSaving(true);
     setMessage(null);
     try {
@@ -1369,7 +1484,7 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           challengeId: challenge.id,
-          actualBracketPicks: picks,
+          actualBracketPicks: picksToSave,
           userId: userId,
         }),
       });
@@ -1692,10 +1807,16 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
 
         <div className={round === "r32" ? "space-y-0.5 sm:space-y-1" : "space-y-1"}>
           {(() => {
-            const simWinnerId = (testMode && simulatedResults) ? getSelectedWinnerForPredictions(simulatedResults, matchId) : "";
+            const currentActualResults = (testMode && simulatedResults) 
+              ? simulatedResults 
+              : (challenge.resolved && parsedPointRules.actualBracketPicks && Object.keys(parsedPointRules.actualBracketPicks.r16 || {}).length > 0 
+                  ? parsedPointRules.actualBracketPicks 
+                  : liveActualResults);
+
+            const simWinnerId = currentActualResults ? getSelectedWinnerForPredictions(currentActualResults, matchId) : "";
             const isSimWinnerA = simWinnerId === teamAId && teamAId !== "";
             const isSimWinnerB = simWinnerId === teamBId && teamBId !== "";
-            const showValidation = testMode && simulatedResults && simWinnerId && activeSimulationTab !== "simulation";
+            const showValidation = currentActualResults && simWinnerId && (!testMode || activeSimulationTab !== "simulation");
 
             let btnClassA = "";
             if (!teamA || isPlaceholderTeam(teamAId)) {
@@ -1748,12 +1869,12 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
             }
 
             const getSimTeamsForMatch = (mId: string) => {
-              if (!simulatedResults) return { homeId: "", awayId: "" };
+              if (!currentActualResults) return { homeId: "", awayId: "" };
               if (mId.startsWith("R32_")) {
                 const startMatch = dynamicR32Matches.find(m => m.id === mId);
                 return { homeId: startMatch?.homeId || "", awayId: startMatch?.awayId || "" };
               }
-              const simState = computeRobustBracketState(simulatedResults, dynamicR32Matches);
+              const simState = computeRobustBracketState(currentActualResults, dynamicR32Matches);
               if (mId.startsWith("R16_")) {
                 const match = simState.r16Matches.find(m => m.id === mId);
                 return { homeId: match?.homeId || "", awayId: match?.awayId || "" };
@@ -2443,12 +2564,23 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
                   .sort((a, b) => {
                     const predictionsA = a.user_id === userId ? picks : (a.predictions || {});
                     const predictionsB = b.user_id === userId ? picks : (b.predictions || {});
-                    const ptsA = (testMode && simulatedResults)
-                      ? calculateBracketPoints(sanitizePredictions(predictionsA, dynamicR32Matches), sanitizePredictions(simulatedResults, dynamicR32Matches))
+                    
+                    const currentActualResults = (testMode && simulatedResults) 
+                      ? simulatedResults 
+                      : (challenge.resolved && parsedPointRules.actualBracketPicks && Object.keys(parsedPointRules.actualBracketPicks.r16 || {}).length > 0 
+                          ? parsedPointRules.actualBracketPicks 
+                          : liveActualResults);
+
+                    const hasCurrentResults = currentActualResults && Object.keys(currentActualResults.r16 || {}).some(k => currentActualResults.r16[k]);
+
+                    const ptsA = hasCurrentResults
+                      ? calculateBracketPoints(sanitizePredictions(predictionsA, dynamicR32Matches), sanitizePredictions(currentActualResults, dynamicR32Matches))
                       : (a.points_awarded || 0);
-                    const ptsB = (testMode && simulatedResults)
-                      ? calculateBracketPoints(sanitizePredictions(predictionsB, dynamicR32Matches), sanitizePredictions(simulatedResults, dynamicR32Matches))
+                      
+                    const ptsB = hasCurrentResults
+                      ? calculateBracketPoints(sanitizePredictions(predictionsB, dynamicR32Matches), sanitizePredictions(currentActualResults, dynamicR32Matches))
                       : (b.points_awarded || 0);
+                      
                     if (ptsA !== ptsB) return ptsB - ptsA;
                     return (b.profile_points || 0) - (a.profile_points || 0);
                   })
@@ -2465,8 +2597,16 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
                     const winC = pPicks.winner ? 1 : 0;
                     const totalC = r16C + r8C + r4C + r2C + winC;
 
-                    const displayPoints = (testMode && simulatedResults)
-                      ? calculateBracketPoints(sanitizePredictions(pPicks, dynamicR32Matches), sanitizePredictions(simulatedResults, dynamicR32Matches))
+                    const currentActualResults = (testMode && simulatedResults) 
+                      ? simulatedResults 
+                      : (challenge.resolved && parsedPointRules.actualBracketPicks && Object.keys(parsedPointRules.actualBracketPicks.r16 || {}).length > 0 
+                          ? parsedPointRules.actualBracketPicks 
+                          : liveActualResults);
+
+                    const hasCurrentResults = currentActualResults && Object.keys(currentActualResults.r16 || {}).some(k => currentActualResults.r16[k]);
+
+                    const displayPoints = hasCurrentResults
+                      ? calculateBracketPoints(sanitizePredictions(pPicks, dynamicR32Matches), sanitizePredictions(currentActualResults, dynamicR32Matches))
                       : (p.points_awarded || 0);
                     
                     return (
@@ -2540,7 +2680,7 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
                               )}
                             </div>
                             <div className="text-[9px] text-gray-400 font-bold">
-                              Profil: {p.profile_points || 0} pts
+                              Score Général : {(p.profile_points || 0) + ((!challenge.resolved || (testMode && simulatedResults)) ? displayPoints : 0)} pts
                             </div>
                           </div>
                           
@@ -2623,31 +2763,11 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
             </div>
           )}
 
-          {/* Action Buttons */}
-          <div className="pt-4 flex justify-end">
-            {mode === "results" && (
-              <button
-                type="button"
-                disabled={saving}
-                onClick={handleResolveChallenge}
-                className="bg-emerald-700 hover:bg-emerald-800 text-white font-black px-6 py-3.5 rounded-2xl shadow-sm transition disabled:opacity-50 disabled:cursor-not-allowed text-sm flex items-center gap-2 cursor-pointer"
-              >
-                {saving ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    Enregistrement en cours...
-                  </>
-                ) : (
-                  <>🎯 Enregistrer les résultats officiels & Résoudre le défi</>
-                )}
-              </button>
-            )}
-          </div>
-          {mode === "prediction" && (
-             <p className="text-[11px] text-gray-400 font-bold text-right mt-1">
-               * Vos pronostics sont sauvegardés automatiquement à chaque sélection.
-             </p>
-          )}
+          <p className="text-[11px] text-gray-400 font-bold text-right mt-1 pt-4">
+            {mode === "prediction" 
+              ? "* Vos pronostics sont sauvegardés automatiquement à chaque sélection."
+              : "* Les résultats officiels sont enregistrés et le défi est résolu automatiquement à chaque sélection."}
+          </p>
         </>
       )}
     </div>
