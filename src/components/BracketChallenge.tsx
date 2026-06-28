@@ -2663,7 +2663,10 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
                             {(challenge.creatorId === userId || isAdmin) && p.user_id !== userId && (
                               <button
                                 type="button"
-                                onClick={() => handleKick(p.user_id, p.username || "Participant")}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleKick(p.user_id, p.username || "Participant");
+                                }}
                                 disabled={kickingParticipantId === p.user_id}
                                 className="bg-white hover:bg-red-50 text-gray-400 hover:text-red-500 border border-gray-200 hover:border-red-200 p-1.5 rounded-lg transition cursor-pointer flex items-center shadow-xs shrink-0"
                                 title="Retirer ce participant du défi"
