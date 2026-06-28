@@ -1501,7 +1501,7 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
         ) : null}
 
         {round === "r32" ? (
-          <div className="hidden sm:flex text-[9px] text-gray-400 font-bold mb-1 px-1 justify-between">
+          <div className="flex text-[9px] text-gray-400 font-bold mb-1 px-1 justify-between">
             <span>{matchId.replace("R32_", "")}</span>
             {BRACKET_MATCH_TIMES[matchId] && (
               <span className="text-[8px] text-gray-400">
