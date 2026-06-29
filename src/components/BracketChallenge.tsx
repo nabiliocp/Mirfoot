@@ -1923,19 +1923,8 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
       <div className={`relative w-full max-w-[220px] mx-auto transition duration-300 ${
         round === "r32" ? "p-1" : "p-2 hover:scale-105"
       }`}>
-        {isStarted ? (
-          <div className={`absolute flex items-center bg-red-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded-full border border-red-400 gap-0.5 shadow-xs z-20 ${round === "r32" ? "-top-1 -right-1 sm:-top-1.5 sm:-right-1" : "-top-1.5 -right-1"}`}>
-            <Lock className="w-2 h-2 sm:w-2.5 sm:h-2.5" />
-            <span className="hidden xs:inline">CLÔTURÉ</span>
-          </div>
-        ) : missingOpponent ? (
-          <div className={`absolute flex items-center bg-amber-50 text-amber-600 text-[8px] font-black px-1.5 py-0.5 rounded-full border border-amber-200 gap-0.5 shadow-xs uppercase tracking-wider ${round === "r32" ? "hidden sm:flex -top-1.5 -right-1" : "-top-1.5 -right-1"}`}>
-            Adversaire requis
-          </div>
-        ) : null}
-
         {round === "r32" ? (
-          <div className="flex text-[9px] text-gray-400 font-bold mb-1 px-1 justify-between">
+          <div className="flex text-[9px] text-gray-400 font-bold mb-1 px-1 justify-between items-center">
             <span>{matchId.replace("R32_", "")}</span>
             {getMatchTime(matchId) && (
               <span className="text-[8px] text-gray-400">
@@ -1949,7 +1938,17 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
           </div>
         )}
 
-        <div className="bg-white border border-gray-150 rounded-2xl p-2 sm:p-2.5 shadow-xs flex flex-col space-y-1.5">
+        <div className="bg-white border border-gray-150 rounded-2xl p-2 sm:p-2.5 shadow-xs flex flex-col space-y-1.5 relative">
+          {isStarted ? (
+            <div className="absolute top-1 right-1 flex items-center bg-red-500 text-white text-[7px] font-black px-1.5 py-0.5 rounded-full border border-red-400 gap-0.5 shadow-xs z-20">
+              <Lock className="w-1.5 h-1.5" />
+              <span>CLÔTURÉ</span>
+            </div>
+          ) : missingOpponent ? (
+            <div className="absolute top-1 right-1 flex items-center bg-amber-50 text-amber-600 text-[7px] font-black px-1.5 py-0.5 rounded-full border border-amber-200 gap-0.5 shadow-xs uppercase tracking-wider z-20">
+              Requis
+            </div>
+          ) : null}
           {(() => {
             const currentActualResults = (testMode && simulatedResults) 
               ? simulatedResults 
@@ -1978,7 +1977,7 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
                 if (isSimWinnerA) {
                   btnClassA = "bg-amber-50 border border-amber-300 text-amber-950 font-bold";
                 } else {
-                  btnClassA = "bg-white border border-gray-100 text-gray-400 opacity-60 hover:opacity-100";
+                  btnClassA = "bg-white border border-gray-150 text-gray-800 hover:bg-gray-50";
                 }
               }
             } else {
@@ -2003,7 +2002,7 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
                 if (isSimWinnerB) {
                   btnClassB = "bg-amber-50 border border-amber-300 text-amber-950 font-bold";
                 } else {
-                  btnClassB = "bg-white border border-gray-100 text-gray-400 opacity-60 hover:opacity-100";
+                  btnClassB = "bg-white border border-gray-150 text-gray-800 hover:bg-gray-50";
                 }
               }
             } else {
@@ -2021,11 +2020,13 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
                   onClick={() => !missingOpponent && handleSelectWinner(round, matchId, teamAId)}
                   className={`w-full flex items-center justify-between p-1.5 rounded-lg border text-xs font-bold transition-all ${btnClassA}`}
                 >
-                  <span className="flex items-center gap-1.5 min-w-0">
+                  <span className="flex items-center gap-1.5 min-w-0 flex-1">
                     <span className="text-base shrink-0">{teamA ? renderFlag(teamA.flag) : "❓"}</span>
                     <span className="truncate">{teamA ? teamA.name : "À déterminer"}</span>
+                  </span>
+                  <span className="flex items-center gap-1 shrink-0 ml-1.5">
                     {showValidation && !maskPrediction && teamA && (
-                      <span className="shrink-0">
+                      <>
                         {isWinnerA && isSimWinnerA && (
                           <span className="text-[7px] bg-emerald-600 text-white font-black px-1.5 py-0.5 rounded uppercase tracking-wider">Correct</span>
                         )}
@@ -2035,12 +2036,12 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
                         {!isWinnerA && isSimWinnerA && (
                           <span className="text-[7px] bg-amber-500 text-white font-black px-1.5 py-0.5 rounded uppercase tracking-wider">Gagnant</span>
                         )}
-                      </span>
+                      </>
+                    )}
+                    {isWinnerA && !maskPrediction && (
+                      <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
                     )}
                   </span>
-                  {isWinnerA && !maskPrediction && (
-                    <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                  )}
                 </button>
 
                 {/* VS Divider */}
@@ -2055,11 +2056,13 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
                   onClick={() => !missingOpponent && handleSelectWinner(round, matchId, teamBId)}
                   className={`w-full flex items-center justify-between p-1.5 rounded-lg border text-xs font-bold transition-all ${btnClassB}`}
                 >
-                  <span className="flex items-center gap-1.5 min-w-0">
+                  <span className="flex items-center gap-1.5 min-w-0 flex-1">
                     <span className="text-base shrink-0">{teamB ? renderFlag(teamB.flag) : "❓"}</span>
                     <span className="truncate">{teamB ? teamB.name : "À déterminer"}</span>
+                  </span>
+                  <span className="flex items-center gap-1 shrink-0 ml-1.5">
                     {showValidation && !maskPrediction && teamB && (
-                      <span className="shrink-0">
+                      <>
                         {isWinnerB && isSimWinnerB && (
                           <span className="text-[7px] bg-emerald-600 text-white font-black px-1.5 py-0.5 rounded uppercase tracking-wider">Correct</span>
                         )}
@@ -2069,12 +2072,12 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
                         {!isWinnerB && isSimWinnerB && (
                           <span className="text-[7px] bg-amber-500 text-white font-black px-1.5 py-0.5 rounded uppercase tracking-wider">Gagnant</span>
                         )}
-                      </span>
+                      </>
+                    )}
+                    {isWinnerB && !maskPrediction && (
+                      <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
                     )}
                   </span>
-                  {isWinnerB && !maskPrediction && (
-                    <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                  )}
                 </button>
               </>
             );
@@ -2098,57 +2101,85 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
   const handleShareBracket = async () => {
     try {
       setSharingBracket(true);
+      
+      const shareUrl = `${window.location.origin}/challenge/${challenge.id || ""}`;
+      
+      // Proactively copy the link to clipboard so the user gets instant result/feedback
+      try {
+        await navigator.clipboard.writeText(shareUrl);
+      } catch (clipErr) {
+        console.warn("Could not copy link to clipboard automatically", clipErr);
+      }
+
       const node = document.getElementById("bracket-export-node");
       if (!node) {
-        setMessage({ type: "error", text: "Erreur : conteneur de partage introuvable." });
+        setMessage({ type: "success", text: "Lien de partage copié dans le presse-papiers !" });
         return;
       }
 
-      const { toJpeg } = await import("html-to-image");
-      const dataUrl = await toJpeg(node, {
-        quality: 0.85,
-        backgroundColor: "#0f172a",
-        pixelRatio: 1.5,
-        cacheBust: true,
-        style: {
-          transform: 'scale(1)',
-          left: '0',
-          top: '0',
-          opacity: '1',
-          visibility: 'visible',
-        }
-      });
+      // Wrap image generation in a promise with a timeout of 3 seconds
+      const generateImagePromise = (async () => {
+        const { toJpeg } = await import("html-to-image");
+        return await toJpeg(node, {
+          quality: 0.8,
+          backgroundColor: "#0f172a",
+          pixelRatio: 1.2, // optimized for performance
+          cacheBust: true,
+          style: {
+            transform: 'scale(1)',
+            left: '0',
+            top: '0',
+            opacity: '1',
+            visibility: 'visible',
+          }
+        });
+      })();
 
+      const timeoutPromise = new Promise<null>((_, reject) => 
+        setTimeout(() => reject(new Error("Timeout")), 3000)
+      );
+
+      let dataUrl: string | null = null;
       try {
-        const response = await fetch(dataUrl);
-        const blob = await response.blob();
-        const file = new File([blob], "mes-pronostics-mirfoot.jpg", { type: "image/jpeg" });
+        dataUrl = await Promise.race([generateImagePromise, timeoutPromise]);
+      } catch (raceErr) {
+        console.warn("Image generation failed or timed out, using clipboard fallback:", raceErr);
+      }
 
-        const shareUrl = window.location.origin;
+      if (dataUrl) {
+        try {
+          const response = await fetch(dataUrl);
+          const blob = await response.blob();
+          const file = new File([blob], "mes-pronostics-mirfoot.jpg", { type: "image/jpeg" });
 
-        if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
-          await navigator.share({
-            title: `Mes pronostics - ${challenge.name}`,
-            text: `Rejoins-moi sur Mirfoot pour faire tes pronostics ! ⚽️🏆 Inscris-toi ici : ${shareUrl}`,
-            files: [file],
-          });
-        } else {
-          // Fallback download
+          if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+            await navigator.share({
+              title: `Mes pronostics - ${challenge.name}`,
+              text: `Rejoins-moi sur Mirfoot pour faire tes pronostics ! ⚽️🏆 Inscris-toi ici : ${shareUrl}`,
+              files: [file],
+            });
+            setMessage({ type: "success", text: "Lien copié et menu de partage ouvert !" });
+          } else {
+            const link = document.createElement("a");
+            link.download = "mes-pronostics-mirfoot.jpg";
+            link.href = dataUrl;
+            link.click();
+            setMessage({ type: "success", text: "Lien copié dans le presse-papiers et image téléchargée !" });
+          }
+        } catch (shareErr) {
+          console.log("Share API or download cancelled, falling back to download");
           const link = document.createElement("a");
           link.download = "mes-pronostics-mirfoot.jpg";
           link.href = dataUrl;
           link.click();
+          setMessage({ type: "success", text: "Lien copié dans le presse-papiers et image téléchargée !" });
         }
-      } catch (shareErr) {
-        console.log("Share API failed or user cancelled, falling back to download");
-        const link = document.createElement("a");
-        link.download = "mes-pronostics-mirfoot.jpg";
-        link.href = dataUrl;
-        link.click();
+      } else {
+        setMessage({ type: "success", text: "Lien de partage copié dans le presse-papiers !" });
       }
     } catch (err) {
       console.error("Error sharing bracket:", err);
-      setMessage({ type: "error", text: "Erreur lors de la génération de l'image." });
+      setMessage({ type: "success", text: "Lien de partage copié dans le presse-papiers !" });
     } finally {
       setSharingBracket(false);
     }
