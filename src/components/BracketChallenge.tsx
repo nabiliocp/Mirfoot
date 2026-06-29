@@ -653,6 +653,7 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
 
   const [qualifiedTeams, setQualifiedTeams] = useState<Set<string>>(new Set());
   const [loadingQualifications, setLoadingQualifications] = useState<boolean>(false);
+  const [apiFailed, setApiFailed] = useState<boolean>(false);
   const [realCompMatches, setRealCompMatches] = useState<any[]>(() => {
     try {
       const savedMatches = localStorage.getItem("mirfoot_matches_by_comp_v3");
@@ -670,6 +671,7 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
 
   const refreshQualifications = async (bypass = false) => {
     setLoadingQualifications(true);
+    setApiFailed(false);
     try {
       const originalCompId = challenge.competitionId || 2000;
       const compId = (originalCompId === 9999 || String(originalCompId) === "9999") ? 2000 : originalCompId;
@@ -693,8 +695,16 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
             console.error("Error saving fetched matches to localStorage:", e);
           }
         }
+      } else {
+        setApiFailed(true);
+        if (userId === "rouijel.nabil.cp@gmail.com") {
+          console.error("API Error: Admin alert for rouijel.nabil@gmail.com");
+          // Here we would ideally show a UI message, but for now let's set it in message state
+          setMessage({ type: "error", text: "⚠️ ERREUR API : Veuillez contacter le support technique. API injoignable." });
+        }
       }
     } catch (err) {
+      setApiFailed(true);
       console.error("Error fetching matches for bracket qualifications:", err);
     } finally {
       setLoadingQualifications(false);
@@ -1853,7 +1863,7 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
             const simWinnerId = currentActualResults ? getSelectedWinnerForPredictions(currentActualResults, matchId) : "";
             const isSimWinnerA = simWinnerId === teamAId && teamAId !== "";
             const isSimWinnerB = simWinnerId === teamBId && teamBId !== "";
-            const showValidation = currentActualResults && simWinnerId && (!testMode || activeSimulationTab !== "simulation");
+            const showValidation = !apiFailed && currentActualResults && simWinnerId && (!testMode || activeSimulationTab !== "simulation");
 
             let btnClassA = "";
             if (!teamA || isPlaceholderTeam(teamAId)) {
