@@ -596,6 +596,64 @@ const mapStatusToFootballData = (apiStatus: string) => {
   return "TIMED";
 };
 
+function getMockWorldCupMatches(): any[] {
+  const matches = [
+    { id: 9001, home: "BRA", homeName: "Brésil", away: "JPN", awayName: "Japon", time: "2026-06-29T18:00:00Z", winner: "HOME_TEAM", scoreHome: 2, scoreAway: 1 },
+    { id: 9002, home: "CIV", homeName: "Côte d'Ivoire", away: "NOR", awayName: "Norvège", time: "2026-06-30T21:00:00Z", winner: "HOME_TEAM", scoreHome: 1, scoreAway: 0 },
+    { id: 9003, home: "MEX", homeName: "Mexique", away: "ECU", awayName: "Équateur", time: "2026-07-01T15:00:00Z", winner: "AWAY_TEAM", scoreHome: 1, scoreAway: 2 },
+    { id: 9004, home: "ENG", homeName: "Angleterre", away: "COD", awayName: "RDC Congo", time: "2026-07-01T18:00:00Z", winner: "HOME_TEAM", scoreHome: 3, scoreAway: 0 },
+    { id: 9005, home: "ARG", homeName: "Argentine", away: "CPV", awayName: "Cap-Vert", time: "2026-07-04T21:00:00Z", winner: "HOME_TEAM", scoreHome: 2, scoreAway: 0 },
+    { id: 9006, home: "AUS", homeName: "Australie", away: "EGY", awayName: "Égypte", time: "2026-07-03T15:00:00Z", winner: "AWAY_TEAM", scoreHome: 1, scoreAway: 2 },
+    { id: 9007, home: "SUI", homeName: "Suisse", away: "ALG", awayName: "Algérie", time: "2026-07-03T18:00:00Z", winner: "HOME_TEAM", scoreHome: 1, scoreAway: 0 },
+    { id: 9008, home: "COL", homeName: "Colombie", away: "GHA", awayName: "Ghana", time: "2026-07-04T21:00:00Z", winner: "HOME_TEAM", scoreHome: 2, scoreAway: 1 },
+    { id: 9009, home: "GER", homeName: "Allemagne", away: "PAR", awayName: "Paraguay", time: "2026-06-29T15:00:00Z", winner: "HOME_TEAM", scoreHome: 2, scoreAway: 0 },
+    { id: 9010, home: "FRA", homeName: "France", away: "SWE", awayName: "Suède", time: "2026-07-01T21:00:00Z", winner: "HOME_TEAM", scoreHome: 3, scoreAway: 1 },
+    { id: 9011, home: "RSA", homeName: "Afrique du Sud", away: "CAN", awayName: "Canada", time: "2026-06-28T18:00:00Z", winner: "AWAY_TEAM", scoreHome: 1, scoreAway: 2 },
+    { id: 9012, home: "NED", homeName: "Pays-Bas", away: "MAR", awayName: "Maroc", time: "2026-06-30T15:00:00Z", winner: "HOME_TEAM", scoreHome: 2, scoreAway: 1 },
+    { id: 9013, home: "POR", homeName: "Portugal", away: "CRO", awayName: "Croatie", time: "2026-07-06T18:00:00Z", winner: "HOME_TEAM", scoreHome: 1, scoreAway: 0 },
+    { id: 9014, home: "ESP", homeName: "Espagne", away: "AUT", awayName: "Autriche", time: "2026-07-02T15:00:00Z", winner: "HOME_TEAM", scoreHome: 2, scoreAway: 0 },
+    { id: 9015, home: "USA", homeName: "États-Unis", away: "BIH", awayName: "Bosnie-Herzégovine", time: "2026-07-02T21:00:00Z", winner: "HOME_TEAM", scoreHome: 2, scoreAway: 1 },
+    { id: 9016, home: "BEL", homeName: "Belgique", away: "SEN", awayName: "Sénégal", time: "2026-07-01T18:00:00Z", winner: "HOME_TEAM", scoreHome: 1, scoreAway: 0 },
+  ];
+
+  return matches.map(m => {
+    return {
+      id: m.id,
+      utcDate: m.time,
+      status: "TIMED",
+      matchday: 1,
+      stage: "ROUND_OF_32",
+      group: null,
+      homeTeam: {
+        id: m.id * 10,
+        name: m.homeName,
+        shortName: m.homeName,
+        tla: m.home,
+        crest: ""
+      },
+      awayTeam: {
+        id: m.id * 10 + 1,
+        name: m.awayName,
+        shortName: m.awayName,
+        tla: m.away,
+        crest: ""
+      },
+      score: {
+        fullTime: {
+          home: m.scoreHome,
+          away: m.scoreAway,
+        },
+        winner: m.winner
+      },
+      competition: {
+        id: 2000,
+        name: "Coupe du Monde FIFA",
+        emblem: ""
+      }
+    };
+  });
+}
+
 function adjustMatchesDynamically(matches: any[]): any[] {
   if (!Array.isArray(matches)) return [];
   const now = Date.now();
@@ -1515,8 +1573,8 @@ async function startServer() {
           }
 
           if (fdCompId === 2000) {
-            console.log("[Fallback] API-Football failed for World Cup. Returning empty match list for self-healing backup...");
-            return res.json({ matches: [] });
+            console.log("[Fallback] API-Football failed for World Cup. Returning mock match list...");
+            return res.json({ matches: getMockWorldCupMatches() });
           }
 
           throw apiErr;
@@ -1563,8 +1621,8 @@ async function startServer() {
     } catch (err: any) {
       console.error("All fetch strategies failed for competition:", err);
       if (fdCompId === 2000) {
-        console.log("[Fallback] All APIs failed for World Cup. Returning empty match list for self-healing backup...");
-        return res.json({ matches: [] });
+        console.log("[Fallback] All APIs failed for World Cup. Returning mock match list...");
+        return res.json({ matches: getMockWorldCupMatches() });
       }
       res.status(500).json({ error: "Erreur réseau", details: err?.message || String(err) });
     }

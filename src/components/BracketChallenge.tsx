@@ -1559,6 +1559,8 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
         <img
           src={flagStr}
           alt=""
+          crossOrigin="anonymous"
+          referrerPolicy="no-referrer"
           className="w-7 h-5 rounded-sm object-cover inline shadow-2xs border border-gray-200"
           onError={(e) => { e.currentTarget.src = "https://flagcdn.com/w80/un.png"; }}
         />
@@ -1584,6 +1586,8 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
         <img
           src={srcUrl}
           alt=""
+          crossOrigin="anonymous"
+          referrerPolicy="no-referrer"
           className="w-full h-full object-cover rounded-full scale-105"
           onError={(e) => { e.currentTarget.src = "https://flagcdn.com/w160/un.png"; }}
         />
@@ -1702,11 +1706,6 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
             <span className="flex items-center gap-1.5 min-w-0">
               <span className="text-lg shrink-0">{teamA ? renderFlag(teamA.flag) : "❓"}</span>
               <span className="truncate">{teamA ? teamA.name : "À déterminer"}</span>
-              {teamA && !isPlaceholderTeam(teamAId) && qualifiedTeams.has(teamAId) && (
-                <span className="bg-emerald-100 text-emerald-800 text-[8px] font-black px-1 py-0.5 rounded-sm shrink-0">
-                  QUALIFIÉ
-                </span>
-              )}
             </span>
             {isSelectedA && <Check className="w-4 h-4 text-emerald-600 shrink-0" />}
           </button>
@@ -1736,11 +1735,6 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
             <span className="flex items-center gap-1.5 min-w-0">
               <span className="text-lg shrink-0">{teamB ? renderFlag(teamB.flag) : "❓"}</span>
               <span className="truncate">{teamB ? teamB.name : "À déterminer"}</span>
-              {teamB && !isPlaceholderTeam(teamBId) && qualifiedTeams.has(teamBId) && (
-                <span className="bg-emerald-100 text-emerald-800 text-[8px] font-black px-1 py-0.5 rounded-sm shrink-0">
-                  QUALIFIÉ
-                </span>
-              )}
             </span>
             {isSelectedB && <Check className="w-4 h-4 text-emerald-600 shrink-0" />}
           </button>
@@ -2030,11 +2024,6 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
                   <span className="flex items-center gap-1.5 min-w-0">
                     <span className="text-base shrink-0">{teamA ? renderFlag(teamA.flag) : "❓"}</span>
                     <span className="truncate">{teamA ? teamA.name : "À déterminer"}</span>
-                    {teamA && !isPlaceholderTeam(teamAId) && qualifiedTeams.has(teamAId) && (
-                      <span className="bg-emerald-100 text-emerald-800 text-[7px] font-black px-1 py-0.5 rounded-sm shrink-0">
-                        QUALIFIÉ
-                      </span>
-                    )}
                     {showValidation && !maskPrediction && teamA && (
                       <span className="shrink-0">
                         {isWinnerA && isSimWinnerA && (
@@ -2069,11 +2058,6 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
                   <span className="flex items-center gap-1.5 min-w-0">
                     <span className="text-base shrink-0">{teamB ? renderFlag(teamB.flag) : "❓"}</span>
                     <span className="truncate">{teamB ? teamB.name : "À déterminer"}</span>
-                    {teamB && !isPlaceholderTeam(teamBId) && qualifiedTeams.has(teamBId) && (
-                      <span className="bg-emerald-100 text-emerald-800 text-[7px] font-black px-1 py-0.5 rounded-sm shrink-0">
-                        QUALIFIÉ
-                      </span>
-                    )}
                     {showValidation && !maskPrediction && teamB && (
                       <span className="shrink-0">
                         {isWinnerB && isSimWinnerB && (
@@ -2122,9 +2106,17 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
 
       const { toJpeg } = await import("html-to-image");
       const dataUrl = await toJpeg(node, {
-        quality: 0.9,
+        quality: 0.85,
         backgroundColor: "#0f172a",
-        pixelRatio: 2,
+        pixelRatio: 1.5,
+        cacheBust: true,
+        style: {
+          transform: 'scale(1)',
+          left: '0',
+          top: '0',
+          opacity: '1',
+          visibility: 'visible',
+        }
       });
 
       try {
@@ -2369,8 +2361,8 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
           </div>
         </div>
 
-        {/* Hidden Export Node */}
-        <div className="fixed top-0 left-0 -z-50 opacity-0 pointer-events-none">
+        {/* Hidden Export Node (positioned far off-screen so layout engine fully renders it) */}
+        <div className="absolute left-[-9999px] top-[-9999px]">
           <div
             id="bracket-export-node"
             className="bg-[#0f172a] flex flex-col items-center justify-center w-[3600px] p-24"
