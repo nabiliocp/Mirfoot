@@ -1554,7 +1554,7 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
 
   const renderFlag = (flagStr: string | undefined, isExport: boolean = false) => {
     if (!flagStr) return "❓";
-    if (flagStr.startsWith("http")) return <img src={flagStr} alt="" className={`${isExport ? "w-full h-16 rounded-md" : "w-full h-8 rounded-sm"} object-cover inline`} onError={(e) => { e.currentTarget.src = "https://flagcdn.com/w80/un.png"; }} />;
+    if (flagStr.startsWith("http")) return <img src={flagStr} alt="" className={`${isExport ? "w-24 h-24" : "w-10 h-10 sm:w-12 sm:h-12"} rounded-full object-cover inline shadow-sm border border-slate-700/20 bg-white`} onError={(e) => { e.currentTarget.src = "https://flagcdn.com/w80/un.png"; }} />;
     return flagStr;
   };
 
@@ -1632,49 +1632,49 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
     const missingOpponent = !teamA || !teamB || isPlaceholderTeam(teamAId) || isPlaceholderTeam(teamBId);
 
     return (
-      <div className="bg-white border border-gray-150 rounded-2xl p-3 shadow-xs hover:shadow-md transition-all duration-300 relative overflow-hidden">
+      <div className="p-2 transition-all duration-300 relative overflow-visible flex items-center justify-center group">
         {locked ? (
-          <div className="absolute top-1.5 right-2 flex items-center gap-1 text-[9px] bg-red-50 text-red-600 font-bold px-1.5 py-0.5 rounded-full border border-red-100">
+          <div className="absolute top-0 right-0 flex items-center gap-1 text-[9px] bg-red-50 text-red-600 font-bold px-1.5 py-0.5 rounded-full border border-red-100 z-20">
             <Lock className="w-2.5 h-2.5" /> Clôturé
           </div>
         ) : missingOpponent ? (
-          <div className="absolute top-1.5 right-2 flex items-center gap-1 text-[8px] bg-amber-50 text-amber-600 font-bold px-1.5 py-0.5 rounded border border-amber-100 uppercase tracking-wider">
+          <div className="absolute -top-2 flex items-center gap-1 text-[8px] bg-amber-50 text-amber-600 font-bold px-1.5 py-0.5 rounded-full border border-amber-100 uppercase tracking-wider z-20 shadow-xs">
             Adversaire requis
           </div>
         ) : null}
         
-        <div className="space-y-1.5 mt-1">
+        <div className="flex flex-row items-center justify-center gap-4">
           {/* Team A */}
           <button
             type="button"
             disabled={locked || missingOpponent}
             onClick={() => !missingOpponent && handleSelectWinner(round, matchId, teamAId)}
-            className={`w-full flex items-center justify-between p-1 rounded-xl border text-sm font-bold transition-all overflow-hidden ${
+            className={`relative flex items-center justify-center rounded-full transition-all ${
               !teamA || isPlaceholderTeam(teamAId)
-                ? "bg-gray-55 border-dashed border-gray-200 text-gray-400 cursor-not-allowed"
+                ? "opacity-40 cursor-not-allowed"
                 : missingOpponent
-                  ? "bg-gray-50/50 border-gray-150 text-gray-500 opacity-75 cursor-not-allowed"
+                  ? "opacity-60 cursor-not-allowed"
                   : isSelectedA
-                    ? "bg-emerald-50 border-emerald-500 text-emerald-950 shadow-sm"
+                    ? "scale-110 drop-shadow-md z-10 ring-4 ring-emerald-500"
                     : locked
-                      ? "bg-gray-50 border-gray-100 text-gray-500 cursor-not-allowed"
-                      : "bg-white border-gray-100 text-gray-800 hover:bg-gray-50 cursor-pointer"
+                      ? "opacity-75 cursor-not-allowed"
+                      : "opacity-80 hover:opacity-100 hover:scale-105 cursor-pointer"
             }`}
           >
-            <span className="flex items-center w-full justify-center min-w-0">
-              <span className="w-full flex items-center justify-center">{teamA ? renderFlag(teamA.flag) : "❓"}</span>
+            <span className="flex items-center justify-center">
+              {teamA ? renderFlag(teamA.flag) : "❓"}
               {teamA && !isPlaceholderTeam(teamAId) && qualifiedTeams.has(teamAId) && (
-                <span className="absolute bg-emerald-100 text-emerald-800 text-[8px] font-black px-1 py-0.5 rounded-sm shrink-0">
+                <span className="absolute -bottom-2 bg-emerald-100 text-emerald-800 text-[8px] font-black px-1.5 py-0.5 rounded-full shrink-0 shadow-sm whitespace-nowrap">
                   QUALIFIÉ
                 </span>
               )}
             </span>
-            {isSelectedA && <Check className="absolute right-2 w-4 h-4 text-emerald-600 shrink-0" />}
+            {isSelectedA && <Check className="absolute -top-1 -right-1 w-4 h-4 text-emerald-500 bg-white rounded-full shrink-0 z-20" />}
           </button>
 
           {/* VS Divider */}
           <div className="flex items-center justify-center py-0.5">
-            <span className="text-[10px] text-gray-400 font-black tracking-widest uppercase">vs</span>
+            <span className="text-[10px] text-gray-400 font-black tracking-widest uppercase px-2">VS</span>
           </div>
 
           {/* Team B */}
@@ -1682,27 +1682,27 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
             type="button"
             disabled={locked || missingOpponent}
             onClick={() => !missingOpponent && handleSelectWinner(round, matchId, teamBId)}
-            className={`w-full flex items-center justify-between p-1 rounded-xl border text-sm font-bold transition-all overflow-hidden ${
+            className={`relative flex items-center justify-center rounded-full transition-all ${
               !teamB || isPlaceholderTeam(teamBId)
-                ? "bg-gray-55 border-dashed border-gray-200 text-gray-400 cursor-not-allowed"
+                ? "opacity-40 cursor-not-allowed"
                 : missingOpponent
-                  ? "bg-gray-50/50 border-gray-150 text-gray-500 opacity-75 cursor-not-allowed"
+                  ? "opacity-60 cursor-not-allowed"
                   : isSelectedB
-                    ? "bg-emerald-50 border-emerald-500 text-emerald-950 shadow-sm"
+                    ? "scale-110 drop-shadow-md z-10 ring-4 ring-emerald-500"
                     : locked
-                      ? "bg-gray-50 border-gray-100 text-gray-500 cursor-not-allowed"
-                      : "bg-white border-gray-100 text-gray-800 hover:bg-gray-50 cursor-pointer"
+                      ? "opacity-75 cursor-not-allowed"
+                      : "opacity-80 hover:opacity-100 hover:scale-105 cursor-pointer"
             }`}
           >
-            <span className="flex items-center w-full justify-center min-w-0">
-              <span className="w-full flex items-center justify-center">{teamB ? renderFlag(teamB.flag) : "❓"}</span>
+            <span className="flex items-center justify-center">
+              {teamB ? renderFlag(teamB.flag) : "❓"}
               {teamB && !isPlaceholderTeam(teamBId) && qualifiedTeams.has(teamBId) && (
-                <span className="absolute bg-emerald-100 text-emerald-800 text-[8px] font-black px-1 py-0.5 rounded-sm shrink-0">
+                <span className="absolute -bottom-2 bg-emerald-100 text-emerald-800 text-[8px] font-black px-1.5 py-0.5 rounded-full shrink-0 shadow-sm whitespace-nowrap">
                   QUALIFIÉ
                 </span>
               )}
             </span>
-            {isSelectedB && <Check className="absolute right-2 w-4 h-4 text-emerald-600 shrink-0" />}
+            {isSelectedB && <Check className="absolute -top-1 -right-1 w-4 h-4 text-emerald-500 bg-white rounded-full shrink-0 z-20" />}
           </button>
         </div>
       </div>
@@ -1822,9 +1822,11 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
 
     return (
       <div className={`relative w-full max-w-[200px] mx-auto transition duration-300 ${
-        round === "r32" 
-          ? "bg-white border border-gray-150 sm:border-gray-200 rounded-xl sm:rounded-2xl p-1 sm:p-2.5 shadow-2xs sm:shadow-sm" 
-          : "bg-white border border-gray-200 rounded-2xl p-2 sm:p-2.5 shadow-sm hover:shadow-md hover:border-slate-350"
+        isExport
+          ? ""
+          : round === "r32" 
+            ? "p-1" 
+            : "p-2 hover:scale-105"
       }`}>
         {isStarted ? (
           <div className={`absolute flex items-center bg-red-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded-full border border-red-400 gap-0.5 shadow-xs z-20 ${round === "r32" ? "-top-1 -right-1 sm:-top-1.5 sm:-right-1" : "-top-1.5 -right-1"}`}>
@@ -1852,7 +1854,7 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
           </div>
         )}
 
-        <div className={round === "r32" ? "space-y-0.5 sm:space-y-1" : "space-y-1"}>
+        <div className="flex flex-row items-center justify-center gap-2">
           {(() => {
             const currentActualResults = (testMode && simulatedResults) 
               ? simulatedResults 
@@ -1867,52 +1869,52 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
 
             let btnClassA = "";
             if (!teamA || isPlaceholderTeam(teamAId)) {
-              btnClassA = "bg-gray-55 border border-dashed border-gray-200 text-gray-400 cursor-not-allowed";
+              btnClassA = "opacity-40 cursor-not-allowed";
             } else if ((!teamB || isPlaceholderTeam(teamBId)) && !showValidation) {
-              btnClassA = "bg-gray-50 border border-gray-150 text-gray-500 opacity-75 cursor-not-allowed";
+              btnClassA = "opacity-60 cursor-not-allowed";
             } else if (showValidation) {
               if (isWinnerA) {
                 if (isSimWinnerA) {
-                  btnClassA = "bg-emerald-50/80 border-emerald-500 text-emerald-950 font-black shadow-sm ring-1 ring-emerald-500/30";
+                  btnClassA = "scale-110 drop-shadow-md z-10";
                 } else {
-                  btnClassA = "bg-rose-50 border-rose-400 text-rose-950 font-bold shadow-xs";
+                  btnClassA = "opacity-60 grayscale z-10";
                 }
               } else {
                 if (isSimWinnerA) {
-                  btnClassA = "bg-amber-50/30 border-amber-300 text-amber-950 font-bold";
+                  btnClassA = "opacity-80 drop-shadow-sm";
                 } else {
-                  btnClassA = "bg-white border-gray-150 text-gray-400 opacity-60 hover:opacity-100";
+                  btnClassA = "opacity-50 hover:opacity-100";
                 }
               }
             } else {
               btnClassA = isWinnerA
-                ? "bg-emerald-50 border-emerald-500 text-emerald-950 font-black shadow-xs"
-                : "bg-white border-gray-200 text-gray-750 hover:bg-gray-50 hover:border-gray-300 cursor-pointer";
+                ? "scale-110 drop-shadow-md z-10 opacity-100 ring-4 ring-emerald-500 rounded-full"
+                : "opacity-75 hover:opacity-100 hover:scale-105 transition-all cursor-pointer";
             }
 
             let btnClassB = "";
             if (!teamB || isPlaceholderTeam(teamBId)) {
-              btnClassB = "bg-gray-55 border border-dashed border-gray-200 text-gray-400 cursor-not-allowed";
+              btnClassB = "opacity-40 cursor-not-allowed";
             } else if ((!teamA || isPlaceholderTeam(teamAId)) && !showValidation) {
-              btnClassB = "bg-gray-50 border border-gray-150 text-gray-500 opacity-75 cursor-not-allowed";
+              btnClassB = "opacity-60 cursor-not-allowed";
             } else if (showValidation) {
               if (isWinnerB) {
                 if (isSimWinnerB) {
-                  btnClassB = "bg-emerald-50/80 border-emerald-500 text-emerald-950 font-black shadow-sm ring-1 ring-emerald-500/30";
+                  btnClassB = "scale-110 drop-shadow-md z-10";
                 } else {
-                  btnClassB = "bg-rose-50 border-rose-400 text-rose-950 font-bold shadow-xs";
+                  btnClassB = "opacity-60 grayscale z-10";
                 }
               } else {
                 if (isSimWinnerB) {
-                  btnClassB = "bg-amber-50/30 border-amber-300 text-amber-950 font-bold";
+                  btnClassB = "opacity-80 drop-shadow-sm";
                 } else {
-                  btnClassB = "bg-white border-gray-150 text-gray-400 opacity-60 hover:opacity-100";
+                  btnClassB = "opacity-50 hover:opacity-100";
                 }
               }
             } else {
               btnClassB = isWinnerB
-                ? "bg-emerald-50 border-emerald-500 text-emerald-950 font-black shadow-xs"
-                : "bg-white border-gray-200 text-gray-750 hover:bg-gray-50 hover:border-gray-300 cursor-pointer";
+                ? "scale-110 drop-shadow-md z-10 opacity-100 ring-4 ring-emerald-500 rounded-full"
+                : "opacity-75 hover:opacity-100 hover:scale-105 transition-all cursor-pointer";
             }
 
             return (
@@ -1921,24 +1923,20 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
                   type="button"
                   disabled={locked || missingOpponent}
                   onClick={() => !missingOpponent && handleSelectWinner(round, matchId, teamAId)}
-                  className={`w-full flex items-center justify-between transition-all overflow-hidden ${
+                  className={`flex items-center justify-center transition-all ${
                     isExport
-                      ? "p-0 rounded-xl text-3xl font-black"
-                      : round === "r32" 
-                        ? "p-1 sm:p-1.5 rounded-md sm:rounded-lg text-[10px] sm:text-xs font-black sm:font-bold" 
-                        : "p-1.5 rounded-lg text-xs font-bold"
+                      ? "rounded-full"
+                      : "rounded-full"
                   } ${btnClassA}`}
                 >
-                  <span className={`flex items-center w-full justify-center ${isExport ? "" : "gap-0"}`}>
+                  <span className={`flex items-center justify-center`}>
                     {maskPrediction ? (
-                      <>
-                        <span className={`${isExport ? "text-5xl py-4" : "text-xs py-1.5"} shrink-0`}>🔒</span>
-                      </>
+                      <span className={`${isExport ? "text-5xl" : "text-xl"} shrink-0`}>🔒</span>
                     ) : (
                       <>
-                        <span className="w-full flex items-center justify-center">{teamA ? renderFlag(teamA.flag, isExport) : "❓"}</span>
+                        {teamA ? renderFlag(teamA.flag, isExport) : "❓"}
                         {showValidation && !maskPrediction && teamA && !isExport && (
-                          <>
+                          <div className="absolute -bottom-1 -right-1 z-20">
                             {isWinnerA && isSimWinnerA && (
                               <span className="text-[7px] bg-emerald-600 text-white font-black px-1 py-0.2 rounded shrink-0 uppercase tracking-wider">Correct</span>
                             )}
@@ -1948,7 +1946,7 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
                             {!isWinnerA && isSimWinnerA && (
                               <span className="text-[7px] bg-amber-500 text-white font-black px-1 py-0.2 rounded shrink-0 uppercase tracking-wider">Gagnant</span>
                             )}
-                          </>
+                          </div>
                         )}
                       </>
                     )}
@@ -1956,16 +1954,16 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
                   {isWinnerA && !maskPrediction && (
                     showValidation ? (
                       isSimWinnerA ? (
-                        <Check className={`${isExport ? "absolute w-8 h-8 drop-shadow-md right-2" : "w-3.5 h-3.5"} text-emerald-600 shrink-0`} />
+                        <Check className={`absolute z-20 ${isExport ? "w-8 h-8 -top-2 -right-2" : "w-4 h-4 -top-1 -right-1"} text-emerald-500 bg-white rounded-full shrink-0`} />
                       ) : (
-                        <span className={`text-rose-600 ${isExport ? "absolute text-2xl drop-shadow-md right-2" : "text-[10px]"} font-black shrink-0`}>❌</span>
+                        <span className={`absolute z-20 text-rose-500 ${isExport ? "text-2xl -top-2 -right-2" : "text-[12px] -top-1 -right-1"} bg-white rounded-full font-black shrink-0`}>❌</span>
                       )
                     ) : (
-                      <Check className={`${isExport ? "absolute w-8 h-8 drop-shadow-md right-2" : "w-3.5 h-3.5"} text-emerald-600 shrink-0`} />
+                      <Check className={`absolute z-20 ${isExport ? "w-8 h-8 -top-2 -right-2" : "w-4 h-4 -top-1 -right-1"} text-emerald-500 bg-white rounded-full shrink-0`} />
                     )
                   )}
                   {!isWinnerA && showValidation && isSimWinnerA && !maskPrediction && (
-                    <span className={`text-amber-500 ${isExport ? "absolute text-2xl drop-shadow-md right-2" : "text-[10px]"} font-black shrink-0`}>🏆</span>
+                    <span className={`absolute z-20 text-amber-500 ${isExport ? "text-2xl -top-2 -right-2" : "text-[12px] -top-1 -right-1"} bg-white rounded-full font-black shrink-0`}>🏆</span>
                   )}
                 </button>
 
@@ -1973,24 +1971,20 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
                   type="button"
                   disabled={locked || missingOpponent}
                   onClick={() => !missingOpponent && handleSelectWinner(round, matchId, teamBId)}
-                  className={`w-full flex items-center justify-between transition-all overflow-hidden ${
+                  className={`flex items-center justify-center transition-all ${
                     isExport
-                      ? "p-0 rounded-xl text-3xl font-black"
-                      : round === "r32" 
-                        ? "p-1 sm:p-1.5 rounded-md sm:rounded-lg text-[10px] sm:text-xs font-black sm:font-bold" 
-                        : "p-1.5 rounded-lg text-xs font-bold"
+                      ? "rounded-full"
+                      : "rounded-full"
                   } ${btnClassB}`}
                 >
-                  <span className={`flex items-center w-full justify-center ${isExport ? "" : "gap-0"}`}>
+                  <span className={`flex items-center justify-center`}>
                     {maskPrediction ? (
-                      <>
-                        <span className={`${isExport ? "text-5xl py-4" : "text-xs py-1.5"} shrink-0`}>🔒</span>
-                      </>
+                      <span className={`${isExport ? "text-5xl" : "text-xl"} shrink-0`}>🔒</span>
                     ) : (
                       <>
-                        <span className="w-full flex items-center justify-center">{teamB ? renderFlag(teamB.flag, isExport) : "❓"}</span>
+                        {teamB ? renderFlag(teamB.flag, isExport) : "❓"}
                         {showValidation && !maskPrediction && teamB && !isExport && (
-                          <>
+                          <div className="absolute -bottom-1 -right-1 z-20">
                             {isWinnerB && isSimWinnerB && (
                               <span className="text-[7px] bg-emerald-600 text-white font-black px-1 py-0.2 rounded shrink-0 uppercase tracking-wider">Correct</span>
                             )}
@@ -2000,7 +1994,7 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
                             {!isWinnerB && isSimWinnerB && (
                               <span className="text-[7px] bg-amber-500 text-white font-black px-1 py-0.2 rounded shrink-0 uppercase tracking-wider">Gagnant</span>
                             )}
-                          </>
+                          </div>
                         )}
                       </>
                     )}
@@ -2008,16 +2002,16 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
                   {isWinnerB && !maskPrediction && (
                     showValidation ? (
                       isSimWinnerB ? (
-                        <Check className={`${isExport ? "absolute w-8 h-8 drop-shadow-md right-2" : "w-3.5 h-3.5"} text-emerald-600 shrink-0`} />
+                        <Check className={`absolute z-20 ${isExport ? "w-8 h-8 -top-2 -right-2" : "w-4 h-4 -top-1 -right-1"} text-emerald-500 bg-white rounded-full shrink-0`} />
                       ) : (
-                        <span className={`text-rose-600 ${isExport ? "absolute text-2xl drop-shadow-md right-2" : "text-[10px]"} font-black shrink-0`}>❌</span>
+                        <span className={`absolute z-20 text-rose-500 ${isExport ? "text-2xl -top-2 -right-2" : "text-[12px] -top-1 -right-1"} bg-white rounded-full font-black shrink-0`}>❌</span>
                       )
                     ) : (
-                      <Check className={`${isExport ? "absolute w-8 h-8 drop-shadow-md right-2" : "w-3.5 h-3.5"} text-emerald-600 shrink-0`} />
+                      <Check className={`absolute z-20 ${isExport ? "w-8 h-8 -top-2 -right-2" : "w-4 h-4 -top-1 -right-1"} text-emerald-500 bg-white rounded-full shrink-0`} />
                     )
                   )}
                   {!isWinnerB && showValidation && isSimWinnerB && !maskPrediction && (
-                    <span className={`text-amber-500 ${isExport ? "absolute text-2xl drop-shadow-md right-2" : "text-[10px]"} font-black shrink-0`}>🏆</span>
+                    <span className={`absolute z-20 text-amber-500 ${isExport ? "text-2xl -top-2 -right-2" : "text-[12px] -top-1 -right-1"} bg-white rounded-full font-black shrink-0`}>🏆</span>
                   )}
                 </button>
               </>
