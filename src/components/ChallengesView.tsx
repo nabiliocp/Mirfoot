@@ -1428,7 +1428,7 @@ export default function ChallengesView({
             status: "accepted",
           });
           
-        await fetchChallenges(currentUserId);
+        await loadData();
         setActiveModal({ type: "detail", challenge: data[0] });
       } else {
         alert("Erreur lors de la création du tableau.");
@@ -4925,7 +4925,7 @@ export default function ChallengesView({
                     >
                       Créer un défi match
                     </button>
-                    {!preselectedMatch && !isArchiveMode && (
+                    {!preselectedMatch && (
                       <div className="mt-8 border-t border-gray-100 pt-8 w-full max-w-md mx-auto">
                         <div className="bg-gradient-to-br from-amber-400 to-amber-500 rounded-3xl p-8 text-center shadow-lg relative overflow-hidden">
                           <div className="absolute top-0 right-0 -mt-4 -mr-4 text-7xl opacity-20">🏆</div>
