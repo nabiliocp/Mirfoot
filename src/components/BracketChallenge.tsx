@@ -2309,7 +2309,7 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
         </div>
 
         {/* Hidden Export Node */}
-        <div className="absolute top-[-9999px] left-[-9999px] opacity-0 pointer-events-none w-0 h-0 overflow-hidden">
+        <div className="absolute top-[-9999px] left-[-9999px] opacity-0 pointer-events-none w-[1920px] h-[1080px]">
           <div
             id="bracket-export-node"
             className="bg-[#0f172a] flex flex-col items-center justify-center w-[1920px] h-[1080px]"
@@ -2317,23 +2317,28 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
             <style>
               {`
                 #bracket-export-node button {
-                  padding: 10px 14px !important;
+                  padding: 14px 18px !important;
                 }
                 #bracket-export-node button span.truncate {
-                  font-size: 18px !important;
-                  line-height: 24px !important;
+                  font-size: 24px !important;
+                  line-height: 28px !important;
                   font-weight: 900 !important;
                 }
-                #bracket-export-node img {
-                  width: 32px !important;
-                  height: 32px !important;
-                  margin-right: 4px !important;
+                #bracket-export-node button img {
+                  width: 48px !important;
+                  height: 48px !important;
+                  margin-right: 8px !important;
                 }
                 #bracket-export-node .text-\\[10px\\] {
-                  font-size: 14px !important;
+                  font-size: 16px !important;
                 }
                 #bracket-export-node .text-xs {
-                  font-size: 16px !important;
+                  font-size: 18px !important;
+                }
+                #bracket-export-node .bg-gradient-to-b img {
+                  width: 80px !important;
+                  height: 80px !important;
+                  margin-right: 16px !important;
                 }
               `}
             </style>
