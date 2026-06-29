@@ -1554,7 +1554,7 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
 
   const renderFlag = (flagStr: string | undefined, isExport: boolean = false) => {
     if (!flagStr) return "❓";
-    if (flagStr.startsWith("http")) return <img src={flagStr} alt="" className={`${isExport ? "w-7 h-7 mr-1" : "w-5 h-5"} object-contain inline`} onError={(e) => { e.currentTarget.src = "https://flagcdn.com/w80/un.png"; }} />;
+    if (flagStr.startsWith("http")) return <img src={flagStr} alt="" className={`${isExport ? "w-16 h-16 mr-3" : "w-5 h-5"} object-contain inline`} onError={(e) => { e.currentTarget.src = "https://flagcdn.com/w80/un.png"; }} />;
     return flagStr;
   };
 
@@ -1925,21 +1925,21 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
                   onClick={() => !missingOpponent && handleSelectWinner(round, matchId, teamAId)}
                   className={`w-full flex items-center justify-between transition-all ${
                     isExport
-                      ? "p-2 rounded-xl text-[16px] font-black"
+                      ? "p-5 rounded-xl text-3xl font-black"
                       : round === "r32" 
                         ? "p-1 sm:p-1.5 rounded-md sm:rounded-lg text-[10px] sm:text-xs font-black sm:font-bold" 
                         : "p-1.5 rounded-lg text-xs font-bold"
                   } ${btnClassA}`}
                 >
-                  <span className={`flex items-center truncate ${isExport ? "gap-2 text-[16px]" : round === "r32" ? "gap-1 sm:gap-1.5" : "gap-1.5"}`}>
+                  <span className={`flex items-center truncate ${isExport ? "gap-4 text-3xl" : round === "r32" ? "gap-1 sm:gap-1.5" : "gap-1.5"}`}>
                     {maskPrediction ? (
                       <>
-                        <span className={`${isExport ? "text-lg" : "text-xs"} shrink-0`}>🔒</span>
+                        <span className={`${isExport ? "text-3xl" : "text-xs"} shrink-0`}>🔒</span>
                         <span className="text-gray-400 italic">Masqué</span>
                       </>
                     ) : (
                       <>
-                        <span className={`${isExport ? "text-xl" : "text-sm"} shrink-0`}>{teamA ? renderFlag(teamA.flag, isExport) : "❓"}</span>
+                        <span className={`${isExport ? "text-4xl" : "text-sm"} shrink-0 flex items-center`}>{teamA ? renderFlag(teamA.flag, isExport) : "❓"}</span>
                         <span className="truncate">{teamA ? teamA.name : "À déterminer"}</span>
                         {showValidation && !maskPrediction && teamA && (
                           <>
@@ -1960,12 +1960,12 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
                   {isWinnerA && !maskPrediction && (
                     showValidation ? (
                       isSimWinnerA ? (
-                        <Check className={`${isExport ? "w-5 h-5" : "w-3.5 h-3.5"} text-emerald-600 shrink-0`} />
+                        <Check className={`${isExport ? "w-8 h-8" : "w-3.5 h-3.5"} text-emerald-600 shrink-0`} />
                       ) : (
-                        <span className="text-rose-600 text-[10px] font-black shrink-0">❌</span>
+                        <span className={`text-rose-600 ${isExport ? "text-xl" : "text-[10px]"} font-black shrink-0`}>❌</span>
                       )
                     ) : (
-                      <Check className={`${isExport ? "w-5 h-5" : "w-3.5 h-3.5"} text-emerald-600 shrink-0`} />
+                      <Check className={`${isExport ? "w-8 h-8" : "w-3.5 h-3.5"} text-emerald-600 shrink-0`} />
                     )
                   )}
                   {!isWinnerA && showValidation && isSimWinnerA && !maskPrediction && (
@@ -1979,21 +1979,21 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
                   onClick={() => !missingOpponent && handleSelectWinner(round, matchId, teamBId)}
                   className={`w-full flex items-center justify-between transition-all ${
                     isExport
-                      ? "p-2 rounded-xl text-[16px] font-black"
+                      ? "p-5 rounded-xl text-3xl font-black"
                       : round === "r32" 
                         ? "p-1 sm:p-1.5 rounded-md sm:rounded-lg text-[10px] sm:text-xs font-black sm:font-bold" 
                         : "p-1.5 rounded-lg text-xs font-bold"
                   } ${btnClassB}`}
                 >
-                  <span className={`flex items-center truncate ${isExport ? "gap-2 text-[16px]" : round === "r32" ? "gap-1 sm:gap-1.5" : "gap-1.5"}`}>
+                  <span className={`flex items-center truncate ${isExport ? "gap-4 text-3xl" : round === "r32" ? "gap-1 sm:gap-1.5" : "gap-1.5"}`}>
                     {maskPrediction ? (
                       <>
-                        <span className={`${isExport ? "text-lg" : "text-xs"} shrink-0`}>🔒</span>
+                        <span className={`${isExport ? "text-3xl" : "text-xs"} shrink-0`}>🔒</span>
                         <span className="text-gray-400 italic">Masqué</span>
                       </>
                     ) : (
                       <>
-                        <span className={`${isExport ? "text-xl" : "text-sm"} shrink-0`}>{teamB ? renderFlag(teamB.flag, isExport) : "❓"}</span>
+                        <span className={`${isExport ? "text-4xl" : "text-sm"} shrink-0 flex items-center`}>{teamB ? renderFlag(teamB.flag, isExport) : "❓"}</span>
                         <span className="truncate">{teamB ? teamB.name : "À déterminer"}</span>
                         {showValidation && !maskPrediction && teamB && (
                           <>
@@ -2014,12 +2014,12 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
                   {isWinnerB && !maskPrediction && (
                     showValidation ? (
                       isSimWinnerB ? (
-                        <Check className={`${isExport ? "w-5 h-5" : "w-3.5 h-3.5"} text-emerald-600 shrink-0`} />
+                        <Check className={`${isExport ? "w-8 h-8" : "w-3.5 h-3.5"} text-emerald-600 shrink-0`} />
                       ) : (
-                        <span className="text-rose-600 text-[10px] font-black shrink-0">❌</span>
+                        <span className={`text-rose-600 ${isExport ? "text-xl" : "text-[10px]"} font-black shrink-0`}>❌</span>
                       )
                     ) : (
-                      <Check className={`${isExport ? "w-5 h-5" : "w-3.5 h-3.5"} text-emerald-600 shrink-0`} />
+                      <Check className={`${isExport ? "w-8 h-8" : "w-3.5 h-3.5"} text-emerald-600 shrink-0`} />
                     )
                   )}
                   {!isWinnerB && showValidation && isSimWinnerB && !maskPrediction && (
@@ -2060,8 +2060,6 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
       const dataUrl = await toJpeg(node, {
         quality: 0.9,
         backgroundColor: "#0f172a",
-        width: 1920,
-        height: 1080,
         pixelRatio: 2,
       });
 
@@ -2309,100 +2307,72 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
         </div>
 
         {/* Hidden Export Node */}
-        <div className="absolute top-[-9999px] left-[-9999px] opacity-0 pointer-events-none w-[1920px] h-[1080px]">
+        <div className="fixed top-0 left-0 -z-50 opacity-0 pointer-events-none">
           <div
             id="bracket-export-node"
-            className="bg-[#0f172a] flex flex-col items-center justify-center w-[1920px] h-[1080px]"
+            className="bg-[#0f172a] flex flex-col items-center justify-center w-[3600px] p-24"
           >
-            <style>
-              {`
-                #bracket-export-node button {
-                  padding: 14px 18px !important;
-                }
-                #bracket-export-node button span.truncate {
-                  font-size: 24px !important;
-                  line-height: 28px !important;
-                  font-weight: 900 !important;
-                }
-                #bracket-export-node button img {
-                  width: 48px !important;
-                  height: 48px !important;
-                  margin-right: 8px !important;
-                }
-                #bracket-export-node .text-\\[10px\\] {
-                  font-size: 16px !important;
-                }
-                #bracket-export-node .text-xs {
-                  font-size: 18px !important;
-                }
-                #bracket-export-node .bg-gradient-to-b img {
-                  width: 80px !important;
-                  height: 80px !important;
-                  margin-right: 16px !important;
-                }
-              `}
-            </style>
-            <div className="w-[1800px] h-[980px] flex flex-col justify-between">
+            <div className="w-full flex flex-col justify-between">
               {/* Title */}
-              <div className="text-center mb-6 shrink-0">
-                <h1 className="text-5xl font-black text-emerald-400 tracking-tight">{challenge.name}</h1>
-                <p className="text-2xl text-slate-300 mt-3 font-medium">{selectedParticipant ? `Les pronostics de ${selectedParticipant.username}` : "Mes pronostics"} - Participez sur Mirfoot !</p>
+              <div className="text-center mb-12 shrink-0">
+                <h1 className="text-7xl font-black text-emerald-400 tracking-tight">{challenge.name}</h1>
+                <p className="text-4xl text-slate-300 mt-6 font-medium">{selectedParticipant ? `Les pronostics de ${selectedParticipant.username}` : "Mes pronostics"} - Participez sur Mirfoot !</p>
               </div>
 
-              <div className="flex justify-between items-stretch gap-6 flex-1 my-4">
+              <div className="flex justify-between items-stretch gap-8 flex-1 my-4">
                 {/* Left Side */}
-                <div className="flex flex-col justify-around w-[220px] gap-3">
+                <div className="flex flex-col justify-around w-[340px] gap-6">
                   {r32Left.map(m => <div key={m.id}>{renderTreeMatchNode("r32", m.id, m.homeId, m.awayId, "center", true)}</div>)}
                 </div>
-                <div className="flex flex-col justify-around w-[220px] gap-3">
+                <div className="flex flex-col justify-around w-[340px] gap-6">
                   {r16Left.map(m => <div key={m.id}>{renderTreeMatchNode("r16", m.id, m.homeId, m.awayId, "center", true)}</div>)}
                 </div>
-                <div className="flex flex-col justify-around w-[220px] gap-3">
+                <div className="flex flex-col justify-around w-[340px] gap-6">
                   {r8Left.map(m => <div key={m.id}>{renderTreeMatchNode("r8", m.id, m.homeId, m.awayId, "center", true)}</div>)}
                 </div>
-                <div className="flex flex-col justify-around w-[220px] gap-3">
+                <div className="flex flex-col justify-around w-[340px] gap-6">
                   {r4Left.map(m => <div key={m.id}>{renderTreeMatchNode("r4", m.id, m.homeId, m.awayId, "center", true)}</div>)}
                 </div>
 
                 {/* Center */}
                 <div className="flex flex-col justify-center items-center flex-1 gap-16 px-4">
                   <div className="w-full text-center">
-                    <div className="text-xl text-amber-500 font-extrabold uppercase mb-4">Finale</div>
-                    <div className="max-w-[280px] mx-auto">
+                    <div className="text-3xl text-amber-500 font-extrabold uppercase mb-6">Finale</div>
+                    <div className="w-[500px] mx-auto">
                       {renderTreeMatchNode("r2", "R2_F1", bracketState.finalMatch.homeId, bracketState.finalMatch.awayId, "center", true)}
                     </div>
                   </div>
                   
                   <div className="w-full text-center flex flex-col items-center">
                     {activePicks.winner ? (
-                      <div className="bg-gradient-to-b from-amber-400 to-yellow-500 border-2 border-amber-300 rounded-3xl p-10 text-slate-950 shadow-md inline-block min-w-[320px]">
-                        <Trophy className="w-20 h-20 mx-auto text-amber-950 mb-4" />
-                        <div className="text-base font-extrabold uppercase tracking-widest text-amber-900">Champion</div>
-                        <div className="text-4xl font-black flex items-center justify-center gap-4 mt-4">
-                          <span className="text-5xl">{BRACKET_TEAMS[activePicks.winner] ? renderFlag(BRACKET_TEAMS[activePicks.winner].flag, true) : "❓"}</span>
+                      <div className="bg-gradient-to-b from-amber-400 to-yellow-500 border-2 border-amber-300 rounded-3xl p-12 text-slate-950 shadow-md inline-block min-w-[480px]">
+                        <Trophy className="w-32 h-32 mx-auto text-amber-950 mb-6" />
+                        <div className="text-2xl font-extrabold uppercase tracking-widest text-amber-900">Champion</div>
+                        <div className="text-6xl font-black flex items-center justify-center gap-6 mt-6">
+                          <span className="text-7xl">{BRACKET_TEAMS[activePicks.winner] ? renderFlag(BRACKET_TEAMS[activePicks.winner].flag, true) : "❓"}</span>
                           <span>{BRACKET_TEAMS[activePicks.winner]?.name}</span>
                         </div>
                       </div>
                     ) : (
-                      <div className="bg-slate-800 border-2 border-slate-700 border-dashed rounded-3xl p-10 text-slate-400 min-w-[320px]">
-                        <HelpCircle className="w-20 h-20 mx-auto text-slate-500 mb-4" />
-                        <div className="text-base font-bold uppercase">À prédire</div>
+                      <div className="bg-slate-800 border-2 border-slate-700 border-dashed rounded-3xl p-12 text-slate-400 min-w-[480px]">
+                        <HelpCircle className="w-32 h-32 mx-auto text-slate-500 mb-6" />
+                        <div className="text-2xl font-bold uppercase">À prédire</div>
                       </div>
                     )}
                   </div>
                 </div>
 
                 {/* Right Side */}
-                <div className="flex flex-col justify-around w-[220px] gap-3">
+                <div className="flex flex-col justify-around w-[340px] gap-6">
                   {r4Right.map(m => <div key={m.id}>{renderTreeMatchNode("r4", m.id, m.homeId, m.awayId, "center", true)}</div>)}
                 </div>
-                <div className="flex flex-col justify-around w-[220px] gap-3">
+                <div className="flex flex-col justify-around w-[340px] gap-6">
                   {r8Right.map(m => <div key={m.id}>{renderTreeMatchNode("r8", m.id, m.homeId, m.awayId, "center", true)}</div>)}
                 </div>
-                <div className="flex flex-col justify-around w-[220px] gap-3">
+                <div className="flex flex-col justify-around w-[340px] gap-6">
                   {r16Right.map(m => <div key={m.id}>{renderTreeMatchNode("r16", m.id, m.homeId, m.awayId, "center", true)}</div>)}
                 </div>
-                <div className="flex flex-col justify-around w-[220px] gap-3">
+                <div className="flex flex-col justify-around w-[340px] gap-6">
                   {r32Right.map(m => <div key={m.id}>{renderTreeMatchNode("r32", m.id, m.homeId, m.awayId, "center", true)}</div>)}
                 </div>
               </div>
