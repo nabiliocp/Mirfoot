@@ -1983,7 +1983,7 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
               }
             } else {
               btnClassA = isWinnerA
-                ? "bg-emerald-50 border border-emerald-500 text-emerald-950 font-bold shadow-sm"
+                ? "bg-blue-50 border border-blue-500 text-blue-950 font-bold shadow-sm"
                 : "bg-white border-gray-150 text-gray-800 hover:bg-gray-50 cursor-pointer";
             }
 
@@ -2008,7 +2008,7 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
               }
             } else {
               btnClassB = isWinnerB
-                ? "bg-emerald-50 border-emerald-500 text-emerald-950 font-bold shadow-sm"
+                ? "bg-blue-50 border border-blue-500 text-blue-950 font-bold shadow-sm"
                 : "bg-white border-gray-150 text-gray-800 hover:bg-gray-50 cursor-pointer";
             }
 
