@@ -1552,9 +1552,9 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
     }
   };
 
-  const renderFlag = (flagStr: string | undefined) => {
+  const renderFlag = (flagStr: string | undefined, isExport: boolean = false) => {
     if (!flagStr) return "❓";
-    if (flagStr.startsWith("http")) return <img src={flagStr} alt="" className="w-5 h-5 object-contain inline" onError={(e) => { e.currentTarget.src = "https://flagcdn.com/w80/un.png"; }} />;
+    if (flagStr.startsWith("http")) return <img src={flagStr} alt="" className={`${isExport ? "w-7 h-7 mr-1" : "w-5 h-5"} object-contain inline`} onError={(e) => { e.currentTarget.src = "https://flagcdn.com/w80/un.png"; }} />;
     return flagStr;
   };
 
@@ -1775,7 +1775,8 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
     matchId: string,
     teamAId: string,
     teamBId: string,
-    direction: "left" | "right" | "center"
+    direction: "left" | "right" | "center",
+    isExport: boolean = false
   ) => {
     const isViewingOther = selectedParticipant !== null && selectedParticipant.user_id !== userId;
     const currentPicks = isViewingOther ? selectedParticipant.predictions : picks;
@@ -1923,20 +1924,22 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
                   disabled={locked || missingOpponent}
                   onClick={() => !missingOpponent && handleSelectWinner(round, matchId, teamAId)}
                   className={`w-full flex items-center justify-between transition-all ${
-                    round === "r32" 
-                      ? "p-1 sm:p-1.5 rounded-md sm:rounded-lg text-[10px] sm:text-xs font-black sm:font-bold" 
-                      : "p-1.5 rounded-lg text-xs font-bold"
+                    isExport
+                      ? "p-2 rounded-xl text-[16px] font-black"
+                      : round === "r32" 
+                        ? "p-1 sm:p-1.5 rounded-md sm:rounded-lg text-[10px] sm:text-xs font-black sm:font-bold" 
+                        : "p-1.5 rounded-lg text-xs font-bold"
                   } ${btnClassA}`}
                 >
-                  <span className={`flex items-center truncate ${round === "r32" ? "gap-1 sm:gap-1.5" : "gap-1.5"}`}>
+                  <span className={`flex items-center truncate ${isExport ? "gap-2 text-[16px]" : round === "r32" ? "gap-1 sm:gap-1.5" : "gap-1.5"}`}>
                     {maskPrediction ? (
                       <>
-                        <span className="text-xs shrink-0">🔒</span>
+                        <span className={`${isExport ? "text-lg" : "text-xs"} shrink-0`}>🔒</span>
                         <span className="text-gray-400 italic">Masqué</span>
                       </>
                     ) : (
                       <>
-                        <span className="text-sm shrink-0">{teamA ? renderFlag(teamA.flag) : "❓"}</span>
+                        <span className={`${isExport ? "text-xl" : "text-sm"} shrink-0`}>{teamA ? renderFlag(teamA.flag, isExport) : "❓"}</span>
                         <span className="truncate">{teamA ? teamA.name : "À déterminer"}</span>
                         {showValidation && !maskPrediction && teamA && (
                           <>
@@ -1957,12 +1960,12 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
                   {isWinnerA && !maskPrediction && (
                     showValidation ? (
                       isSimWinnerA ? (
-                        <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                        <Check className={`${isExport ? "w-5 h-5" : "w-3.5 h-3.5"} text-emerald-600 shrink-0`} />
                       ) : (
                         <span className="text-rose-600 text-[10px] font-black shrink-0">❌</span>
                       )
                     ) : (
-                      <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                      <Check className={`${isExport ? "w-5 h-5" : "w-3.5 h-3.5"} text-emerald-600 shrink-0`} />
                     )
                   )}
                   {!isWinnerA && showValidation && isSimWinnerA && !maskPrediction && (
@@ -1975,20 +1978,22 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
                   disabled={locked || missingOpponent}
                   onClick={() => !missingOpponent && handleSelectWinner(round, matchId, teamBId)}
                   className={`w-full flex items-center justify-between transition-all ${
-                    round === "r32" 
-                      ? "p-1 sm:p-1.5 rounded-md sm:rounded-lg text-[10px] sm:text-xs font-black sm:font-bold" 
-                      : "p-1.5 rounded-lg text-xs font-bold"
+                    isExport
+                      ? "p-2 rounded-xl text-[16px] font-black"
+                      : round === "r32" 
+                        ? "p-1 sm:p-1.5 rounded-md sm:rounded-lg text-[10px] sm:text-xs font-black sm:font-bold" 
+                        : "p-1.5 rounded-lg text-xs font-bold"
                   } ${btnClassB}`}
                 >
-                  <span className={`flex items-center truncate ${round === "r32" ? "gap-1 sm:gap-1.5" : "gap-1.5"}`}>
+                  <span className={`flex items-center truncate ${isExport ? "gap-2 text-[16px]" : round === "r32" ? "gap-1 sm:gap-1.5" : "gap-1.5"}`}>
                     {maskPrediction ? (
                       <>
-                        <span className="text-xs shrink-0">🔒</span>
+                        <span className={`${isExport ? "text-lg" : "text-xs"} shrink-0`}>🔒</span>
                         <span className="text-gray-400 italic">Masqué</span>
                       </>
                     ) : (
                       <>
-                        <span className="text-sm shrink-0">{teamB ? renderFlag(teamB.flag) : "❓"}</span>
+                        <span className={`${isExport ? "text-xl" : "text-sm"} shrink-0`}>{teamB ? renderFlag(teamB.flag, isExport) : "❓"}</span>
                         <span className="truncate">{teamB ? teamB.name : "À déterminer"}</span>
                         {showValidation && !maskPrediction && teamB && (
                           <>
@@ -2009,12 +2014,12 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
                   {isWinnerB && !maskPrediction && (
                     showValidation ? (
                       isSimWinnerB ? (
-                        <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                        <Check className={`${isExport ? "w-5 h-5" : "w-3.5 h-3.5"} text-emerald-600 shrink-0`} />
                       ) : (
                         <span className="text-rose-600 text-[10px] font-black shrink-0">❌</span>
                       )
                     ) : (
-                      <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                      <Check className={`${isExport ? "w-5 h-5" : "w-3.5 h-3.5"} text-emerald-600 shrink-0`} />
                     )
                   )}
                   {!isWinnerB && showValidation && isSimWinnerB && !maskPrediction && (
@@ -2342,16 +2347,16 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
               <div className="flex justify-between items-stretch gap-6 flex-1 my-4">
                 {/* Left Side */}
                 <div className="flex flex-col justify-around w-[220px] gap-3">
-                  {r32Left.map(m => <div key={m.id}>{renderTreeMatchNode("r32", m.id, m.homeId, m.awayId, "center")}</div>)}
+                  {r32Left.map(m => <div key={m.id}>{renderTreeMatchNode("r32", m.id, m.homeId, m.awayId, "center", true)}</div>)}
                 </div>
                 <div className="flex flex-col justify-around w-[220px] gap-3">
-                  {r16Left.map(m => <div key={m.id}>{renderTreeMatchNode("r16", m.id, m.homeId, m.awayId, "center")}</div>)}
+                  {r16Left.map(m => <div key={m.id}>{renderTreeMatchNode("r16", m.id, m.homeId, m.awayId, "center", true)}</div>)}
                 </div>
                 <div className="flex flex-col justify-around w-[220px] gap-3">
-                  {r8Left.map(m => <div key={m.id}>{renderTreeMatchNode("r8", m.id, m.homeId, m.awayId, "center")}</div>)}
+                  {r8Left.map(m => <div key={m.id}>{renderTreeMatchNode("r8", m.id, m.homeId, m.awayId, "center", true)}</div>)}
                 </div>
                 <div className="flex flex-col justify-around w-[220px] gap-3">
-                  {r4Left.map(m => <div key={m.id}>{renderTreeMatchNode("r4", m.id, m.homeId, m.awayId, "center")}</div>)}
+                  {r4Left.map(m => <div key={m.id}>{renderTreeMatchNode("r4", m.id, m.homeId, m.awayId, "center", true)}</div>)}
                 </div>
 
                 {/* Center */}
@@ -2359,7 +2364,7 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
                   <div className="w-full text-center">
                     <div className="text-xl text-amber-500 font-extrabold uppercase mb-4">Finale</div>
                     <div className="max-w-[280px] mx-auto">
-                      {renderTreeMatchNode("r2", "R2_F1", bracketState.finalMatch.homeId, bracketState.finalMatch.awayId, "center")}
+                      {renderTreeMatchNode("r2", "R2_F1", bracketState.finalMatch.homeId, bracketState.finalMatch.awayId, "center", true)}
                     </div>
                   </div>
                   
@@ -2369,7 +2374,7 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
                         <Trophy className="w-20 h-20 mx-auto text-amber-950 mb-4" />
                         <div className="text-base font-extrabold uppercase tracking-widest text-amber-900">Champion</div>
                         <div className="text-4xl font-black flex items-center justify-center gap-4 mt-4">
-                          <span className="text-5xl">{BRACKET_TEAMS[activePicks.winner] ? renderFlag(BRACKET_TEAMS[activePicks.winner].flag) : "❓"}</span>
+                          <span className="text-5xl">{BRACKET_TEAMS[activePicks.winner] ? renderFlag(BRACKET_TEAMS[activePicks.winner].flag, true) : "❓"}</span>
                           <span>{BRACKET_TEAMS[activePicks.winner]?.name}</span>
                         </div>
                       </div>
@@ -2384,16 +2389,16 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
 
                 {/* Right Side */}
                 <div className="flex flex-col justify-around w-[220px] gap-3">
-                  {r4Right.map(m => <div key={m.id}>{renderTreeMatchNode("r4", m.id, m.homeId, m.awayId, "center")}</div>)}
+                  {r4Right.map(m => <div key={m.id}>{renderTreeMatchNode("r4", m.id, m.homeId, m.awayId, "center", true)}</div>)}
                 </div>
                 <div className="flex flex-col justify-around w-[220px] gap-3">
-                  {r8Right.map(m => <div key={m.id}>{renderTreeMatchNode("r8", m.id, m.homeId, m.awayId, "center")}</div>)}
+                  {r8Right.map(m => <div key={m.id}>{renderTreeMatchNode("r8", m.id, m.homeId, m.awayId, "center", true)}</div>)}
                 </div>
                 <div className="flex flex-col justify-around w-[220px] gap-3">
-                  {r16Right.map(m => <div key={m.id}>{renderTreeMatchNode("r16", m.id, m.homeId, m.awayId, "center")}</div>)}
+                  {r16Right.map(m => <div key={m.id}>{renderTreeMatchNode("r16", m.id, m.homeId, m.awayId, "center", true)}</div>)}
                 </div>
                 <div className="flex flex-col justify-around w-[220px] gap-3">
-                  {r32Right.map(m => <div key={m.id}>{renderTreeMatchNode("r32", m.id, m.homeId, m.awayId, "center")}</div>)}
+                  {r32Right.map(m => <div key={m.id}>{renderTreeMatchNode("r32", m.id, m.homeId, m.awayId, "center", true)}</div>)}
                 </div>
               </div>
 
