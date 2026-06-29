@@ -1554,7 +1554,7 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
 
   const renderFlag = (flagStr: string | undefined, isExport: boolean = false) => {
     if (!flagStr) return "❓";
-    if (flagStr.startsWith("http")) return <img src={flagStr} alt="" className={`${isExport ? "w-16 h-16 mr-3" : "w-5 h-5"} object-contain inline`} onError={(e) => { e.currentTarget.src = "https://flagcdn.com/w80/un.png"; }} />;
+    if (flagStr.startsWith("http")) return <img src={flagStr} alt="" className={`${isExport ? "w-full h-16 rounded-md" : "w-full h-8 rounded-sm"} object-cover inline`} onError={(e) => { e.currentTarget.src = "https://flagcdn.com/w80/un.png"; }} />;
     return flagStr;
   };
 
@@ -1649,7 +1649,7 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
             type="button"
             disabled={locked || missingOpponent}
             onClick={() => !missingOpponent && handleSelectWinner(round, matchId, teamAId)}
-            className={`w-full flex items-center justify-between p-2 rounded-xl border text-sm font-bold transition-all ${
+            className={`w-full flex items-center justify-between p-1 rounded-xl border text-sm font-bold transition-all overflow-hidden ${
               !teamA || isPlaceholderTeam(teamAId)
                 ? "bg-gray-55 border-dashed border-gray-200 text-gray-400 cursor-not-allowed"
                 : missingOpponent
@@ -1661,16 +1661,15 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
                       : "bg-white border-gray-100 text-gray-800 hover:bg-gray-50 cursor-pointer"
             }`}
           >
-            <span className="flex items-center gap-1.5 min-w-0">
-              <span className="text-lg shrink-0">{teamA ? renderFlag(teamA.flag) : "❓"}</span>
-              <span className="truncate">{teamA ? teamA.name : "À déterminer"}</span>
+            <span className="flex items-center w-full justify-center min-w-0">
+              <span className="w-full flex items-center justify-center">{teamA ? renderFlag(teamA.flag) : "❓"}</span>
               {teamA && !isPlaceholderTeam(teamAId) && qualifiedTeams.has(teamAId) && (
-                <span className="bg-emerald-100 text-emerald-800 text-[8px] font-black px-1 py-0.5 rounded-sm shrink-0">
+                <span className="absolute bg-emerald-100 text-emerald-800 text-[8px] font-black px-1 py-0.5 rounded-sm shrink-0">
                   QUALIFIÉ
                 </span>
               )}
             </span>
-            {isSelectedA && <Check className="w-4 h-4 text-emerald-600 shrink-0" />}
+            {isSelectedA && <Check className="absolute right-2 w-4 h-4 text-emerald-600 shrink-0" />}
           </button>
 
           {/* VS Divider */}
@@ -1683,7 +1682,7 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
             type="button"
             disabled={locked || missingOpponent}
             onClick={() => !missingOpponent && handleSelectWinner(round, matchId, teamBId)}
-            className={`w-full flex items-center justify-between p-2 rounded-xl border text-sm font-bold transition-all ${
+            className={`w-full flex items-center justify-between p-1 rounded-xl border text-sm font-bold transition-all overflow-hidden ${
               !teamB || isPlaceholderTeam(teamBId)
                 ? "bg-gray-55 border-dashed border-gray-200 text-gray-400 cursor-not-allowed"
                 : missingOpponent
@@ -1695,16 +1694,15 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
                       : "bg-white border-gray-100 text-gray-800 hover:bg-gray-50 cursor-pointer"
             }`}
           >
-            <span className="flex items-center gap-1.5 min-w-0">
-              <span className="text-lg shrink-0">{teamB ? renderFlag(teamB.flag) : "❓"}</span>
-              <span className="truncate">{teamB ? teamB.name : "À déterminer"}</span>
+            <span className="flex items-center w-full justify-center min-w-0">
+              <span className="w-full flex items-center justify-center">{teamB ? renderFlag(teamB.flag) : "❓"}</span>
               {teamB && !isPlaceholderTeam(teamBId) && qualifiedTeams.has(teamBId) && (
-                <span className="bg-emerald-100 text-emerald-800 text-[8px] font-black px-1 py-0.5 rounded-sm shrink-0">
+                <span className="absolute bg-emerald-100 text-emerald-800 text-[8px] font-black px-1 py-0.5 rounded-sm shrink-0">
                   QUALIFIÉ
                 </span>
               )}
             </span>
-            {isSelectedB && <Check className="w-4 h-4 text-emerald-600 shrink-0" />}
+            {isSelectedB && <Check className="absolute right-2 w-4 h-4 text-emerald-600 shrink-0" />}
           </button>
         </div>
       </div>
@@ -1923,25 +1921,23 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
                   type="button"
                   disabled={locked || missingOpponent}
                   onClick={() => !missingOpponent && handleSelectWinner(round, matchId, teamAId)}
-                  className={`w-full flex items-center justify-between transition-all ${
+                  className={`w-full flex items-center justify-between transition-all overflow-hidden ${
                     isExport
-                      ? "p-5 rounded-xl text-3xl font-black"
+                      ? "p-0 rounded-xl text-3xl font-black"
                       : round === "r32" 
                         ? "p-1 sm:p-1.5 rounded-md sm:rounded-lg text-[10px] sm:text-xs font-black sm:font-bold" 
                         : "p-1.5 rounded-lg text-xs font-bold"
                   } ${btnClassA}`}
                 >
-                  <span className={`flex items-center truncate ${isExport ? "gap-4 text-3xl" : round === "r32" ? "gap-1 sm:gap-1.5" : "gap-1.5"}`}>
+                  <span className={`flex items-center w-full justify-center ${isExport ? "" : "gap-0"}`}>
                     {maskPrediction ? (
                       <>
-                        <span className={`${isExport ? "text-3xl" : "text-xs"} shrink-0`}>🔒</span>
-                        <span className="text-gray-400 italic">Masqué</span>
+                        <span className={`${isExport ? "text-5xl py-4" : "text-xs py-1.5"} shrink-0`}>🔒</span>
                       </>
                     ) : (
                       <>
-                        <span className={`${isExport ? "text-4xl" : "text-sm"} shrink-0 flex items-center`}>{teamA ? renderFlag(teamA.flag, isExport) : "❓"}</span>
-                        <span className="truncate">{teamA ? teamA.name : "À déterminer"}</span>
-                        {showValidation && !maskPrediction && teamA && (
+                        <span className="w-full flex items-center justify-center">{teamA ? renderFlag(teamA.flag, isExport) : "❓"}</span>
+                        {showValidation && !maskPrediction && teamA && !isExport && (
                           <>
                             {isWinnerA && isSimWinnerA && (
                               <span className="text-[7px] bg-emerald-600 text-white font-black px-1 py-0.2 rounded shrink-0 uppercase tracking-wider">Correct</span>
@@ -1960,16 +1956,16 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
                   {isWinnerA && !maskPrediction && (
                     showValidation ? (
                       isSimWinnerA ? (
-                        <Check className={`${isExport ? "w-8 h-8" : "w-3.5 h-3.5"} text-emerald-600 shrink-0`} />
+                        <Check className={`${isExport ? "absolute w-8 h-8 drop-shadow-md right-2" : "w-3.5 h-3.5"} text-emerald-600 shrink-0`} />
                       ) : (
-                        <span className={`text-rose-600 ${isExport ? "text-xl" : "text-[10px]"} font-black shrink-0`}>❌</span>
+                        <span className={`text-rose-600 ${isExport ? "absolute text-2xl drop-shadow-md right-2" : "text-[10px]"} font-black shrink-0`}>❌</span>
                       )
                     ) : (
-                      <Check className={`${isExport ? "w-8 h-8" : "w-3.5 h-3.5"} text-emerald-600 shrink-0`} />
+                      <Check className={`${isExport ? "absolute w-8 h-8 drop-shadow-md right-2" : "w-3.5 h-3.5"} text-emerald-600 shrink-0`} />
                     )
                   )}
                   {!isWinnerA && showValidation && isSimWinnerA && !maskPrediction && (
-                    <span className="text-amber-500 text-[10px] font-black shrink-0">🏆</span>
+                    <span className={`text-amber-500 ${isExport ? "absolute text-2xl drop-shadow-md right-2" : "text-[10px]"} font-black shrink-0`}>🏆</span>
                   )}
                 </button>
 
@@ -1977,25 +1973,23 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
                   type="button"
                   disabled={locked || missingOpponent}
                   onClick={() => !missingOpponent && handleSelectWinner(round, matchId, teamBId)}
-                  className={`w-full flex items-center justify-between transition-all ${
+                  className={`w-full flex items-center justify-between transition-all overflow-hidden ${
                     isExport
-                      ? "p-5 rounded-xl text-3xl font-black"
+                      ? "p-0 rounded-xl text-3xl font-black"
                       : round === "r32" 
                         ? "p-1 sm:p-1.5 rounded-md sm:rounded-lg text-[10px] sm:text-xs font-black sm:font-bold" 
                         : "p-1.5 rounded-lg text-xs font-bold"
                   } ${btnClassB}`}
                 >
-                  <span className={`flex items-center truncate ${isExport ? "gap-4 text-3xl" : round === "r32" ? "gap-1 sm:gap-1.5" : "gap-1.5"}`}>
+                  <span className={`flex items-center w-full justify-center ${isExport ? "" : "gap-0"}`}>
                     {maskPrediction ? (
                       <>
-                        <span className={`${isExport ? "text-3xl" : "text-xs"} shrink-0`}>🔒</span>
-                        <span className="text-gray-400 italic">Masqué</span>
+                        <span className={`${isExport ? "text-5xl py-4" : "text-xs py-1.5"} shrink-0`}>🔒</span>
                       </>
                     ) : (
                       <>
-                        <span className={`${isExport ? "text-4xl" : "text-sm"} shrink-0 flex items-center`}>{teamB ? renderFlag(teamB.flag, isExport) : "❓"}</span>
-                        <span className="truncate">{teamB ? teamB.name : "À déterminer"}</span>
-                        {showValidation && !maskPrediction && teamB && (
+                        <span className="w-full flex items-center justify-center">{teamB ? renderFlag(teamB.flag, isExport) : "❓"}</span>
+                        {showValidation && !maskPrediction && teamB && !isExport && (
                           <>
                             {isWinnerB && isSimWinnerB && (
                               <span className="text-[7px] bg-emerald-600 text-white font-black px-1 py-0.2 rounded shrink-0 uppercase tracking-wider">Correct</span>
@@ -2014,16 +2008,16 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
                   {isWinnerB && !maskPrediction && (
                     showValidation ? (
                       isSimWinnerB ? (
-                        <Check className={`${isExport ? "w-8 h-8" : "w-3.5 h-3.5"} text-emerald-600 shrink-0`} />
+                        <Check className={`${isExport ? "absolute w-8 h-8 drop-shadow-md right-2" : "w-3.5 h-3.5"} text-emerald-600 shrink-0`} />
                       ) : (
-                        <span className={`text-rose-600 ${isExport ? "text-xl" : "text-[10px]"} font-black shrink-0`}>❌</span>
+                        <span className={`text-rose-600 ${isExport ? "absolute text-2xl drop-shadow-md right-2" : "text-[10px]"} font-black shrink-0`}>❌</span>
                       )
                     ) : (
-                      <Check className={`${isExport ? "w-8 h-8" : "w-3.5 h-3.5"} text-emerald-600 shrink-0`} />
+                      <Check className={`${isExport ? "absolute w-8 h-8 drop-shadow-md right-2" : "w-3.5 h-3.5"} text-emerald-600 shrink-0`} />
                     )
                   )}
                   {!isWinnerB && showValidation && isSimWinnerB && !maskPrediction && (
-                    <span className="text-amber-500 text-[10px] font-black shrink-0">🏆</span>
+                    <span className={`text-amber-500 ${isExport ? "absolute text-2xl drop-shadow-md right-2" : "text-[10px]"} font-black shrink-0`}>🏆</span>
                   )}
                 </button>
               </>
@@ -2266,10 +2260,9 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
                     <div className="relative bg-gradient-to-b from-amber-400 to-yellow-500 border border-amber-300 rounded-3xl p-10 text-slate-950 shadow-md space-y-4 text-center">
                       <Trophy className="w-20 h-20 mx-auto text-amber-950 animate-bounce" />
                       <div>
-                        <div className="text-xs font-extrabold uppercase tracking-widest text-amber-900">Champion Prédit</div>
-                        <div className="text-3xl font-black flex items-center justify-center gap-3 mt-3">
-                          <span className="text-4xl">{BRACKET_TEAMS[activePicks.winner] ? renderFlag(BRACKET_TEAMS[activePicks.winner].flag) : "❓"}</span>
-                          <span>{BRACKET_TEAMS[activePicks.winner]?.name}</span>
+                        <div className="text-xs font-extrabold uppercase tracking-widest text-amber-900 mb-2">Champion Prédit</div>
+                        <div className="flex items-center justify-center">
+                          <span className="flex w-32 h-20 items-center justify-center">{BRACKET_TEAMS[activePicks.winner] ? renderFlag(BRACKET_TEAMS[activePicks.winner].flag, true) : "❓"}</span>
                         </div>
                       </div>
                     </div>
@@ -2347,10 +2340,9 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
                     {activePicks.winner ? (
                       <div className="bg-gradient-to-b from-amber-400 to-yellow-500 border-2 border-amber-300 rounded-3xl p-12 text-slate-950 shadow-md inline-block min-w-[480px]">
                         <Trophy className="w-32 h-32 mx-auto text-amber-950 mb-6" />
-                        <div className="text-2xl font-extrabold uppercase tracking-widest text-amber-900">Champion</div>
-                        <div className="text-6xl font-black flex items-center justify-center gap-6 mt-6">
-                          <span className="text-7xl">{BRACKET_TEAMS[activePicks.winner] ? renderFlag(BRACKET_TEAMS[activePicks.winner].flag, true) : "❓"}</span>
-                          <span>{BRACKET_TEAMS[activePicks.winner]?.name}</span>
+                        <div className="text-2xl font-extrabold uppercase tracking-widest text-amber-900 mb-6">Champion</div>
+                        <div className="flex items-center justify-center">
+                          <span className="flex w-48 h-32 items-center justify-center">{BRACKET_TEAMS[activePicks.winner] ? renderFlag(BRACKET_TEAMS[activePicks.winner].flag, true) : "❓"}</span>
                         </div>
                       </div>
                     ) : (
