@@ -1363,6 +1363,84 @@ export default function ChallengesView({
   };
 
 
+  const handleQuickStartBracket = async () => {
+    setCreating(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      const currentUserId = user?.id || userId;
+      if (!currentUserId) {
+        alert("Session expirée. Veuillez vous reconnecter.");
+        setCreating(false);
+        return;
+      }
+      
+      // Look for an existing bracket challenge created by this user
+      const { data: existingChallenges, error: fetchErr } = await supabase
+        .from("challenges")
+        .select("id")
+        .eq("creator_id", currentUserId)
+        .eq("type", "bracket")
+        .limit(1);
+        
+      if (!fetchErr && existingChallenges && existingChallenges.length > 0) {
+        // Just go to it
+        const chalId = existingChallenges[0].id;
+        const chal = challenges.find(c => c.id === chalId) || existingChallenges[0];
+        setActiveModal({ type: "detail", challenge: chal });
+        setCreating(false);
+        return;
+      }
+
+      const title = "Mon Tableau de Qualification";
+      const savedRules = {
+        exact_score: 100,
+        close_score: 200,
+        correct_winner: 300,
+        qualification: 400,
+        actualBracketPicks: null
+      };
+      const generatedCode = "BRK-" + Math.random().toString(36).substring(2, 8).toUpperCase();
+
+      const { data, error } = await supabase
+        .from("challenges")
+        .insert({
+          competition_id: 9999,
+          match_id: 999999,
+          match_home_team: "Tableau",
+          match_away_team: "Éliminatoire",
+          match_date: "2026-06-26T18:00:00Z",
+          creator_id: currentUserId,
+          title: title,
+          point_rules: savedRules,
+          locked: false,
+          resolved: false,
+          type: 'bracket',
+          rules: generatedCode,
+        })
+        .select();
+
+      if (!error && data && data.length > 0) {
+        await supabase
+          .from("challenge_invitations")
+          .insert({
+            challenge_id: data[0].id,
+            user_id: currentUserId,
+            status: "accepted",
+          });
+          
+        await fetchChallenges(currentUserId);
+        setActiveModal({ type: "detail", challenge: data[0] });
+      } else {
+        alert("Erreur lors de la création du tableau.");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Une erreur est survenue.");
+    } finally {
+      setCreating(false);
+    }
+  };
+
   const handleCreateChallenge = async (e: FormEvent) => {
     e.preventDefault();
     if (createType === "bracket") {
@@ -4845,8 +4923,29 @@ export default function ChallengesView({
                       }}
                       className="mt-4 text-emerald-600 font-bold hover:underline cursor-pointer"
                     >
-                      Créer un défi ici
+                      Créer un défi match
                     </button>
+                    {!preselectedMatch && !isArchiveMode && (
+                      <div className="mt-8 border-t border-gray-100 pt-8 w-full max-w-md mx-auto">
+                        <div className="bg-gradient-to-br from-amber-400 to-amber-500 rounded-3xl p-8 text-center shadow-lg relative overflow-hidden">
+                          <div className="absolute top-0 right-0 -mt-4 -mr-4 text-7xl opacity-20">🏆</div>
+                          <div className="absolute bottom-0 left-0 -mb-4 -ml-4 text-6xl opacity-20 transform -rotate-12">⚽️</div>
+                          <h3 className="text-2xl font-black text-amber-950 mb-3 relative z-10">
+                            Tableau de Qualification
+                          </h3>
+                          <p className="text-amber-900 font-medium mb-6 relative z-10">
+                            Pronostiquez dès maintenant toute la phase finale et partagez votre tableau.
+                          </p>
+                          <button
+                            onClick={handleQuickStartBracket}
+                            disabled={creating}
+                            className="bg-amber-950 text-amber-50 hover:bg-slate-900 w-full py-4 rounded-xl font-black text-lg transition-all shadow-md active:scale-95 cursor-pointer relative z-10"
+                          >
+                            {creating ? "Création en cours..." : "Commencer mon tableau 🚀"}
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
 

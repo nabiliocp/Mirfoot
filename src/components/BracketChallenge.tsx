@@ -2055,12 +2055,9 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
       const dataUrl = await toJpeg(node, {
         quality: 0.9,
         backgroundColor: "#0f172a",
-        width: node.scrollWidth,
-        height: node.scrollHeight,
+        width: 1920,
+        height: 1080,
         pixelRatio: 2,
-        style: {
-          transform: 'none', // Ensure it doesn't try to inherit any weird transforms from absolute positioning
-        }
       });
 
       try {
@@ -2068,10 +2065,12 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
         const blob = await response.blob();
         const file = new File([blob], "mes-pronostics-mirfoot.jpg", { type: "image/jpeg" });
 
+        const shareUrl = window.location.origin;
+
         if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
           await navigator.share({
             title: `Mes pronostics - ${challenge.name}`,
-            text: `Rejoins-moi sur Mirfoot pour faire tes pronostics ! ⚽️🏆`,
+            text: `Rejoins-moi sur Mirfoot pour faire tes pronostics ! ⚽️🏆 Inscris-toi ici : ${shareUrl}`,
             files: [file],
           });
         } else {
@@ -2310,73 +2309,96 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
             id="bracket-export-node"
             className="bg-[#0f172a] flex flex-col items-center justify-center w-[1920px] h-[1080px]"
           >
-            <div className="w-[1400px] h-[800px] transform scale-[1.35] origin-center flex flex-col">
+            <style>
+              {`
+                #bracket-export-node button {
+                  padding: 10px 14px !important;
+                }
+                #bracket-export-node button span.truncate {
+                  font-size: 18px !important;
+                  line-height: 24px !important;
+                  font-weight: 900 !important;
+                }
+                #bracket-export-node img {
+                  width: 32px !important;
+                  height: 32px !important;
+                  margin-right: 4px !important;
+                }
+                #bracket-export-node .text-\\[10px\\] {
+                  font-size: 14px !important;
+                }
+                #bracket-export-node .text-xs {
+                  font-size: 16px !important;
+                }
+              `}
+            </style>
+            <div className="w-[1800px] h-[980px] flex flex-col justify-between">
               {/* Title */}
               <div className="text-center mb-6 shrink-0">
-                <h1 className="text-4xl font-black text-emerald-400 tracking-tight">{challenge.name}</h1>
-                <p className="text-xl text-slate-300 mt-2 font-medium">Les pronostics de {selectedParticipant ? selectedParticipant.username : "moi"} - Participez sur Mirfoot !</p>
+                <h1 className="text-5xl font-black text-emerald-400 tracking-tight">{challenge.name}</h1>
+                <p className="text-2xl text-slate-300 mt-3 font-medium">{selectedParticipant ? `Les pronostics de ${selectedParticipant.username}` : "Mes pronostics"} - Participez sur Mirfoot !</p>
               </div>
 
-              <div className="flex justify-between items-stretch gap-6 flex-1">
+              <div className="flex justify-between items-stretch gap-6 flex-1 my-4">
                 {/* Left Side */}
-                <div className="flex flex-col justify-around w-[160px] gap-2">
+                <div className="flex flex-col justify-around w-[220px] gap-3">
                   {r32Left.map(m => <div key={m.id}>{renderTreeMatchNode("r32", m.id, m.homeId, m.awayId, "center")}</div>)}
                 </div>
-                <div className="flex flex-col justify-around w-[160px] gap-2">
+                <div className="flex flex-col justify-around w-[220px] gap-3">
                   {r16Left.map(m => <div key={m.id}>{renderTreeMatchNode("r16", m.id, m.homeId, m.awayId, "center")}</div>)}
                 </div>
-                <div className="flex flex-col justify-around w-[160px] gap-2">
+                <div className="flex flex-col justify-around w-[220px] gap-3">
                   {r8Left.map(m => <div key={m.id}>{renderTreeMatchNode("r8", m.id, m.homeId, m.awayId, "center")}</div>)}
                 </div>
-                <div className="flex flex-col justify-around w-[160px] gap-2">
+                <div className="flex flex-col justify-around w-[220px] gap-3">
                   {r4Left.map(m => <div key={m.id}>{renderTreeMatchNode("r4", m.id, m.homeId, m.awayId, "center")}</div>)}
                 </div>
 
                 {/* Center */}
-                <div className="flex flex-col justify-center items-center flex-1 gap-12 px-4">
+                <div className="flex flex-col justify-center items-center flex-1 gap-16 px-4">
                   <div className="w-full text-center">
-                    <div className="text-base text-amber-500 font-extrabold uppercase mb-3">Finale</div>
-                    <div className="max-w-[200px] mx-auto">
+                    <div className="text-xl text-amber-500 font-extrabold uppercase mb-4">Finale</div>
+                    <div className="max-w-[280px] mx-auto">
                       {renderTreeMatchNode("r2", "R2_F1", bracketState.finalMatch.homeId, bracketState.finalMatch.awayId, "center")}
                     </div>
                   </div>
                   
                   <div className="w-full text-center flex flex-col items-center">
                     {activePicks.winner ? (
-                      <div className="bg-gradient-to-b from-amber-400 to-yellow-500 border-2 border-amber-300 rounded-3xl p-8 text-slate-950 shadow-md inline-block min-w-[240px]">
-                        <Trophy className="w-14 h-14 mx-auto text-amber-950 mb-3" />
-                        <div className="text-[12px] font-extrabold uppercase tracking-widest text-amber-900">Champion</div>
-                        <div className="text-2xl font-black flex items-center justify-center gap-3 mt-3">
-                          <span className="text-3xl">{BRACKET_TEAMS[activePicks.winner] ? renderFlag(BRACKET_TEAMS[activePicks.winner].flag) : "❓"}</span>
+                      <div className="bg-gradient-to-b from-amber-400 to-yellow-500 border-2 border-amber-300 rounded-3xl p-10 text-slate-950 shadow-md inline-block min-w-[320px]">
+                        <Trophy className="w-20 h-20 mx-auto text-amber-950 mb-4" />
+                        <div className="text-base font-extrabold uppercase tracking-widest text-amber-900">Champion</div>
+                        <div className="text-4xl font-black flex items-center justify-center gap-4 mt-4">
+                          <span className="text-5xl">{BRACKET_TEAMS[activePicks.winner] ? renderFlag(BRACKET_TEAMS[activePicks.winner].flag) : "❓"}</span>
                           <span>{BRACKET_TEAMS[activePicks.winner]?.name}</span>
                         </div>
                       </div>
                     ) : (
-                      <div className="bg-slate-800 border-2 border-slate-700 border-dashed rounded-3xl p-8 text-slate-400 min-w-[240px]">
-                        <HelpCircle className="w-12 h-12 mx-auto text-slate-500 mb-3" />
-                        <div className="text-[12px] font-bold uppercase">À prédire</div>
+                      <div className="bg-slate-800 border-2 border-slate-700 border-dashed rounded-3xl p-10 text-slate-400 min-w-[320px]">
+                        <HelpCircle className="w-20 h-20 mx-auto text-slate-500 mb-4" />
+                        <div className="text-base font-bold uppercase">À prédire</div>
                       </div>
                     )}
                   </div>
                 </div>
 
                 {/* Right Side */}
-                <div className="flex flex-col justify-around w-[160px] gap-2">
+                <div className="flex flex-col justify-around w-[220px] gap-3">
                   {r4Right.map(m => <div key={m.id}>{renderTreeMatchNode("r4", m.id, m.homeId, m.awayId, "center")}</div>)}
                 </div>
-                <div className="flex flex-col justify-around w-[160px] gap-2">
+                <div className="flex flex-col justify-around w-[220px] gap-3">
                   {r8Right.map(m => <div key={m.id}>{renderTreeMatchNode("r8", m.id, m.homeId, m.awayId, "center")}</div>)}
                 </div>
-                <div className="flex flex-col justify-around w-[160px] gap-2">
+                <div className="flex flex-col justify-around w-[220px] gap-3">
                   {r16Right.map(m => <div key={m.id}>{renderTreeMatchNode("r16", m.id, m.homeId, m.awayId, "center")}</div>)}
                 </div>
-                <div className="flex flex-col justify-around w-[160px] gap-2">
+                <div className="flex flex-col justify-around w-[220px] gap-3">
                   {r32Right.map(m => <div key={m.id}>{renderTreeMatchNode("r32", m.id, m.homeId, m.awayId, "center")}</div>)}
                 </div>
               </div>
 
               {/* Footer */}
-              <div className="mt-8 text-center text-slate-400 text-base font-semibold shrink-0">
+              <div className="mt-4 text-center text-slate-400 text-xl font-semibold shrink-0">
                 Généré par Mirfoot - L'application de pronostics entre amis !
               </div>
             </div>
