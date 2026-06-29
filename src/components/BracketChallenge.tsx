@@ -12,7 +12,7 @@ import {
   isPlaceholderTeam
 } from "../bracketData";
 import { supabase } from "../lib/supabase";
-import { Check, Lock, Trophy, AlertTriangle, Sparkles, HelpCircle, RefreshCw, Trash2, Share2, Download } from "lucide-react";
+import { Check, Lock, Trophy, AlertTriangle, Sparkles, HelpCircle, RefreshCw, Trash2, Share2, Download, Copy, X } from "lucide-react";
 
 interface BracketChallengeProps {
   challenge: any;
@@ -654,6 +654,8 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
   const [qualifiedTeams, setQualifiedTeams] = useState<Set<string>>(new Set());
   const [loadingQualifications, setLoadingQualifications] = useState<boolean>(false);
   const [sharingBracket, setSharingBracket] = useState<boolean>(false);
+  const [showShareModal, setShowShareModal] = useState<boolean>(false);
+  const [copied, setCopied] = useState<boolean>(false);
   const [apiFailed, setApiFailed] = useState<boolean>(false);
   const [realCompMatches, setRealCompMatches] = useState<any[]>(() => {
     try {
@@ -1925,7 +1927,10 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
       }`}>
         {round === "r32" ? (
           <div className="flex text-[9px] text-gray-400 font-bold mb-1 px-1 justify-between items-center">
-            <span>{matchId.replace("R32_", "")}</span>
+            <span className="flex items-center gap-1">
+              <span>{matchId.replace("R32_", "")}</span>
+              {isStarted && <Lock className="w-2.5 h-2.5 text-red-500 stroke-[3px]" title="Clôturé" />}
+            </span>
             {getMatchTime(matchId) && (
               <span className="text-[8px] text-gray-400">
                 {new Date(getMatchTime(matchId)).toLocaleDateString("fr-FR", {day: "numeric", month: "short"})}
@@ -1933,22 +1938,15 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
             )}
           </div>
         ) : (
-          <div className="text-[9px] text-gray-400 font-bold mb-1 px-1 flex justify-between">
-            <span>{matchId.replace("R16_", "").replace("R8_", "").replace("R4_", "")}</span>
+          <div className="text-[9px] text-gray-400 font-bold mb-1 px-1 flex justify-between items-center">
+            <span className="flex items-center gap-1">
+              <span>{matchId.replace("R16_", "").replace("R8_", "").replace("R4_", "")}</span>
+              {isStarted && <Lock className="w-2.5 h-2.5 text-red-500 stroke-[3px]" title="Clôturé" />}
+            </span>
           </div>
         )}
 
         <div className="bg-white border border-gray-150 rounded-2xl p-2 sm:p-2.5 shadow-xs flex flex-col space-y-1.5 relative">
-          {isStarted ? (
-            <div className="absolute top-1 right-1 flex items-center bg-red-500 text-white text-[7px] font-black px-1.5 py-0.5 rounded-full border border-red-400 gap-0.5 shadow-xs z-20">
-              <Lock className="w-1.5 h-1.5" />
-              <span>CLÔTURÉ</span>
-            </div>
-          ) : missingOpponent ? (
-            <div className="absolute top-1 right-1 flex items-center bg-amber-50 text-amber-600 text-[7px] font-black px-1.5 py-0.5 rounded-full border border-amber-200 gap-0.5 shadow-xs uppercase tracking-wider z-20">
-              Requis
-            </div>
-          ) : null}
           {(() => {
             const currentActualResults = (testMode && simulatedResults) 
               ? simulatedResults 
@@ -2018,30 +2016,30 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
                   type="button"
                   disabled={locked || missingOpponent}
                   onClick={() => !missingOpponent && handleSelectWinner(round, matchId, teamAId)}
-                  className={`w-full flex items-center justify-between p-1.5 rounded-lg border text-xs font-bold transition-all ${btnClassA}`}
+                  className={`w-full flex flex-col items-start p-1.5 rounded-lg border text-xs font-bold transition-all disabled:opacity-100 ${btnClassA}`}
                 >
-                  <span className="flex items-center gap-1.5 min-w-0 flex-1">
-                    <span className="text-base shrink-0">{teamA ? renderFlag(teamA.flag) : "❓"}</span>
-                    <span className="truncate">{teamA ? teamA.name : "À déterminer"}</span>
-                  </span>
-                  <span className="flex items-center gap-1 shrink-0 ml-1.5">
-                    {showValidation && !maskPrediction && teamA && (
-                      <>
-                        {isWinnerA && isSimWinnerA && (
-                          <span className="text-[7px] bg-emerald-600 text-white font-black px-1.5 py-0.5 rounded uppercase tracking-wider">Correct</span>
-                        )}
-                        {isWinnerA && !isSimWinnerA && (
-                          <span className="text-[7px] bg-rose-600 text-white font-black px-1.5 py-0.5 rounded uppercase tracking-wider">Faux</span>
-                        )}
-                        {!isWinnerA && isSimWinnerA && (
-                          <span className="text-[7px] bg-amber-500 text-white font-black px-1.5 py-0.5 rounded uppercase tracking-wider">Gagnant</span>
-                        )}
-                      </>
-                    )}
+                  <div className="flex items-center justify-between w-full min-w-0">
+                    <span className="flex items-center gap-1.5 min-w-0 flex-1">
+                      <span className="text-base shrink-0">{teamA ? renderFlag(teamA.flag) : "❓"}</span>
+                      <span className="truncate">{teamA ? teamA.name : "À déterminer"}</span>
+                    </span>
                     {isWinnerA && !maskPrediction && (
-                      <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                      <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0 ml-1" />
                     )}
-                  </span>
+                  </div>
+                  {showValidation && !maskPrediction && teamA && (
+                    <div className="flex justify-end w-full mt-1">
+                      {isWinnerA && isSimWinnerA && (
+                        <span className="text-[7px] bg-emerald-600 text-white font-black px-1.5 py-0.5 rounded uppercase tracking-wider">Correct</span>
+                      )}
+                      {isWinnerA && !isSimWinnerA && (
+                        <span className="text-[7px] bg-rose-600 text-white font-black px-1.5 py-0.5 rounded uppercase tracking-wider">Faux</span>
+                      )}
+                      {!isWinnerA && isSimWinnerA && (
+                        <span className="text-[7px] bg-amber-500 text-white font-black px-1.5 py-0.5 rounded uppercase tracking-wider">Gagnant</span>
+                      )}
+                    </div>
+                  )}
                 </button>
 
                 {/* VS Divider */}
@@ -2054,30 +2052,30 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
                   type="button"
                   disabled={locked || missingOpponent}
                   onClick={() => !missingOpponent && handleSelectWinner(round, matchId, teamBId)}
-                  className={`w-full flex items-center justify-between p-1.5 rounded-lg border text-xs font-bold transition-all ${btnClassB}`}
+                  className={`w-full flex flex-col items-start p-1.5 rounded-lg border text-xs font-bold transition-all disabled:opacity-100 ${btnClassB}`}
                 >
-                  <span className="flex items-center gap-1.5 min-w-0 flex-1">
-                    <span className="text-base shrink-0">{teamB ? renderFlag(teamB.flag) : "❓"}</span>
-                    <span className="truncate">{teamB ? teamB.name : "À déterminer"}</span>
-                  </span>
-                  <span className="flex items-center gap-1 shrink-0 ml-1.5">
-                    {showValidation && !maskPrediction && teamB && (
-                      <>
-                        {isWinnerB && isSimWinnerB && (
-                          <span className="text-[7px] bg-emerald-600 text-white font-black px-1.5 py-0.5 rounded uppercase tracking-wider">Correct</span>
-                        )}
-                        {isWinnerB && !isSimWinnerB && (
-                          <span className="text-[7px] bg-rose-600 text-white font-black px-1.5 py-0.5 rounded uppercase tracking-wider">Faux</span>
-                        )}
-                        {!isWinnerB && isSimWinnerB && (
-                          <span className="text-[7px] bg-amber-500 text-white font-black px-1.5 py-0.5 rounded uppercase tracking-wider">Gagnant</span>
-                        )}
-                      </>
-                    )}
+                  <div className="flex items-center justify-between w-full min-w-0">
+                    <span className="flex items-center gap-1.5 min-w-0 flex-1">
+                      <span className="text-base shrink-0">{teamB ? renderFlag(teamB.flag) : "❓"}</span>
+                      <span className="truncate">{teamB ? teamB.name : "À déterminer"}</span>
+                    </span>
                     {isWinnerB && !maskPrediction && (
-                      <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                      <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0 ml-1" />
                     )}
-                  </span>
+                  </div>
+                  {showValidation && !maskPrediction && teamB && (
+                    <div className="flex justify-end w-full mt-1">
+                      {isWinnerB && isSimWinnerB && (
+                        <span className="text-[7px] bg-emerald-600 text-white font-black px-1.5 py-0.5 rounded uppercase tracking-wider">Correct</span>
+                      )}
+                      {isWinnerB && !isSimWinnerB && (
+                        <span className="text-[7px] bg-rose-600 text-white font-black px-1.5 py-0.5 rounded uppercase tracking-wider">Faux</span>
+                      )}
+                      {!isWinnerB && isSimWinnerB && (
+                        <span className="text-[7px] bg-amber-500 text-white font-black px-1.5 py-0.5 rounded uppercase tracking-wider">Gagnant</span>
+                      )}
+                    </div>
+                  )}
                 </button>
               </>
             );
@@ -2098,88 +2096,80 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
     );
   };
 
-  const handleShareBracket = async () => {
+  const handleShareBracket = () => {
+    setCopied(false);
+    setShowShareModal(true);
+    
+    // Also try to copy automatically as a nice helper
+    const shareUrl = `${window.location.origin}/challenge/${challenge.id || ""}`;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(shareUrl)
+        .then(() => setCopied(true))
+        .catch(err => console.warn("Could not copy automatically:", err));
+    }
+  };
+
+  const handleCopyLinkOnly = () => {
+    const shareUrl = `${window.location.origin}/challenge/${challenge.id || ""}`;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(shareUrl)
+        .then(() => {
+          setCopied(true);
+          setTimeout(() => setCopied(false), 2000);
+        })
+        .catch(err => {
+          console.error("Failed to copy:", err);
+          alert("Impossible de copier automatiquement. Veuillez copier le lien manuellement.");
+        });
+    } else {
+      // Fallback for non-supported browsers/iframes
+      const textArea = document.createElement("textarea");
+      textArea.value = shareUrl;
+      document.body.appendChild(textArea);
+      textArea.select();
+      try {
+        document.execCommand("copy");
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      } catch (err) {
+        console.error("Fallback copy failed:", err);
+      }
+      document.body.removeChild(textArea);
+    }
+  };
+
+  const handleDownloadImage = async () => {
     try {
       setSharingBracket(true);
-      
-      const shareUrl = `${window.location.origin}/challenge/${challenge.id || ""}`;
-      
-      // Proactively copy the link to clipboard so the user gets instant result/feedback
-      try {
-        await navigator.clipboard.writeText(shareUrl);
-      } catch (clipErr) {
-        console.warn("Could not copy link to clipboard automatically", clipErr);
-      }
-
       const node = document.getElementById("bracket-export-node");
       if (!node) {
-        setMessage({ type: "success", text: "Lien de partage copié dans le presse-papiers !" });
+        setMessage({ type: "error", text: "Erreur : conteneur de partage introuvable." });
         return;
       }
 
-      // Wrap image generation in a promise with a timeout of 3 seconds
-      const generateImagePromise = (async () => {
-        const { toJpeg } = await import("html-to-image");
-        return await toJpeg(node, {
-          quality: 0.8,
-          backgroundColor: "#0f172a",
-          pixelRatio: 1.2, // optimized for performance
-          cacheBust: true,
-          style: {
-            transform: 'scale(1)',
-            left: '0',
-            top: '0',
-            opacity: '1',
-            visibility: 'visible',
-          }
-        });
-      })();
-
-      const timeoutPromise = new Promise<null>((_, reject) => 
-        setTimeout(() => reject(new Error("Timeout")), 3000)
-      );
-
-      let dataUrl: string | null = null;
-      try {
-        dataUrl = await Promise.race([generateImagePromise, timeoutPromise]);
-      } catch (raceErr) {
-        console.warn("Image generation failed or timed out, using clipboard fallback:", raceErr);
-      }
-
-      if (dataUrl) {
-        try {
-          const response = await fetch(dataUrl);
-          const blob = await response.blob();
-          const file = new File([blob], "mes-pronostics-mirfoot.jpg", { type: "image/jpeg" });
-
-          if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
-            await navigator.share({
-              title: `Mes pronostics - ${challenge.name}`,
-              text: `Rejoins-moi sur Mirfoot pour faire tes pronostics ! ⚽️🏆 Inscris-toi ici : ${shareUrl}`,
-              files: [file],
-            });
-            setMessage({ type: "success", text: "Lien copié et menu de partage ouvert !" });
-          } else {
-            const link = document.createElement("a");
-            link.download = "mes-pronostics-mirfoot.jpg";
-            link.href = dataUrl;
-            link.click();
-            setMessage({ type: "success", text: "Lien copié dans le presse-papiers et image téléchargée !" });
-          }
-        } catch (shareErr) {
-          console.log("Share API or download cancelled, falling back to download");
-          const link = document.createElement("a");
-          link.download = "mes-pronostics-mirfoot.jpg";
-          link.href = dataUrl;
-          link.click();
-          setMessage({ type: "success", text: "Lien copié dans le presse-papiers et image téléchargée !" });
+      const { toJpeg } = await import("html-to-image");
+      const dataUrl = await toJpeg(node, {
+        quality: 0.8,
+        backgroundColor: "#0f172a",
+        pixelRatio: 1.2,
+        cacheBust: true,
+        style: {
+          transform: 'scale(1)',
+          left: '0',
+          top: '0',
+          opacity: '1',
+          visibility: 'visible',
         }
-      } else {
-        setMessage({ type: "success", text: "Lien de partage copié dans le presse-papiers !" });
-      }
+      });
+
+      const link = document.createElement("a");
+      link.download = "mes-pronostics-mirfoot.jpg";
+      link.href = dataUrl;
+      link.click();
+      setMessage({ type: "success", text: "Image téléchargée avec succès !" });
     } catch (err) {
-      console.error("Error sharing bracket:", err);
-      setMessage({ type: "success", text: "Lien de partage copié dans le presse-papiers !" });
+      console.error("Error generating image:", err);
+      setMessage({ type: "error", text: "Erreur lors de la génération de l'image." });
     } finally {
       setSharingBracket(false);
     }
@@ -3024,6 +3014,87 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
               : "* Les résultats officiels sont enregistrés et le défi est résolu automatiquement à chaque sélection."}
           </p>
         </>
+      )}
+
+      {showShareModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-xs animate-fade-in">
+          <div className="bg-white rounded-3xl p-6 max-w-sm w-full border border-gray-100 shadow-2xl relative space-y-4 text-center">
+            <button 
+              onClick={() => setShowShareModal(false)}
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100 transition cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            
+            <div className="mx-auto w-12 h-12 rounded-full bg-emerald-50 flex items-center justify-center text-xl">
+              ⚽
+            </div>
+            
+            <div className="space-y-1">
+              <h3 className="text-base font-black text-gray-900">Partager mon Tableau</h3>
+              <p className="text-[11px] text-gray-500 font-semibold">
+                Défiez vos amis sur Mirfoot en partageant votre tableau de la phase finale !
+              </p>
+            </div>
+
+            {/* Link Copy Field */}
+            <div className="space-y-1.5 text-left">
+              <label className="text-[9px] text-gray-400 font-extrabold uppercase tracking-wider block">Lien de partage</label>
+              <div className="flex gap-2">
+                <input 
+                  type="text" 
+                  readOnly 
+                  value={`${window.location.origin}/challenge/${challenge.id || ""}`}
+                  className="flex-1 text-xs px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-hidden font-bold text-gray-700 select-all"
+                />
+                <button 
+                  onClick={handleCopyLinkOnly}
+                  className={`px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition cursor-pointer shrink-0 ${
+                    copied 
+                      ? "bg-emerald-600 text-white" 
+                      : "bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+                  }`}
+                >
+                  {copied ? (
+                    <>
+                      <Check className="w-4 h-4" />
+                      <span>Copié</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-4 h-4" />
+                      <span>Copier</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {/* Image Download Option */}
+            <div className="border-t border-gray-100 pt-4 mt-2 space-y-2">
+              <p className="text-[10px] text-gray-400 font-semibold">
+                Vous pouvez également télécharger une image complète de votre tableau pour la poster ou l'envoyer.
+              </p>
+              <button
+                onClick={handleDownloadImage}
+                disabled={sharingBracket}
+                className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-400 text-white font-extrabold text-xs py-2.5 rounded-xl flex items-center justify-center gap-2 transition cursor-pointer shadow-sm"
+              >
+                {sharingBracket ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    <span>Génération de l'image...</span>
+                  </>
+                ) : (
+                  <>
+                    <Download className="w-4 h-4" />
+                    <span>Télécharger l'image (.JPG)</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
