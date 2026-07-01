@@ -306,11 +306,61 @@ export function computeLiveActualResults(matches: any[], dynamicR32Matches: Brac
     return !s.includes("GROUP") && !s.includes("REGULAR") && s !== "THIRD_PLACE";
   }).sort((a, b) => new Date(a.utcDate).getTime() - new Date(b.utcDate).getTime());
 
+  const countryToTlaMap: Record<string, string> = {
+    "pays-bas": "NED", "netherlands": "NED", "holland": "NED", "net": "NED", "ned": "NED",
+    "espagne": "ESP", "spain": "ESP", "esp": "ESP", "spa": "ESP",
+    "maroc": "MAR", "morocco": "MAR", "mar": "MAR", "mor": "MAR",
+    "suisse": "SUI", "switzerland": "SUI", "sui": "SUI", "swi": "SUI",
+    "cote d'ivoire": "CIV", "côte d'ivoire": "CIV", "ivory coast": "CIV", "civ": "CIV", "cot": "CIV",
+    "bresil": "BRA", "brazil": "BRA", "bra": "BRA", "bre": "BRA", "brésil": "BRA", "bré": "BRA",
+    "allemagne": "GER", "germany": "GER", "ger": "GER", "all": "GER",
+    "angleterre": "ENG", "england": "ENG", "eng": "ENG", "ang": "ENG",
+    "argentine": "ARG", "argentina": "ARG", "arg": "ARG",
+    "belgique": "BEL", "belgium": "BEL", "bel": "BEL",
+    "croatie": "CRO", "croatia": "CRO", "cro": "CRO",
+    "portugal": "POR", "por": "POR",
+    "senegal": "SEN", "sénégal": "SEN", "sen": "SEN", "sén": "SEN",
+    "uruguay": "URU", "ury": "URU", "uru": "URU",
+    "etats-unis": "USA", "usa": "USA", "united states": "USA", "états-unis": "USA",
+    "mexique": "MEX", "mexico": "MEX", "mex": "MEX",
+    "equateur": "ECU", "ecuador": "ECU", "équateur": "ECU", "ecu": "ECU", "équ": "ECU",
+    "japon": "JPN", "japan": "JPN", "jpn": "JPN", "jap": "JPN",
+    "canada": "CAN", "can": "CAN",
+    "australie": "AUS", "australia": "AUS", "aus": "AUS",
+    "cameroun": "CMR", "cameroon": "CMR", "cmr": "CMR", "cam": "CMR",
+    "egypte": "EGY", "egypt": "EGY", "egy": "EGY", "égp": "EGY", "égy": "EGY",
+    "algerie": "ALG", "algeria": "ALG", "alg": "ALG",
+    "ghana": "GHA", "gha": "GHA",
+    "colombie": "COL", "colombia": "COL", "col": "COL",
+    "cap-vert": "CPV", "cape verde": "CPV", "cpv": "CPV", "cap": "CPV",
+    "norvege": "NOR", "norway": "NOR", "nor": "NOR",
+    "rdc congo": "COD", "congo dr": "COD", "dr congo": "COD", "rd congo": "COD", "cod": "COD", "con": "COD"
+  };
+
   const getBracketTeamId = (apiTeam: any): string | null => {
     if (!apiTeam) return null;
-    const tla = (apiTeam.tla || "").toUpperCase();
-    const name = (apiTeam.name || "").toLowerCase();
-    
+    const tla = (apiTeam.tla || "").toUpperCase().trim();
+    const name = (apiTeam.name || "").toLowerCase().trim();
+    const nameNormalized = name.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+    // 1. Direct TLA mapping lookup
+    if (tla && countryToTlaMap[tla.toLowerCase()]) {
+      return countryToTlaMap[tla.toLowerCase()];
+    }
+
+    // 2. Direct name mapping lookup
+    if (countryToTlaMap[nameNormalized]) {
+      return countryToTlaMap[nameNormalized];
+    }
+
+    // 3. Try to match keys in countryToTlaMap as sub-strings
+    for (const [key, value] of Object.entries(countryToTlaMap)) {
+      if (key.length > 3 && (nameNormalized.includes(key) || key.includes(nameNormalized))) {
+        return value;
+      }
+    }
+
+    // 4. Default to standard matching loop
     for (const match of dynamicR32Matches) {
       if (match.homeId && (match.homeId.toUpperCase() === tla || name.includes(match.homeId.toLowerCase()))) return match.homeId;
       if (match.awayId && (match.awayId.toUpperCase() === tla || name.includes(match.awayId.toLowerCase()))) return match.awayId;

@@ -3032,8 +3032,14 @@ export default function ChallengesView({
           const pQualifies = predVal?.qualifies;
 
           let actualQualifier = null;
-          if (singleMatch.score.winner === 'HOME_TEAM') actualQualifier = 'home';
-          else if (singleMatch.score.winner === 'AWAY_TEAM') actualQualifier = 'away';
+          if (singleMatch.score.winner === 'HOME_TEAM') {
+            actualQualifier = 'home';
+          } else if (singleMatch.score.winner === 'AWAY_TEAM') {
+            actualQualifier = 'away';
+          } else {
+            if (rHome > rAway) actualQualifier = 'home';
+            else if (rAway > rHome) actualQualifier = 'away';
+          }
           
           if (pHome !== undefined && pAway !== undefined) {
             isExact = Number(pHome) === Number(rHome) && Number(pAway) === Number(rAway);
@@ -3140,8 +3146,14 @@ export default function ChallengesView({
               const pQualifies = pMatch.qualifies;
 
               let actualQualifier = null;
-              if (m.score.winner === 'HOME_TEAM') actualQualifier = 'home';
-              else if (m.score.winner === 'AWAY_TEAM') actualQualifier = 'away';
+              if (m.score.winner === 'HOME_TEAM') {
+                actualQualifier = 'home';
+              } else if (m.score.winner === 'AWAY_TEAM') {
+                actualQualifier = 'away';
+              } else {
+                if (rHome > rAway) actualQualifier = 'home';
+                else if (rAway > rHome) actualQualifier = 'away';
+              }
               
               if (rHome !== null && rAway !== null) {
                 const isExact = Number(pMatch.homeScore) === Number(rHome) && Number(pMatch.awayScore) === Number(rAway);

@@ -696,6 +696,9 @@ function adjustMatchesDynamically(matches: any[]): any[] {
                   away: updatedScore.fullTime.away ?? 0
                 };
               }
+              const hScore = updatedScore.fullTime.home ?? 0;
+              const aScore = updatedScore.fullTime.away ?? 0;
+              updatedScore.winner = hScore > aScore ? "HOME_TEAM" : hScore < aScore ? "AWAY_TEAM" : "DRAW";
               return {
                 ...m,
                 status: "FINISHED",
@@ -1762,6 +1765,60 @@ async function startServer() {
           }
         }
 
+        // Fallback 1: check if it's a mock match (id >= 9000)
+        if (!matchData && challenge.match_id >= 9000) {
+          const mockMatches = getMockWorldCupMatches();
+          const mockMatch = mockMatches.find((m: any) => m.id === challenge.match_id);
+          if (mockMatch) {
+            const adjustedList = adjustMatchesDynamically([mockMatch]);
+            const adjusted = adjustedList[0];
+            matchData = {
+              status: adjusted.status,
+              score: {
+                regularTime: {
+                  home: adjusted.score.fullTime.home,
+                  away: adjusted.score.fullTime.away,
+                },
+                fullTime: {
+                  home: adjusted.score.fullTime.home,
+                  away: adjusted.score.fullTime.away,
+                },
+                winner: adjusted.score.winner
+              }
+            };
+          }
+        }
+
+        // Fallback 2: check cached matches for this competition (handles scraper updates and API-Football cached matches!)
+        if (!matchData && challenge.competition_id) {
+          const activeProvider = getActiveApiProvider();
+          const cacheKey = `comp_${challenge.competition_id}_${activeProvider}_current`;
+          const cached = apiCache[cacheKey] || loadPersistentCache(cacheKey);
+          if (cached && cached.data && Array.isArray(cached.data.matches)) {
+            const cachedMatch = cached.data.matches.find((m: any) => String(m.id) === String(challenge.match_id));
+            if (cachedMatch) {
+              matchData = {
+                status: cachedMatch.status,
+                score: {
+                  regularTime: {
+                    home: cachedMatch.score?.regularTime?.home ?? cachedMatch.score?.fullTime?.home ?? 0,
+                    away: cachedMatch.score?.regularTime?.away ?? cachedMatch.score?.fullTime?.away ?? 0,
+                  },
+                  fullTime: {
+                    home: cachedMatch.score?.fullTime?.home ?? 0,
+                    away: cachedMatch.score?.fullTime?.away ?? 0,
+                  },
+                  winner: cachedMatch.score?.winner || (
+                    (cachedMatch.score?.fullTime?.home !== null && cachedMatch.score?.fullTime?.away !== null)
+                      ? (cachedMatch.score.fullTime.home > cachedMatch.score.fullTime.away ? "HOME_TEAM" : cachedMatch.score.fullTime.home < cachedMatch.score.fullTime.away ? "AWAY_TEAM" : "DRAW")
+                      : "DRAW"
+                  )
+                }
+              };
+            }
+          }
+        }
+
         if (!matchData) continue;
         if (challenge.match_id === 0) continue; // Multi-match resolution requires competition fetch
 
@@ -1782,8 +1839,11 @@ async function startServer() {
 
           let actualQualifier = null;
           if (matchData.score.winner === "HOME_TEAM") actualQualifier = "home";
-          else if (matchData.score.winner === "AWAY_TEAM")
-            actualQualifier = "away";
+          else if (matchData.score.winner === "AWAY_TEAM") actualQualifier = "away";
+          else {
+            if (homeScore > awayScore) actualQualifier = "home";
+            else if (awayScore > homeScore) actualQualifier = "away";
+          }
 
           // Logic to calculate points for each user
           const { data: bets } = await supabase
