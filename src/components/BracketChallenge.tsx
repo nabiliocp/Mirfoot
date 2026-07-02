@@ -12,7 +12,7 @@ import {
   isPlaceholderTeam
 } from "../bracketData";
 import { supabase } from "../lib/supabase";
-import { Check, Lock, Trophy, AlertTriangle, Sparkles, HelpCircle, RefreshCw, Trash2, Share2, Download, Copy, X } from "lucide-react";
+import { Check, Lock, Trophy, AlertTriangle, Sparkles, HelpCircle, RefreshCw } from "lucide-react";
 
 interface BracketChallengeProps {
   challenge: any;
@@ -22,8 +22,6 @@ interface BracketChallengeProps {
   onShowRules?: () => void;
   isSimulationMode?: boolean;
   detailTab?: "matches" | "leaderboard" | "participants" | "results";
-  isAdmin?: boolean;
-  onKickParticipant?: (targetUserId: string, targetUsername: string) => void;
 }
 
 const getFlagUrl = (teamName: string) => {
@@ -306,61 +304,11 @@ export function computeLiveActualResults(matches: any[], dynamicR32Matches: Brac
     return !s.includes("GROUP") && !s.includes("REGULAR") && s !== "THIRD_PLACE";
   }).sort((a, b) => new Date(a.utcDate).getTime() - new Date(b.utcDate).getTime());
 
-  const countryToTlaMap: Record<string, string> = {
-    "pays-bas": "NED", "netherlands": "NED", "holland": "NED", "net": "NED", "ned": "NED",
-    "espagne": "ESP", "spain": "ESP", "esp": "ESP", "spa": "ESP",
-    "maroc": "MAR", "morocco": "MAR", "mar": "MAR", "mor": "MAR",
-    "suisse": "SUI", "switzerland": "SUI", "sui": "SUI", "swi": "SUI",
-    "cote d'ivoire": "CIV", "côte d'ivoire": "CIV", "ivory coast": "CIV", "civ": "CIV", "cot": "CIV",
-    "bresil": "BRA", "brazil": "BRA", "bra": "BRA", "bre": "BRA", "brésil": "BRA", "bré": "BRA",
-    "allemagne": "GER", "germany": "GER", "ger": "GER", "all": "GER",
-    "angleterre": "ENG", "england": "ENG", "eng": "ENG", "ang": "ENG",
-    "argentine": "ARG", "argentina": "ARG", "arg": "ARG",
-    "belgique": "BEL", "belgium": "BEL", "bel": "BEL",
-    "croatie": "CRO", "croatia": "CRO", "cro": "CRO",
-    "portugal": "POR", "por": "POR",
-    "senegal": "SEN", "sénégal": "SEN", "sen": "SEN", "sén": "SEN",
-    "uruguay": "URU", "ury": "URU", "uru": "URU",
-    "etats-unis": "USA", "usa": "USA", "united states": "USA", "états-unis": "USA",
-    "mexique": "MEX", "mexico": "MEX", "mex": "MEX",
-    "equateur": "ECU", "ecuador": "ECU", "équateur": "ECU", "ecu": "ECU", "équ": "ECU",
-    "japon": "JPN", "japan": "JPN", "jpn": "JPN", "jap": "JPN",
-    "canada": "CAN", "can": "CAN",
-    "australie": "AUS", "australia": "AUS", "aus": "AUS",
-    "cameroun": "CMR", "cameroon": "CMR", "cmr": "CMR", "cam": "CMR",
-    "egypte": "EGY", "egypt": "EGY", "egy": "EGY", "égp": "EGY", "égy": "EGY",
-    "algerie": "ALG", "algeria": "ALG", "alg": "ALG",
-    "ghana": "GHA", "gha": "GHA",
-    "colombie": "COL", "colombia": "COL", "col": "COL",
-    "cap-vert": "CPV", "cape verde": "CPV", "cpv": "CPV", "cap": "CPV",
-    "norvege": "NOR", "norway": "NOR", "nor": "NOR",
-    "rdc congo": "COD", "congo dr": "COD", "dr congo": "COD", "rd congo": "COD", "cod": "COD", "con": "COD"
-  };
-
   const getBracketTeamId = (apiTeam: any): string | null => {
     if (!apiTeam) return null;
-    const tla = (apiTeam.tla || "").toUpperCase().trim();
-    const name = (apiTeam.name || "").toLowerCase().trim();
-    const nameNormalized = name.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-
-    // 1. Direct TLA mapping lookup
-    if (tla && countryToTlaMap[tla.toLowerCase()]) {
-      return countryToTlaMap[tla.toLowerCase()];
-    }
-
-    // 2. Direct name mapping lookup
-    if (countryToTlaMap[nameNormalized]) {
-      return countryToTlaMap[nameNormalized];
-    }
-
-    // 3. Try to match keys in countryToTlaMap as sub-strings
-    for (const [key, value] of Object.entries(countryToTlaMap)) {
-      if (key.length > 3 && (nameNormalized.includes(key) || key.includes(nameNormalized))) {
-        return value;
-      }
-    }
-
-    // 4. Default to standard matching loop
+    const tla = (apiTeam.tla || "").toUpperCase();
+    const name = (apiTeam.name || "").toLowerCase();
+    
     for (const match of dynamicR32Matches) {
       if (match.homeId && (match.homeId.toUpperCase() === tla || name.includes(match.homeId.toLowerCase()))) return match.homeId;
       if (match.awayId && (match.awayId.toUpperCase() === tla || name.includes(match.awayId.toLowerCase()))) return match.awayId;
@@ -450,7 +398,7 @@ export function computeLiveActualResults(matches: any[], dynamicR32Matches: Brac
   return result;
 }
 
-export function computeRobustBracketState(picks: BracketPredictions, r32Matches: BracketMatch[], lockedMatches: Record<string, boolean> = {}, realResults: BracketPredictions | null = null): RobustBracketState {
+export function computeRobustBracketState(picks: BracketPredictions, r32Matches: BracketMatch[]): RobustBracketState {
   const r32Winners: Record<string, string> = {};
   
   const r32Mapping: Record<string, string> = {
@@ -469,8 +417,7 @@ export function computeRobustBracketState(picks: BracketPredictions, r32Matches:
     let winner = "";
     if (hasBothOpponents) {
       const slotKey = r32Mapping[m.id];
-      const isLocked = lockedMatches[m.id];
-      const pickedWinner = (isLocked && realResults ? realResults.r16?.[slotKey] : picks.r16?.[slotKey]) || "";
+      const pickedWinner = picks.r16?.[slotKey] || "";
       if (pickedWinner === m.homeId || pickedWinner === m.awayId) {
         winner = pickedWinner;
       }
@@ -502,8 +449,7 @@ export function computeRobustBracketState(picks: BracketPredictions, r32Matches:
     let winner = "";
     if (hasBothOpponents) {
       const slotKey = r16Mapping[m.id];
-      const isLocked = lockedMatches[m.id];
-      const pickedWinner = (isLocked && realResults ? realResults.r8?.[slotKey] : picks.r8?.[slotKey]) || "";
+      const pickedWinner = picks.r8?.[slotKey] || "";
       if (pickedWinner === m.homeId || pickedWinner === m.awayId) {
         winner = pickedWinner;
       }
@@ -530,8 +476,7 @@ export function computeRobustBracketState(picks: BracketPredictions, r32Matches:
     let winner = "";
     if (hasBothOpponents) {
       const slotKey = r8Mapping[m.id];
-      const isLocked = lockedMatches[m.id];
-      const pickedWinner = (isLocked && realResults ? realResults.r4?.[slotKey] : picks.r4?.[slotKey]) || "";
+      const pickedWinner = picks.r4?.[slotKey] || "";
       if (pickedWinner === m.homeId || pickedWinner === m.awayId) {
         winner = pickedWinner;
       }
@@ -555,8 +500,7 @@ export function computeRobustBracketState(picks: BracketPredictions, r32Matches:
     let winner = "";
     if (hasBothOpponents) {
       const slotKey = r4Mapping[m.id];
-      const isLocked = lockedMatches[m.id];
-      const pickedWinner = (isLocked && realResults ? realResults.r2?.[slotKey] : picks.r2?.[slotKey]) || "";
+      const pickedWinner = picks.r2?.[slotKey] || "";
       if (pickedWinner === m.homeId || pickedWinner === m.awayId) {
         winner = pickedWinner;
       }
@@ -575,8 +519,7 @@ export function computeRobustBracketState(picks: BracketPredictions, r32Matches:
   let winner = "";
   const hasBothFinalOpponents = finalMatch.homeId !== "" && finalMatch.awayId !== "";
   if (hasBothFinalOpponents) {
-    const isLocked = lockedMatches[finalMatch.id];
-    const pickedWinner = (isLocked && realResults ? realResults.winner : picks.winner) || "";
+    const pickedWinner = picks.winner || "";
     if (pickedWinner === finalMatch.homeId || pickedWinner === finalMatch.awayId) {
       winner = pickedWinner;
     }
@@ -644,28 +587,12 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
   onSaveSuccess,
   onShowRules,
   isSimulationMode = false,
-  detailTab = "matches",
-  isAdmin,
-  onKickParticipant
+  detailTab = "matches"
 }) => {
   const [picks, setPicks] = useState<BracketPredictions>(createEmptyBracketPredictions());
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
-  const [kickingParticipantId, setKickingParticipantId] = useState<string | null>(null);
-
-  const handleKick = async (participantId: string, username: string) => {
-    console.log("Kick button clicked for:", participantId, username);
-    if (!onKickParticipant) return;
-    setKickingParticipantId(participantId);
-    try {
-      await onKickParticipant(participantId, username);
-      // It might trigger a reload via parent, but let's also reload locally
-      await loadParticipants();
-    } finally {
-      setKickingParticipantId(null);
-    }
-  };
 
   // Participant list and selected participant for viewing bracket
   const [participants, setParticipants] = useState<any[]>([]);
@@ -703,10 +630,6 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
 
   const [qualifiedTeams, setQualifiedTeams] = useState<Set<string>>(new Set());
   const [loadingQualifications, setLoadingQualifications] = useState<boolean>(false);
-  const [sharingBracket, setSharingBracket] = useState<boolean>(false);
-  const [showShareModal, setShowShareModal] = useState<boolean>(false);
-  const [copied, setCopied] = useState<boolean>(false);
-  const [apiFailed, setApiFailed] = useState<boolean>(false);
   const [realCompMatches, setRealCompMatches] = useState<any[]>(() => {
     try {
       const savedMatches = localStorage.getItem("mirfoot_matches_by_comp_v3");
@@ -724,7 +647,6 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
 
   const refreshQualifications = async (bypass = false) => {
     setLoadingQualifications(true);
-    setApiFailed(false);
     try {
       const originalCompId = challenge.competitionId || 2000;
       const compId = (originalCompId === 9999 || String(originalCompId) === "9999") ? 2000 : originalCompId;
@@ -748,16 +670,8 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
             console.error("Error saving fetched matches to localStorage:", e);
           }
         }
-      } else {
-        setApiFailed(true);
-        if (userId === "rouijel.nabil.cp@gmail.com") {
-          console.error("API Error: Admin alert for rouijel.nabil@gmail.com");
-          // Here we would ideally show a UI message, but for now let's set it in message state
-          setMessage({ type: "error", text: "⚠️ ERREUR API : Veuillez contacter le support technique. API injoignable." });
-        }
       }
     } catch (err) {
-      setApiFailed(true);
       console.error("Error fetching matches for bracket qualifications:", err);
     } finally {
       setLoadingQualifications(false);
@@ -1206,18 +1120,6 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
     loadData();
   }, [challengeId, pointRulesStr, userId, mode]);
 
-  const realResults = useMemo(() => computeLiveActualResults(realCompMatches, dynamicR32Matches), [realCompMatches, dynamicR32Matches]);
-
-  const lockedMatches = useMemo(() => {
-    const locked: Record<string, boolean> = {};
-    dynamicR32Matches.forEach(m => {
-      locked[m.id] = isMatchLocked(m.id);
-    });
-    return locked;
-  }, [dynamicR32Matches, realCompMatches]); // Need to ensure isMatchLocked depends on dynamicR32Matches
-  
-  // Actually isMatchLocked depends on BRACKET_MATCH_TIMES and dynamicR32Matches, which seem stable.
-
   // Determine which predictions are currently active for the bracket tree
   const isViewingOther = selectedParticipant !== null && selectedParticipant.user_id !== userId;
   const activePicks = (testMode && activeSimulationTab === "simulation" && simulatedResults)
@@ -1225,7 +1127,7 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
     : (selectedParticipant ? selectedParticipant.predictions : picks);
 
   // Compute the current state of matches in later rounds based on active predictions
-  const bracketState = computeRobustBracketState(activePicks, dynamicR32Matches, lockedMatches, realResults);
+  const bracketState = computeRobustBracketState(activePicks, dynamicR32Matches);
 
   // Determine slot progression mapping
   // maps previous round winner to subsequent round position key
@@ -1606,50 +1508,8 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
 
   const renderFlag = (flagStr: string | undefined) => {
     if (!flagStr) return "❓";
-    if (flagStr.startsWith("http")) {
-      return (
-        <img
-          src={flagStr}
-          alt=""
-          crossOrigin="anonymous"
-          referrerPolicy="no-referrer"
-          className="w-7 h-5 rounded-sm object-cover inline shadow-2xs border border-gray-200"
-          onError={(e) => { e.currentTarget.src = "https://flagcdn.com/w80/un.png"; }}
-        />
-      );
-    }
+    if (flagStr.startsWith("http")) return <img src={flagStr} alt="" className="w-5 h-5 object-contain inline" onError={(e) => { e.currentTarget.src = "https://flagcdn.com/w80/un.png"; }} />;
     return flagStr;
-  };
-
-  const renderExportFlag = (flagStr: string | undefined, sizeClass: string = "w-28 h-28") => {
-    if (!flagStr) {
-      return (
-        <div className={`${sizeClass} rounded-full bg-slate-800 border-4 border-slate-700 flex items-center justify-center text-3xl shadow-lg font-bold text-slate-400`}>
-          ❓
-        </div>
-      );
-    }
-    const isUrl = flagStr.startsWith("http");
-    const srcUrl = isUrl ? flagStr : "https://flagcdn.com/w160/un.png";
-
-    return (
-      <div className={`relative ${sizeClass} rounded-full overflow-hidden border-4 border-white shadow-2xl bg-white flex-shrink-0 flex items-center justify-center`}>
-        {/* Flag Image */}
-        <img
-          src={srcUrl}
-          alt=""
-          crossOrigin="anonymous"
-          referrerPolicy="no-referrer"
-          className="w-full h-full object-cover rounded-full scale-105"
-          onError={(e) => { e.currentTarget.src = "https://flagcdn.com/w160/un.png"; }}
-        />
-        {/* 3D Glass / Gel Orb Overlay Effect */}
-        <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-black/20 via-transparent to-white/40 pointer-events-none" />
-        <div className="absolute top-[8%] left-[12%] w-[76%] h-[35%] rounded-full bg-gradient-to-b from-white/40 to-transparent pointer-events-none" />
-        {/* Premium Outer Glow Ring */}
-        <div className="absolute inset-0 rounded-full border border-black/10 pointer-events-none" />
-      </div>
-    );
   };
 
   // Render a single match box
@@ -1758,6 +1618,11 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
             <span className="flex items-center gap-1.5 min-w-0">
               <span className="text-lg shrink-0">{teamA ? renderFlag(teamA.flag) : "❓"}</span>
               <span className="truncate">{teamA ? teamA.name : "À déterminer"}</span>
+              {teamA && !isPlaceholderTeam(teamAId) && qualifiedTeams.has(teamAId) && (
+                <span className="bg-emerald-100 text-emerald-800 text-[8px] font-black px-1 py-0.5 rounded-sm shrink-0">
+                  QUALIFIÉ
+                </span>
+              )}
             </span>
             {isSelectedA && <Check className="w-4 h-4 text-emerald-600 shrink-0" />}
           </button>
@@ -1787,6 +1652,11 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
             <span className="flex items-center gap-1.5 min-w-0">
               <span className="text-lg shrink-0">{teamB ? renderFlag(teamB.flag) : "❓"}</span>
               <span className="truncate">{teamB ? teamB.name : "À déterminer"}</span>
+              {teamB && !isPlaceholderTeam(teamBId) && qualifiedTeams.has(teamBId) && (
+                <span className="bg-emerald-100 text-emerald-800 text-[8px] font-black px-1 py-0.5 rounded-sm shrink-0">
+                  QUALIFIÉ
+                </span>
+              )}
             </span>
             {isSelectedB && <Check className="w-4 h-4 text-emerald-600 shrink-0" />}
           </button>
@@ -1859,8 +1729,7 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
     matchId: string,
     teamAId: string,
     teamBId: string,
-    direction: "left" | "right" | "center",
-    isExport: boolean = false
+    direction: "left" | "right" | "center"
   ) => {
     const isViewingOther = selectedParticipant !== null && selectedParticipant.user_id !== userId;
     const currentPicks = isViewingOther ? selectedParticipant.predictions : picks;
@@ -1906,81 +1775,26 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
 
     const stats = isStarted ? getMatchStats(matchId, teamAId, teamBId) : null;
 
-    if (isExport) {
-      const currentActualResults = (testMode && simulatedResults) 
-        ? simulatedResults 
-        : (challenge.resolved && parsedPointRules.actualBracketPicks && Object.keys(parsedPointRules.actualBracketPicks.r16 || {}).length > 0 
-            ? parsedPointRules.actualBracketPicks 
-            : liveActualResults);
-
-      const simWinnerId = currentActualResults ? getSelectedWinnerForPredictions(currentActualResults, matchId) : "";
-      const isSimWinnerA = simWinnerId === teamAId && teamAId !== "";
-      const isSimWinnerB = simWinnerId === teamBId && teamBId !== "";
-      const showValidation = !apiFailed && currentActualResults && simWinnerId && (!testMode || activeSimulationTab !== "simulation");
-
-      return (
-        <div className="flex flex-row items-center justify-center gap-6 py-4">
-          {/* Team A Flag */}
-          <div className="relative">
-            <div className={`transition-all duration-300 ${
-              isWinnerA 
-                ? "scale-110 ring-4 ring-emerald-500 shadow-[0_0_25px_rgba(16,185,129,0.5)] rounded-full z-10" 
-                : "opacity-60 grayscale-[20%]"
-            }`}>
-              {renderExportFlag(teamA?.flag, "w-28 h-28")}
-            </div>
-            {isWinnerA && !maskPrediction && (
-              <div className="absolute -top-2 -right-2 bg-emerald-500 text-white rounded-full p-1.5 border-4 border-[#0f172a] shadow-lg z-20">
-                <Check className="w-5 h-5 stroke-[4px]" />
-              </div>
-            )}
-            {showValidation && isSimWinnerA && (
-              <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-amber-500 text-slate-950 font-black text-[10px] px-2 py-0.5 rounded-full border-2 border-[#0f172a] shadow-md uppercase tracking-wider z-20">
-                Gagnant
-              </div>
-            )}
-          </div>
-
-          {/* VS Divider */}
-          <div className="text-2xl font-black text-slate-400 uppercase tracking-widest select-none drop-shadow-sm px-1">
-            vs
-          </div>
-
-          {/* Team B Flag */}
-          <div className="relative">
-            <div className={`transition-all duration-300 ${
-              isWinnerB 
-                ? "scale-110 ring-4 ring-emerald-500 shadow-[0_0_25px_rgba(16,185,129,0.5)] rounded-full z-10" 
-                : "opacity-60 grayscale-[20%]"
-            }`}>
-              {renderExportFlag(teamB?.flag, "w-28 h-28")}
-            </div>
-            {isWinnerB && !maskPrediction && (
-              <div className="absolute -top-2 -right-2 bg-emerald-500 text-white rounded-full p-1.5 border-4 border-[#0f172a] shadow-lg z-20">
-                <Check className="w-5 h-5 stroke-[4px]" />
-              </div>
-            )}
-            {showValidation && isSimWinnerB && (
-              <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-amber-500 text-slate-950 font-black text-[10px] px-2 py-0.5 rounded-full border-2 border-[#0f172a] shadow-md uppercase tracking-wider z-20">
-                Gagnant
-              </div>
-            )}
-          </div>
-        </div>
-      );
-    }
-
-    // Interactive prediction card UI
     return (
-      <div className={`relative w-full max-w-[220px] mx-auto transition duration-300 ${
-        round === "r32" ? "p-1" : "p-2 hover:scale-105"
+      <div className={`relative w-full max-w-[200px] mx-auto transition duration-300 ${
+        round === "r32" 
+          ? "bg-white border border-gray-150 sm:border-gray-200 rounded-xl sm:rounded-2xl p-1 sm:p-2.5 shadow-2xs sm:shadow-sm" 
+          : "bg-white border border-gray-200 rounded-2xl p-2 sm:p-2.5 shadow-sm hover:shadow-md hover:border-slate-350"
       }`}>
+        {isStarted ? (
+          <div className={`absolute flex items-center bg-red-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded-full border border-red-400 gap-0.5 shadow-xs z-20 ${round === "r32" ? "-top-1 -right-1 sm:-top-1.5 sm:-right-1" : "-top-1.5 -right-1"}`}>
+            <Lock className="w-2 h-2 sm:w-2.5 sm:h-2.5" />
+            <span className="hidden xs:inline">CLÔTURÉ</span>
+          </div>
+        ) : missingOpponent ? (
+          <div className={`absolute flex items-center bg-amber-50 text-amber-600 text-[8px] font-black px-1.5 py-0.5 rounded-full border border-amber-200 gap-0.5 shadow-xs uppercase tracking-wider ${round === "r32" ? "hidden sm:flex -top-1.5 -right-1" : "-top-1.5 -right-1"}`}>
+            Adversaire requis
+          </div>
+        ) : null}
+
         {round === "r32" ? (
-          <div className="flex text-[9px] text-gray-400 font-bold mb-1 px-1 justify-between items-center">
-            <span className="flex items-center gap-1">
-              <span>{matchId.replace("R32_", "")}</span>
-              {isStarted && <Lock className="w-2.5 h-2.5 text-red-500 stroke-[3px]" title="Clôturé" />}
-            </span>
+          <div className="flex text-[9px] text-gray-400 font-bold mb-1 px-1 justify-between">
+            <span>{matchId.replace("R32_", "")}</span>
             {getMatchTime(matchId) && (
               <span className="text-[8px] text-gray-400">
                 {new Date(getMatchTime(matchId)).toLocaleDateString("fr-FR", {day: "numeric", month: "short"})}
@@ -1988,15 +1802,12 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
             )}
           </div>
         ) : (
-          <div className="text-[9px] text-gray-400 font-bold mb-1 px-1 flex justify-between items-center">
-            <span className="flex items-center gap-1">
-              <span>{matchId.replace("R16_", "").replace("R8_", "").replace("R4_", "")}</span>
-              {isStarted && <Lock className="w-2.5 h-2.5 text-red-500 stroke-[3px]" title="Clôturé" />}
-            </span>
+          <div className="text-[9px] text-gray-400 font-bold mb-1 px-1 flex justify-between">
+            <span>{matchId.replace("R16_", "").replace("R8_", "").replace("R4_", "")}</span>
           </div>
         )}
 
-        <div className="bg-white border border-gray-150 rounded-2xl p-2 sm:p-2.5 shadow-xs flex flex-col space-y-1.5 relative">
+        <div className={round === "r32" ? "space-y-0.5 sm:space-y-1" : "space-y-1"}>
           {(() => {
             const currentActualResults = (testMode && simulatedResults) 
               ? simulatedResults 
@@ -2007,7 +1818,7 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
             const simWinnerId = currentActualResults ? getSelectedWinnerForPredictions(currentActualResults, matchId) : "";
             const isSimWinnerA = simWinnerId === teamAId && teamAId !== "";
             const isSimWinnerB = simWinnerId === teamBId && teamBId !== "";
-            const showValidation = !apiFailed && currentActualResults && simWinnerId && (!testMode || activeSimulationTab !== "simulation");
+            const showValidation = currentActualResults && simWinnerId && (!testMode || activeSimulationTab !== "simulation");
 
             let btnClassA = "";
             if (!teamA || isPlaceholderTeam(teamAId)) {
@@ -2017,21 +1828,21 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
             } else if (showValidation) {
               if (isWinnerA) {
                 if (isSimWinnerA) {
-                  btnClassA = "bg-emerald-50 border border-emerald-500 text-emerald-950 font-bold shadow-sm";
+                  btnClassA = "bg-emerald-50/80 border-emerald-500 text-emerald-950 font-black shadow-sm ring-1 ring-emerald-500/30";
                 } else {
-                  btnClassA = "bg-rose-50 border border-rose-300 text-rose-950 font-bold";
+                  btnClassA = "bg-rose-50 border-rose-400 text-rose-950 font-bold shadow-xs";
                 }
               } else {
                 if (isSimWinnerA) {
-                  btnClassA = "bg-amber-50 border border-amber-300 text-amber-950 font-bold";
+                  btnClassA = "bg-amber-50/30 border-amber-300 text-amber-950 font-bold";
                 } else {
-                  btnClassA = "bg-white border border-gray-150 text-gray-800 hover:bg-gray-50";
+                  btnClassA = "bg-white border-gray-150 text-gray-400 opacity-60 hover:opacity-100";
                 }
               }
             } else {
               btnClassA = isWinnerA
-                ? "bg-blue-50 border border-blue-500 text-blue-950 font-bold shadow-sm"
-                : "bg-white border-gray-150 text-gray-800 hover:bg-gray-50 cursor-pointer";
+                ? "bg-emerald-50 border-emerald-500 text-emerald-950 font-black shadow-xs"
+                : "bg-white border-gray-200 text-gray-750 hover:bg-gray-50 hover:border-gray-300 cursor-pointer";
             }
 
             let btnClassB = "";
@@ -2042,95 +1853,134 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
             } else if (showValidation) {
               if (isWinnerB) {
                 if (isSimWinnerB) {
-                  btnClassB = "bg-emerald-50 border border-emerald-500 text-emerald-950 font-bold shadow-sm";
+                  btnClassB = "bg-emerald-50/80 border-emerald-500 text-emerald-950 font-black shadow-sm ring-1 ring-emerald-500/30";
                 } else {
-                  btnClassB = "bg-rose-50 border border-rose-300 text-rose-950 font-bold";
+                  btnClassB = "bg-rose-50 border-rose-400 text-rose-950 font-bold shadow-xs";
                 }
               } else {
                 if (isSimWinnerB) {
-                  btnClassB = "bg-amber-50 border border-amber-300 text-amber-950 font-bold";
+                  btnClassB = "bg-amber-50/30 border-amber-300 text-amber-950 font-bold";
                 } else {
-                  btnClassB = "bg-white border border-gray-150 text-gray-800 hover:bg-gray-50";
+                  btnClassB = "bg-white border-gray-150 text-gray-400 opacity-60 hover:opacity-100";
                 }
               }
             } else {
               btnClassB = isWinnerB
-                ? "bg-blue-50 border border-blue-500 text-blue-950 font-bold shadow-sm"
-                : "bg-white border-gray-150 text-gray-800 hover:bg-gray-50 cursor-pointer";
+                ? "bg-emerald-50 border-emerald-500 text-emerald-950 font-black shadow-xs"
+                : "bg-white border-gray-200 text-gray-750 hover:bg-gray-50 hover:border-gray-300 cursor-pointer";
             }
 
             return (
               <>
-                {/* Team A Button */}
                 <button
                   type="button"
                   disabled={locked || missingOpponent}
                   onClick={() => !missingOpponent && handleSelectWinner(round, matchId, teamAId)}
-                  className={`w-full flex flex-col items-start p-1.5 rounded-lg border text-xs font-bold transition-all disabled:opacity-100 ${btnClassA}`}
+                  className={`w-full flex items-center justify-between transition-all ${
+                    round === "r32" 
+                      ? "p-1 sm:p-1.5 rounded-md sm:rounded-lg text-[10px] sm:text-xs font-black sm:font-bold" 
+                      : "p-1.5 rounded-lg text-xs font-bold"
+                  } ${btnClassA}`}
                 >
-                  <div className="flex items-center justify-between w-full min-w-0">
-                    <span className="flex items-center gap-1.5 min-w-0 flex-1">
-                      <span className="text-base shrink-0">{teamA ? renderFlag(teamA.flag) : "❓"}</span>
-                      <span className="truncate">{teamA ? teamA.name : "À déterminer"}</span>
-                    </span>
-                    {isWinnerA && !maskPrediction && (
-                      <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0 ml-1" />
+                  <span className={`flex items-center truncate ${round === "r32" ? "gap-1 sm:gap-1.5" : "gap-1.5"}`}>
+                    {maskPrediction ? (
+                      <>
+                        <span className="text-xs shrink-0">🔒</span>
+                        <span className="text-gray-400 italic">Masqué</span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="text-sm shrink-0">{teamA ? renderFlag(teamA.flag) : "❓"}</span>
+                        <span className="truncate">{teamA ? teamA.name : "À déterminer"}</span>
+                        {showValidation && !maskPrediction && teamA && (
+                          <>
+                            {isWinnerA && isSimWinnerA && (
+                              <span className="text-[7px] bg-emerald-600 text-white font-black px-1 py-0.2 rounded shrink-0 uppercase tracking-wider">Correct</span>
+                            )}
+                            {isWinnerA && !isSimWinnerA && (
+                              <span className="text-[7px] bg-rose-600 text-white font-black px-1 py-0.2 rounded shrink-0 uppercase tracking-wider">Faux</span>
+                            )}
+                            {!isWinnerA && isSimWinnerA && (
+                              <span className="text-[7px] bg-amber-500 text-white font-black px-1 py-0.2 rounded shrink-0 uppercase tracking-wider">Gagnant</span>
+                            )}
+                          </>
+                        )}
+                      </>
                     )}
-                  </div>
-                  {showValidation && !maskPrediction && teamA && (
-                    <div className="flex justify-end w-full mt-1">
-                      {isWinnerA && isSimWinnerA && (
-                        <span className="text-[7px] bg-emerald-600 text-white font-black px-1.5 py-0.5 rounded uppercase tracking-wider">Correct</span>
-                      )}
-                      {isWinnerA && !isSimWinnerA && (
-                        <span className="text-[7px] bg-rose-600 text-white font-black px-1.5 py-0.5 rounded uppercase tracking-wider">Faux</span>
-                      )}
-                      {!isWinnerA && isSimWinnerA && (
-                        <span className="text-[7px] bg-amber-500 text-white font-black px-1.5 py-0.5 rounded uppercase tracking-wider">Gagnant</span>
-                      )}
-                    </div>
+                  </span>
+                  {isWinnerA && !maskPrediction && (
+                    showValidation ? (
+                      isSimWinnerA ? (
+                        <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                      ) : (
+                        <span className="text-rose-600 text-[10px] font-black shrink-0">❌</span>
+                      )
+                    ) : (
+                      <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                    )
+                  )}
+                  {!isWinnerA && showValidation && isSimWinnerA && !maskPrediction && (
+                    <span className="text-amber-500 text-[10px] font-black shrink-0">🏆</span>
                   )}
                 </button>
 
-                {/* VS Divider */}
-                <div className="flex items-center justify-center text-[9px] text-gray-400 font-black tracking-wider uppercase">
-                  vs
-                </div>
-
-                {/* Team B Button */}
                 <button
                   type="button"
                   disabled={locked || missingOpponent}
                   onClick={() => !missingOpponent && handleSelectWinner(round, matchId, teamBId)}
-                  className={`w-full flex flex-col items-start p-1.5 rounded-lg border text-xs font-bold transition-all disabled:opacity-100 ${btnClassB}`}
+                  className={`w-full flex items-center justify-between transition-all ${
+                    round === "r32" 
+                      ? "p-1 sm:p-1.5 rounded-md sm:rounded-lg text-[10px] sm:text-xs font-black sm:font-bold" 
+                      : "p-1.5 rounded-lg text-xs font-bold"
+                  } ${btnClassB}`}
                 >
-                  <div className="flex items-center justify-between w-full min-w-0">
-                    <span className="flex items-center gap-1.5 min-w-0 flex-1">
-                      <span className="text-base shrink-0">{teamB ? renderFlag(teamB.flag) : "❓"}</span>
-                      <span className="truncate">{teamB ? teamB.name : "À déterminer"}</span>
-                    </span>
-                    {isWinnerB && !maskPrediction && (
-                      <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0 ml-1" />
+                  <span className={`flex items-center truncate ${round === "r32" ? "gap-1 sm:gap-1.5" : "gap-1.5"}`}>
+                    {maskPrediction ? (
+                      <>
+                        <span className="text-xs shrink-0">🔒</span>
+                        <span className="text-gray-400 italic">Masqué</span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="text-sm shrink-0">{teamB ? renderFlag(teamB.flag) : "❓"}</span>
+                        <span className="truncate">{teamB ? teamB.name : "À déterminer"}</span>
+                        {showValidation && !maskPrediction && teamB && (
+                          <>
+                            {isWinnerB && isSimWinnerB && (
+                              <span className="text-[7px] bg-emerald-600 text-white font-black px-1 py-0.2 rounded shrink-0 uppercase tracking-wider">Correct</span>
+                            )}
+                            {isWinnerB && !isSimWinnerB && (
+                              <span className="text-[7px] bg-rose-600 text-white font-black px-1 py-0.2 rounded shrink-0 uppercase tracking-wider">Faux</span>
+                            )}
+                            {!isWinnerB && isSimWinnerB && (
+                              <span className="text-[7px] bg-amber-500 text-white font-black px-1 py-0.2 rounded shrink-0 uppercase tracking-wider">Gagnant</span>
+                            )}
+                          </>
+                        )}
+                      </>
                     )}
-                  </div>
-                  {showValidation && !maskPrediction && teamB && (
-                    <div className="flex justify-end w-full mt-1">
-                      {isWinnerB && isSimWinnerB && (
-                        <span className="text-[7px] bg-emerald-600 text-white font-black px-1.5 py-0.5 rounded uppercase tracking-wider">Correct</span>
-                      )}
-                      {isWinnerB && !isSimWinnerB && (
-                        <span className="text-[7px] bg-rose-600 text-white font-black px-1.5 py-0.5 rounded uppercase tracking-wider">Faux</span>
-                      )}
-                      {!isWinnerB && isSimWinnerB && (
-                        <span className="text-[7px] bg-amber-500 text-white font-black px-1.5 py-0.5 rounded uppercase tracking-wider">Gagnant</span>
-                      )}
-                    </div>
+                  </span>
+                  {isWinnerB && !maskPrediction && (
+                    showValidation ? (
+                      isSimWinnerB ? (
+                        <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                      ) : (
+                        <span className="text-rose-600 text-[10px] font-black shrink-0">❌</span>
+                      )
+                    ) : (
+                      <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                    )
+                  )}
+                  {!isWinnerB && showValidation && isSimWinnerB && !maskPrediction && (
+                    <span className="text-amber-500 text-[10px] font-black shrink-0">🏆</span>
                   )}
                 </button>
               </>
             );
           })()}
         </div>
+
+
 
         {direction === "left" && (
           <div className={`absolute right-[-16px] top-1/2 -translate-y-1/2 w-4 h-[2px] transition ${
@@ -2144,85 +1994,6 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
         )}
       </div>
     );
-  };
-
-  const handleShareBracket = () => {
-    setCopied(false);
-    setShowShareModal(true);
-    
-    // Also try to copy automatically as a nice helper
-    const shareUrl = `${window.location.origin}/challenge/${challenge.id || ""}`;
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(shareUrl)
-        .then(() => setCopied(true))
-        .catch(err => console.warn("Could not copy automatically:", err));
-    }
-  };
-
-  const handleCopyLinkOnly = () => {
-    const shareUrl = `${window.location.origin}/challenge/${challenge.id || ""}`;
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(shareUrl)
-        .then(() => {
-          setCopied(true);
-          setTimeout(() => setCopied(false), 2000);
-        })
-        .catch(err => {
-          console.error("Failed to copy:", err);
-          alert("Impossible de copier automatiquement. Veuillez copier le lien manuellement.");
-        });
-    } else {
-      // Fallback for non-supported browsers/iframes
-      const textArea = document.createElement("textarea");
-      textArea.value = shareUrl;
-      document.body.appendChild(textArea);
-      textArea.select();
-      try {
-        document.execCommand("copy");
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
-      } catch (err) {
-        console.error("Fallback copy failed:", err);
-      }
-      document.body.removeChild(textArea);
-    }
-  };
-
-  const handleDownloadImage = async () => {
-    try {
-      setSharingBracket(true);
-      const node = document.getElementById("bracket-export-node");
-      if (!node) {
-        setMessage({ type: "error", text: "Erreur : conteneur de partage introuvable." });
-        return;
-      }
-
-      const { toJpeg } = await import("html-to-image");
-      const dataUrl = await toJpeg(node, {
-        quality: 0.8,
-        backgroundColor: "#0f172a",
-        pixelRatio: 1.2,
-        cacheBust: true,
-        style: {
-          transform: 'scale(1)',
-          left: '0',
-          top: '0',
-          opacity: '1',
-          visibility: 'visible',
-        }
-      });
-
-      const link = document.createElement("a");
-      link.download = "mes-pronostics-mirfoot.jpg";
-      link.href = dataUrl;
-      link.click();
-      setMessage({ type: "success", text: "Image téléchargée avec succès !" });
-    } catch (err) {
-      console.error("Error generating image:", err);
-      setMessage({ type: "error", text: "Erreur lors de la génération de l'image." });
-    } finally {
-      setSharingBracket(false);
-    }
   };
 
   const renderBracketTree = () => {
@@ -2263,7 +2034,7 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
         )}
 
         {/* Call to action to invite user to predict */}
-        <div className="bg-emerald-50/40 border border-emerald-100 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-2xs">
+        <div className="bg-emerald-50/40 border border-emerald-100 rounded-2xl p-4 flex items-center justify-between gap-4 shadow-2xs">
           <div className="flex items-start gap-3 text-left">
             <span className="text-xl mt-0.5 shrink-0 select-none">🔮</span>
             <div>
@@ -2275,18 +2046,6 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
               </p>
             </div>
           </div>
-          <button
-            onClick={handleShareBracket}
-            disabled={sharingBracket}
-            className="w-full sm:w-auto shrink-0 bg-white hover:bg-emerald-50 border border-emerald-200 text-emerald-700 font-bold px-4 py-2 rounded-xl text-xs flex items-center justify-center gap-2 cursor-pointer transition shadow-sm"
-          >
-            {sharingBracket ? (
-              <RefreshCw className="w-4 h-4 animate-spin" />
-            ) : (
-              <Share2 className="w-4 h-4" />
-            )}
-            Partager mon tableau
-          </button>
         </div>
 
         {/* Phase navigation timeline */}
@@ -2393,9 +2152,10 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
                     <div className="relative bg-gradient-to-b from-amber-400 to-yellow-500 border border-amber-300 rounded-3xl p-10 text-slate-950 shadow-md space-y-4 text-center">
                       <Trophy className="w-20 h-20 mx-auto text-amber-950 animate-bounce" />
                       <div>
-                        <div className="text-xs font-extrabold uppercase tracking-widest text-amber-900 mb-2">Champion Prédit</div>
-                        <div className="flex items-center justify-center">
-                          <span className="flex w-32 h-20 items-center justify-center">{BRACKET_TEAMS[activePicks.winner] ? renderExportFlag(BRACKET_TEAMS[activePicks.winner].flag, "w-24 h-24") : "❓"}</span>
+                        <div className="text-xs font-extrabold uppercase tracking-widest text-amber-900">Champion Prédit</div>
+                        <div className="text-3xl font-black flex items-center justify-center gap-3 mt-3">
+                          <span className="text-4xl">{BRACKET_TEAMS[activePicks.winner] ? renderFlag(BRACKET_TEAMS[activePicks.winner].flag) : "❓"}</span>
+                          <span>{BRACKET_TEAMS[activePicks.winner]?.name}</span>
                         </div>
                       </div>
                     </div>
@@ -2429,84 +2189,6 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
              {currentPhase === "r2" && (
                 <button onClick={() => setCurrentPhase("winner")} className="bg-amber-500 hover:bg-amber-600 text-white font-bold text-sm px-6 py-2.5 rounded-xl shadow-sm transition">Choisir le Vainqueur 🏆</button>
              )}
-          </div>
-        </div>
-
-        {/* Hidden Export Node (positioned far off-screen so layout engine fully renders it) */}
-        <div className="absolute left-[-9999px] top-[-9999px]">
-          <div
-            id="bracket-export-node"
-            className="bg-[#0f172a] flex flex-col items-center justify-center w-[3600px] p-24"
-          >
-            <div className="w-full flex flex-col justify-between">
-              {/* Title */}
-              <div className="text-center mb-12 shrink-0">
-                <h1 className="text-7xl font-black text-emerald-400 tracking-tight">{challenge.name}</h1>
-                <p className="text-4xl text-slate-300 mt-6 font-medium">{selectedParticipant ? `Les pronostics de ${selectedParticipant.username}` : "Mes pronostics"} - Participez sur Mirfoot !</p>
-              </div>
-
-              <div className="flex justify-between items-stretch gap-8 flex-1 my-4">
-                {/* Left Side */}
-                <div className="flex flex-col justify-around w-[340px] gap-6">
-                  {r32Left.map(m => <div key={m.id}>{renderTreeMatchNode("r32", m.id, m.homeId, m.awayId, "center", true)}</div>)}
-                </div>
-                <div className="flex flex-col justify-around w-[340px] gap-6">
-                  {r16Left.map(m => <div key={m.id}>{renderTreeMatchNode("r16", m.id, m.homeId, m.awayId, "center", true)}</div>)}
-                </div>
-                <div className="flex flex-col justify-around w-[340px] gap-6">
-                  {r8Left.map(m => <div key={m.id}>{renderTreeMatchNode("r8", m.id, m.homeId, m.awayId, "center", true)}</div>)}
-                </div>
-                <div className="flex flex-col justify-around w-[340px] gap-6">
-                  {r4Left.map(m => <div key={m.id}>{renderTreeMatchNode("r4", m.id, m.homeId, m.awayId, "center", true)}</div>)}
-                </div>
-
-                {/* Center */}
-                <div className="flex flex-col justify-center items-center flex-1 gap-16 px-4">
-                  <div className="w-full text-center">
-                    <div className="text-3xl text-amber-500 font-extrabold uppercase mb-6">Finale</div>
-                    <div className="w-[500px] mx-auto">
-                      {renderTreeMatchNode("r2", "R2_F1", bracketState.finalMatch.homeId, bracketState.finalMatch.awayId, "center", true)}
-                    </div>
-                  </div>
-                  
-                  <div className="w-full text-center flex flex-col items-center">
-                    {activePicks.winner ? (
-                      <div className="bg-gradient-to-b from-amber-400 to-yellow-500 border-2 border-amber-300 rounded-3xl p-12 text-slate-950 shadow-md inline-block min-w-[480px]">
-                        <Trophy className="w-32 h-32 mx-auto text-amber-950 mb-6" />
-                        <div className="text-2xl font-extrabold uppercase tracking-widest text-amber-900 mb-6">Champion</div>
-                        <div className="flex items-center justify-center">
-                          <span className="flex w-48 h-32 items-center justify-center">{BRACKET_TEAMS[activePicks.winner] ? renderExportFlag(BRACKET_TEAMS[activePicks.winner].flag, "w-40 h-40") : "❓"}</span>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="bg-slate-800 border-2 border-slate-700 border-dashed rounded-3xl p-12 text-slate-400 min-w-[480px]">
-                        <HelpCircle className="w-32 h-32 mx-auto text-slate-500 mb-6" />
-                        <div className="text-2xl font-bold uppercase">À prédire</div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Right Side */}
-                <div className="flex flex-col justify-around w-[340px] gap-6">
-                  {r4Right.map(m => <div key={m.id}>{renderTreeMatchNode("r4", m.id, m.homeId, m.awayId, "center", true)}</div>)}
-                </div>
-                <div className="flex flex-col justify-around w-[340px] gap-6">
-                  {r8Right.map(m => <div key={m.id}>{renderTreeMatchNode("r8", m.id, m.homeId, m.awayId, "center", true)}</div>)}
-                </div>
-                <div className="flex flex-col justify-around w-[340px] gap-6">
-                  {r16Right.map(m => <div key={m.id}>{renderTreeMatchNode("r16", m.id, m.homeId, m.awayId, "center", true)}</div>)}
-                </div>
-                <div className="flex flex-col justify-around w-[340px] gap-6">
-                  {r32Right.map(m => <div key={m.id}>{renderTreeMatchNode("r32", m.id, m.homeId, m.awayId, "center", true)}</div>)}
-                </div>
-              </div>
-
-              {/* Footer */}
-              <div className="mt-4 text-center text-slate-400 text-xl font-semibold shrink-0">
-                Généré par Mirfoot - L'application de pronostics entre amis !
-              </div>
-            </div>
           </div>
         </div>
       </div>
@@ -2959,33 +2641,13 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
                             </div>
                           </div>
                           
-                          <div className="flex items-center gap-1">
-                            {(challenge.creatorId === userId || isAdmin) && p.user_id !== userId && (
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleKick(p.user_id, p.username || "Participant");
-                                }}
-                                disabled={kickingParticipantId === p.user_id}
-                                className="bg-white hover:bg-red-50 text-gray-400 hover:text-red-500 border border-gray-200 hover:border-red-200 p-1.5 rounded-lg transition cursor-pointer flex items-center shadow-xs shrink-0"
-                                title="Retirer ce participant du défi"
-                              >
-                                {kickingParticipantId === p.user_id ? (
-                                  <div className="w-3.5 h-3.5 border-2 border-red-500 border-t-transparent rounded-full animate-spin"></div>
-                                ) : (
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                )}
-                              </button>
-                            )}
-                            <button
-                              type="button"
-                              onClick={() => setSelectedParticipant(p)}
-                              className="bg-white hover:bg-gray-150 text-gray-750 border border-gray-200 font-black text-[10px] px-2 py-1.5 rounded-lg transition cursor-pointer flex items-center shadow-xs shrink-0"
-                            >
-                              👁️
-                            </button>
-                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setSelectedParticipant(p)}
+                            className="bg-white hover:bg-gray-150 text-gray-750 border border-gray-200 font-black text-[10px] px-2 py-1.5 rounded-lg transition cursor-pointer flex items-center shadow-xs shrink-0"
+                          >
+                            👁️
+                          </button>
                         </div>
                       </div>
                     );
@@ -3064,87 +2726,6 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
               : "* Les résultats officiels sont enregistrés et le défi est résolu automatiquement à chaque sélection."}
           </p>
         </>
-      )}
-
-      {showShareModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-xs animate-fade-in">
-          <div className="bg-white rounded-3xl p-6 max-w-sm w-full border border-gray-100 shadow-2xl relative space-y-4 text-center">
-            <button 
-              onClick={() => setShowShareModal(false)}
-              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100 transition cursor-pointer"
-            >
-              <X className="w-5 h-5" />
-            </button>
-            
-            <div className="mx-auto w-12 h-12 rounded-full bg-emerald-50 flex items-center justify-center text-xl">
-              ⚽
-            </div>
-            
-            <div className="space-y-1">
-              <h3 className="text-base font-black text-gray-900">Partager mon Tableau</h3>
-              <p className="text-[11px] text-gray-500 font-semibold">
-                Défiez vos amis sur Mirfoot en partageant votre tableau de la phase finale !
-              </p>
-            </div>
-
-            {/* Link Copy Field */}
-            <div className="space-y-1.5 text-left">
-              <label className="text-[9px] text-gray-400 font-extrabold uppercase tracking-wider block">Lien de partage</label>
-              <div className="flex gap-2">
-                <input 
-                  type="text" 
-                  readOnly 
-                  value={`${window.location.origin}/challenge/${challenge.id || ""}`}
-                  className="flex-1 text-xs px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-hidden font-bold text-gray-700 select-all"
-                />
-                <button 
-                  onClick={handleCopyLinkOnly}
-                  className={`px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition cursor-pointer shrink-0 ${
-                    copied 
-                      ? "bg-emerald-600 text-white" 
-                      : "bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
-                  }`}
-                >
-                  {copied ? (
-                    <>
-                      <Check className="w-4 h-4" />
-                      <span>Copié</span>
-                    </>
-                  ) : (
-                    <>
-                      <Copy className="w-4 h-4" />
-                      <span>Copier</span>
-                    </>
-                  )}
-                </button>
-              </div>
-            </div>
-
-            {/* Image Download Option */}
-            <div className="border-t border-gray-100 pt-4 mt-2 space-y-2">
-              <p className="text-[10px] text-gray-400 font-semibold">
-                Vous pouvez également télécharger une image complète de votre tableau pour la poster ou l'envoyer.
-              </p>
-              <button
-                onClick={handleDownloadImage}
-                disabled={sharingBracket}
-                className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-400 text-white font-extrabold text-xs py-2.5 rounded-xl flex items-center justify-center gap-2 transition cursor-pointer shadow-sm"
-              >
-                {sharingBracket ? (
-                  <>
-                    <RefreshCw className="w-4 h-4 animate-spin" />
-                    <span>Génération de l'image...</span>
-                  </>
-                ) : (
-                  <>
-                    <Download className="w-4 h-4" />
-                    <span>Télécharger l'image (.JPG)</span>
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
       )}
     </div>
   );

@@ -7,7 +7,7 @@
       "season": "2024"
     },
     "errors": {
-      "access": "Your account is suspended, check on https://dashboard.api-football.com."
+      "requests": "You have reached the request limit for the day, Go to https://dashboard.api-football.com to upgrade your plan."
     },
     "results": 0,
     "paging": {

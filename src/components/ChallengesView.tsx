@@ -1070,31 +1070,20 @@ export default function ChallengesView({
 
       let challengesRes: any[] = [];
       try {
-        const { data: userChallenges, error: challengesError } = await supabase
-          .from("challenges")
-          .select("*");
-          
-        if (challengesError) throw challengesError;
-        challengesRes = userChallenges || [];
-        
-        const creatorIds = Array.from(new Set(challengesRes.map((c: any) => c.creator_id).filter(Boolean)));
-        if (creatorIds.length > 0) {
-          const { data: profs } = await supabase
-            .from("profiles")
-            .select("id, username")
-            .in("id", creatorIds);
-            
-          if (profs) {
-            const creatorsMap: Record<string, string> = {};
-            profs.forEach(p => { creatorsMap[p.id] = p.username; });
-            challengesRes = challengesRes.map(c => ({
-              ...c,
-              creator_username: creatorsMap[c.creator_id] || "Inconnu"
-            }));
-          }
+        const res = await fetch(`/api/challenges/user/${user.id}`);
+        if (!res.ok) {
+          throw new Error(`HTTP error: ${res.status}`);
         }
+        const data = await res.json();
+        challengesRes = data.challenges || [];
       } catch (err) {
-        console.error("Error loading user challenges:", err);
+        console.error("Error loading user challenges from backend:", err);
+        // Fallback
+        const { data: createdChallenges } = await supabase
+          .from("challenges")
+          .select("*")
+          .eq("creator_id", user.id);
+        challengesRes = createdChallenges || [];
       }
 
       const sortedChallenges = [...challengesRes].sort(
@@ -1176,34 +1165,33 @@ export default function ChallengesView({
     setSearchError(null);
     setSearchResult(null);
     try {
-      const cleanCode = searchCodeInput.trim().toUpperCase();
-      const { data, error } = await supabase.rpc("search_challenge_by_code", { search_code: cleanCode });
-
-      if (error) {
-        throw error;
-      }
-      
-      if (data && data.length > 0) {
-        const c = data[0];
+      const res = await fetch(`/api/challenges/search/${encodeURIComponent(searchCodeInput.trim())}`);
+      if (res.ok) {
+        const data = await res.json();
+        // Map backend's challenge object to local Challenge interface format
         const foundChallenge: Challenge = {
-          id: c.id,
-          competitionId: c.competition_id,
-          matchId: c.match_id,
-          matchHomeTeam: "", // Set below if needed
-          matchAwayTeam: "",
-          matchDate: "",
-          creatorId: c.creator_id,
-          creatorUsername: c.creator_username || "Inconnu",
-          title: c.title,
-          rules: c.rules,
-          code: c.rules || c.id.substring(0, 8).toUpperCase(),
-          pointRules: typeof c.point_rules === "string" ? JSON.parse(c.point_rules) : c.point_rules,
-          locked: c.locked,
-          resolved: c.resolved,
+          id: data.id,
+          competitionId: data.competition_id,
+          matchId: data.match_id,
+          matchHomeTeam: data.match_home_team,
+          matchAwayTeam: data.match_away_team,
+          matchDate: data.match_date,
+          creatorId: data.creator_id,
+          creatorUsername: data.creator_username,
+          title: data.title,
+          rules: data.rules,
+          code: data.rules || data.id.substring(0, 8).toUpperCase(),
+          pointRules:
+            typeof data.point_rules === "string"
+              ? JSON.parse(data.point_rules)
+              : data.point_rules,
+          locked: data.locked,
+          resolved: data.resolved,
         };
         setSearchResult(foundChallenge);
       } else {
-        setSearchError("Aucun défi trouvé avec ce code.");
+        const err = await res.json();
+        setSearchError(err.error || "Aucun défi trouvé avec ce code.");
       }
     } catch (err: any) {
       console.error(err);
@@ -1226,33 +1214,30 @@ export default function ChallengesView({
     setJoiningChallengeId(challengeToJoin.id);
     try {
       // Call the server API endpoint to safely insert/join the challenge
-      const { data: existingInvite } = await supabase
-        .from("challenge_invitations")
-        .select("id")
-        .eq("challenge_id", challengeToJoin.id)
-        .eq("user_id", userId)
-        .maybeSingle();
+      const response = await fetch("/api/challenges/join", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          challengeId: challengeToJoin.id,
+          userId,
+        }),
+      });
 
-      if (existingInvite) {
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Erreur lors de l'enregistrement");
+      }
+
+      const result = await response.json();
+      if (result.wasAlreadyParticipant) {
         setCustomAlert({
           type: "info",
           title: "Déjà rejoint !",
           message: `Vous avez déjà rejoint le défi "${challengeToJoin.title}".`
         });
         return;
-      }
-
-      const { error: insertError } = await supabase
-        .from("challenge_invitations")
-        .insert({
-          challenge_id: challengeToJoin.id,
-          user_id: userId,
-          invited_by: null,
-          accepted: true,
-        });
-
-      if (insertError) {
-        throw new Error("Impossible de rejoindre le défi.");
       }
 
       // Reload all challenges to fetch the newly joined challenge in local list, or append if missing
@@ -1377,84 +1362,6 @@ export default function ChallengesView({
     window.open(url, "_blank");
   };
 
-
-  const handleQuickStartBracket = async () => {
-    setCreating(true);
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      const currentUserId = user?.id || userId;
-      if (!currentUserId) {
-        alert("Session expirée. Veuillez vous reconnecter.");
-        setCreating(false);
-        return;
-      }
-      
-      // Look for an existing bracket challenge created by this user
-      const { data: existingChallenges, error: fetchErr } = await supabase
-        .from("challenges")
-        .select("id")
-        .eq("creator_id", currentUserId)
-        .eq("type", "bracket")
-        .limit(1);
-        
-      if (!fetchErr && existingChallenges && existingChallenges.length > 0) {
-        // Just go to it
-        const chalId = existingChallenges[0].id;
-        const chal = challenges.find(c => c.id === chalId) || existingChallenges[0];
-        setActiveModal({ type: "detail", challenge: chal });
-        setCreating(false);
-        return;
-      }
-
-      const title = "Mon Tableau de Qualification";
-      const savedRules = {
-        exact_score: 100,
-        close_score: 200,
-        correct_winner: 300,
-        qualification: 400,
-        actualBracketPicks: null
-      };
-      const generatedCode = "BRK-" + Math.random().toString(36).substring(2, 8).toUpperCase();
-
-      const { data, error } = await supabase
-        .from("challenges")
-        .insert({
-          competition_id: 9999,
-          match_id: 999999,
-          match_home_team: "Tableau",
-          match_away_team: "Éliminatoire",
-          match_date: "2026-06-26T18:00:00Z",
-          creator_id: currentUserId,
-          title: title,
-          point_rules: savedRules,
-          locked: false,
-          resolved: false,
-          type: 'bracket',
-          rules: generatedCode,
-        })
-        .select();
-
-      if (!error && data && data.length > 0) {
-        await supabase
-          .from("challenge_invitations")
-          .insert({
-            challenge_id: data[0].id,
-            user_id: currentUserId,
-            status: "accepted",
-          });
-          
-        await loadData();
-        setActiveModal({ type: "detail", challenge: data[0] });
-      } else {
-        alert("Erreur lors de la création du tableau.");
-      }
-    } catch (err) {
-      console.error(err);
-      alert("Une erreur est survenue.");
-    } finally {
-      setCreating(false);
-    }
-  };
 
   const handleCreateChallenge = async (e: FormEvent) => {
     e.preventDefault();
@@ -3047,14 +2954,8 @@ export default function ChallengesView({
           const pQualifies = predVal?.qualifies;
 
           let actualQualifier = null;
-          if (singleMatch.score.winner === 'HOME_TEAM') {
-            actualQualifier = 'home';
-          } else if (singleMatch.score.winner === 'AWAY_TEAM') {
-            actualQualifier = 'away';
-          } else {
-            if (rHome > rAway) actualQualifier = 'home';
-            else if (rAway > rHome) actualQualifier = 'away';
-          }
+          if (singleMatch.score.winner === 'HOME_TEAM') actualQualifier = 'home';
+          else if (singleMatch.score.winner === 'AWAY_TEAM') actualQualifier = 'away';
           
           if (pHome !== undefined && pAway !== undefined) {
             isExact = Number(pHome) === Number(rHome) && Number(pAway) === Number(rAway);
@@ -3161,14 +3062,8 @@ export default function ChallengesView({
               const pQualifies = pMatch.qualifies;
 
               let actualQualifier = null;
-              if (m.score.winner === 'HOME_TEAM') {
-                actualQualifier = 'home';
-              } else if (m.score.winner === 'AWAY_TEAM') {
-                actualQualifier = 'away';
-              } else {
-                if (rHome > rAway) actualQualifier = 'home';
-                else if (rAway > rHome) actualQualifier = 'away';
-              }
+              if (m.score.winner === 'HOME_TEAM') actualQualifier = 'home';
+              else if (m.score.winner === 'AWAY_TEAM') actualQualifier = 'away';
               
               if (rHome !== null && rAway !== null) {
                 const isExact = Number(pMatch.homeScore) === Number(rHome) && Number(pMatch.awayScore) === Number(rAway);
@@ -3751,8 +3646,6 @@ export default function ChallengesView({
                   onSaveSuccess={() => {
                     refreshChallengeBets();
                   }}
-                  isAdmin={isAdmin}
-                  onKickParticipant={performKick}
                 />
               ) : (
                 <>
@@ -4364,8 +4257,6 @@ export default function ChallengesView({
                   onSaveSuccess={() => {
                     refreshChallengeBets();
                   }}
-                  isAdmin={isAdmin}
-                  onKickParticipant={performKick}
                 />
               ) : (
                 <>
@@ -4496,8 +4387,6 @@ export default function ChallengesView({
                   onSaveSuccess={() => {
                     refreshChallengeBets();
                   }}
-                  isAdmin={isAdmin}
-                  onKickParticipant={performKick}
                 />
               ) : (
                 <>
@@ -4649,8 +4538,6 @@ export default function ChallengesView({
                       refreshChallengeBets();
                       loadData();
                     }}
-                    isAdmin={isAdmin}
-                    onKickParticipant={performKick}
                   />
                 ) : (
                   <div>
@@ -4666,8 +4553,6 @@ export default function ChallengesView({
                       userId={userId || ""}
                       mode="prediction"
                       onShowRules={() => setActiveModal({ type: 'rules', challenge })}
-                      isAdmin={isAdmin}
-                      onKickParticipant={performKick}
                     />
                   </div>
                 )
@@ -4950,29 +4835,8 @@ export default function ChallengesView({
                       }}
                       className="mt-4 text-emerald-600 font-bold hover:underline cursor-pointer"
                     >
-                      Créer un défi match
+                      Créer un défi ici
                     </button>
-                    {!preselectedMatch && (
-                      <div className="mt-8 border-t border-gray-100 pt-8 w-full max-w-md mx-auto">
-                        <div className="bg-gradient-to-br from-amber-400 to-amber-500 rounded-3xl p-8 text-center shadow-lg relative overflow-hidden">
-                          <div className="absolute top-0 right-0 -mt-4 -mr-4 text-7xl opacity-20">🏆</div>
-                          <div className="absolute bottom-0 left-0 -mb-4 -ml-4 text-6xl opacity-20 transform -rotate-12">⚽️</div>
-                          <h3 className="text-2xl font-black text-amber-950 mb-3 relative z-10">
-                            Tableau de Qualification
-                          </h3>
-                          <p className="text-amber-900 font-medium mb-6 relative z-10">
-                            Pronostiquez dès maintenant toute la phase finale et partagez votre tableau.
-                          </p>
-                          <button
-                            onClick={handleQuickStartBracket}
-                            disabled={creating}
-                            className="bg-amber-950 text-amber-50 hover:bg-slate-900 w-full py-4 rounded-xl font-black text-lg transition-all shadow-md active:scale-95 cursor-pointer relative z-10"
-                          >
-                            {creating ? "Création en cours..." : "Commencer mon tableau 🚀"}
-                          </button>
-                        </div>
-                      </div>
-                    )}
                   </div>
                 )}
 

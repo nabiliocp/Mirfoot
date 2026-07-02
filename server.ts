@@ -596,64 +596,6 @@ const mapStatusToFootballData = (apiStatus: string) => {
   return "TIMED";
 };
 
-function getMockWorldCupMatches(): any[] {
-  const matches = [
-    { id: 9001, home: "BRA", homeName: "Brésil", away: "JPN", awayName: "Japon", time: "2026-06-29T18:00:00Z", winner: "HOME_TEAM", scoreHome: 2, scoreAway: 1 },
-    { id: 9002, home: "CIV", homeName: "Côte d'Ivoire", away: "NOR", awayName: "Norvège", time: "2026-06-30T21:00:00Z", winner: "HOME_TEAM", scoreHome: 1, scoreAway: 0 },
-    { id: 9003, home: "MEX", homeName: "Mexique", away: "ECU", awayName: "Équateur", time: "2026-07-01T15:00:00Z", winner: "AWAY_TEAM", scoreHome: 1, scoreAway: 2 },
-    { id: 9004, home: "ENG", homeName: "Angleterre", away: "COD", awayName: "RDC Congo", time: "2026-07-01T18:00:00Z", winner: "HOME_TEAM", scoreHome: 3, scoreAway: 0 },
-    { id: 9005, home: "ARG", homeName: "Argentine", away: "CPV", awayName: "Cap-Vert", time: "2026-07-04T21:00:00Z", winner: "HOME_TEAM", scoreHome: 2, scoreAway: 0 },
-    { id: 9006, home: "AUS", homeName: "Australie", away: "EGY", awayName: "Égypte", time: "2026-07-03T15:00:00Z", winner: "AWAY_TEAM", scoreHome: 1, scoreAway: 2 },
-    { id: 9007, home: "SUI", homeName: "Suisse", away: "ALG", awayName: "Algérie", time: "2026-07-03T18:00:00Z", winner: "HOME_TEAM", scoreHome: 1, scoreAway: 0 },
-    { id: 9008, home: "COL", homeName: "Colombie", away: "GHA", awayName: "Ghana", time: "2026-07-04T21:00:00Z", winner: "HOME_TEAM", scoreHome: 2, scoreAway: 1 },
-    { id: 9009, home: "GER", homeName: "Allemagne", away: "PAR", awayName: "Paraguay", time: "2026-06-29T15:00:00Z", winner: "HOME_TEAM", scoreHome: 2, scoreAway: 0 },
-    { id: 9010, home: "FRA", homeName: "France", away: "SWE", awayName: "Suède", time: "2026-07-01T21:00:00Z", winner: "HOME_TEAM", scoreHome: 3, scoreAway: 1 },
-    { id: 9011, home: "RSA", homeName: "Afrique du Sud", away: "CAN", awayName: "Canada", time: "2026-06-28T18:00:00Z", winner: "AWAY_TEAM", scoreHome: 1, scoreAway: 2 },
-    { id: 9012, home: "NED", homeName: "Pays-Bas", away: "MAR", awayName: "Maroc", time: "2026-06-30T15:00:00Z", winner: "HOME_TEAM", scoreHome: 2, scoreAway: 1 },
-    { id: 9013, home: "POR", homeName: "Portugal", away: "CRO", awayName: "Croatie", time: "2026-07-06T18:00:00Z", winner: "HOME_TEAM", scoreHome: 1, scoreAway: 0 },
-    { id: 9014, home: "ESP", homeName: "Espagne", away: "AUT", awayName: "Autriche", time: "2026-07-02T15:00:00Z", winner: "HOME_TEAM", scoreHome: 2, scoreAway: 0 },
-    { id: 9015, home: "USA", homeName: "États-Unis", away: "BIH", awayName: "Bosnie-Herzégovine", time: "2026-07-02T21:00:00Z", winner: "HOME_TEAM", scoreHome: 2, scoreAway: 1 },
-    { id: 9016, home: "BEL", homeName: "Belgique", away: "SEN", awayName: "Sénégal", time: "2026-07-01T18:00:00Z", winner: "HOME_TEAM", scoreHome: 1, scoreAway: 0 },
-  ];
-
-  return matches.map(m => {
-    return {
-      id: m.id,
-      utcDate: m.time,
-      status: "TIMED",
-      matchday: 1,
-      stage: "ROUND_OF_32",
-      group: null,
-      homeTeam: {
-        id: m.id * 10,
-        name: m.homeName,
-        shortName: m.homeName,
-        tla: m.home,
-        crest: ""
-      },
-      awayTeam: {
-        id: m.id * 10 + 1,
-        name: m.awayName,
-        shortName: m.awayName,
-        tla: m.away,
-        crest: ""
-      },
-      score: {
-        fullTime: {
-          home: m.scoreHome,
-          away: m.scoreAway,
-        },
-        winner: m.winner
-      },
-      competition: {
-        id: 2000,
-        name: "Coupe du Monde FIFA",
-        emblem: ""
-      }
-    };
-  });
-}
-
 function adjustMatchesDynamically(matches: any[]): any[] {
   if (!Array.isArray(matches)) return [];
   const now = Date.now();
@@ -696,9 +638,6 @@ function adjustMatchesDynamically(matches: any[]): any[] {
                   away: updatedScore.fullTime.away ?? 0
                 };
               }
-              const hScore = updatedScore.fullTime.home ?? 0;
-              const aScore = updatedScore.fullTime.away ?? 0;
-              updatedScore.winner = hScore > aScore ? "HOME_TEAM" : hScore < aScore ? "AWAY_TEAM" : "DRAW";
               return {
                 ...m,
                 status: "FINISHED",
@@ -1576,8 +1515,8 @@ async function startServer() {
           }
 
           if (fdCompId === 2000) {
-            console.log("[Fallback] API-Football failed for World Cup. Returning mock match list...");
-            return res.json({ matches: getMockWorldCupMatches() });
+            console.log("[Fallback] API-Football failed for World Cup. Returning empty match list for self-healing backup...");
+            return res.json({ matches: [] });
           }
 
           throw apiErr;
@@ -1624,8 +1563,8 @@ async function startServer() {
     } catch (err: any) {
       console.error("All fetch strategies failed for competition:", err);
       if (fdCompId === 2000) {
-        console.log("[Fallback] All APIs failed for World Cup. Returning mock match list...");
-        return res.json({ matches: getMockWorldCupMatches() });
+        console.log("[Fallback] All APIs failed for World Cup. Returning empty match list for self-healing backup...");
+        return res.json({ matches: [] });
       }
       res.status(500).json({ error: "Erreur réseau", details: err?.message || String(err) });
     }
@@ -1765,60 +1704,6 @@ async function startServer() {
           }
         }
 
-        // Fallback 1: check if it's a mock match (id >= 9000)
-        if (!matchData && challenge.match_id >= 9000) {
-          const mockMatches = getMockWorldCupMatches();
-          const mockMatch = mockMatches.find((m: any) => m.id === challenge.match_id);
-          if (mockMatch) {
-            const adjustedList = adjustMatchesDynamically([mockMatch]);
-            const adjusted = adjustedList[0];
-            matchData = {
-              status: adjusted.status,
-              score: {
-                regularTime: {
-                  home: adjusted.score.fullTime.home,
-                  away: adjusted.score.fullTime.away,
-                },
-                fullTime: {
-                  home: adjusted.score.fullTime.home,
-                  away: adjusted.score.fullTime.away,
-                },
-                winner: adjusted.score.winner
-              }
-            };
-          }
-        }
-
-        // Fallback 2: check cached matches for this competition (handles scraper updates and API-Football cached matches!)
-        if (!matchData && challenge.competition_id) {
-          const activeProvider = getActiveApiProvider();
-          const cacheKey = `comp_${challenge.competition_id}_${activeProvider}_current`;
-          const cached = apiCache[cacheKey] || loadPersistentCache(cacheKey);
-          if (cached && cached.data && Array.isArray(cached.data.matches)) {
-            const cachedMatch = cached.data.matches.find((m: any) => String(m.id) === String(challenge.match_id));
-            if (cachedMatch) {
-              matchData = {
-                status: cachedMatch.status,
-                score: {
-                  regularTime: {
-                    home: cachedMatch.score?.regularTime?.home ?? cachedMatch.score?.fullTime?.home ?? 0,
-                    away: cachedMatch.score?.regularTime?.away ?? cachedMatch.score?.fullTime?.away ?? 0,
-                  },
-                  fullTime: {
-                    home: cachedMatch.score?.fullTime?.home ?? 0,
-                    away: cachedMatch.score?.fullTime?.away ?? 0,
-                  },
-                  winner: cachedMatch.score?.winner || (
-                    (cachedMatch.score?.fullTime?.home !== null && cachedMatch.score?.fullTime?.away !== null)
-                      ? (cachedMatch.score.fullTime.home > cachedMatch.score.fullTime.away ? "HOME_TEAM" : cachedMatch.score.fullTime.home < cachedMatch.score.fullTime.away ? "AWAY_TEAM" : "DRAW")
-                      : "DRAW"
-                  )
-                }
-              };
-            }
-          }
-        }
-
         if (!matchData) continue;
         if (challenge.match_id === 0) continue; // Multi-match resolution requires competition fetch
 
@@ -1839,11 +1724,8 @@ async function startServer() {
 
           let actualQualifier = null;
           if (matchData.score.winner === "HOME_TEAM") actualQualifier = "home";
-          else if (matchData.score.winner === "AWAY_TEAM") actualQualifier = "away";
-          else {
-            if (homeScore > awayScore) actualQualifier = "home";
-            else if (awayScore > homeScore) actualQualifier = "away";
-          }
+          else if (matchData.score.winner === "AWAY_TEAM")
+            actualQualifier = "away";
 
           // Logic to calculate points for each user
           const { data: bets } = await supabase
