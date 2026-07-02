@@ -1070,20 +1070,31 @@ export default function ChallengesView({
 
       let challengesRes: any[] = [];
       try {
-        const res = await fetch(`/api/challenges/user/${user.id}`);
-        if (!res.ok) {
-          throw new Error(`HTTP error: ${res.status}`);
-        }
-        const data = await res.json();
-        challengesRes = data.challenges || [];
-      } catch (err) {
-        console.error("Error loading user challenges from backend:", err);
-        // Fallback
-        const { data: createdChallenges } = await supabase
+        const { data: userChallenges, error: challengesError } = await supabase
           .from("challenges")
-          .select("*")
-          .eq("creator_id", user.id);
-        challengesRes = createdChallenges || [];
+          .select("*");
+          
+        if (challengesError) throw challengesError;
+        challengesRes = userChallenges || [];
+        
+        const creatorIds = Array.from(new Set(challengesRes.map((c: any) => c.creator_id).filter(Boolean)));
+        if (creatorIds.length > 0) {
+          const { data: profs } = await supabase
+            .from("profiles")
+            .select("id, username")
+            .in("id", creatorIds);
+            
+          if (profs) {
+            const creatorsMap: Record<string, string> = {};
+            profs.forEach(p => { creatorsMap[p.id] = p.username; });
+            challengesRes = challengesRes.map(c => ({
+              ...c,
+              creator_username: creatorsMap[c.creator_id] || "Inconnu"
+            }));
+          }
+        }
+      } catch (err) {
+        console.error("Error loading user challenges:", err);
       }
 
       const sortedChallenges = [...challengesRes].sort(
@@ -1165,33 +1176,34 @@ export default function ChallengesView({
     setSearchError(null);
     setSearchResult(null);
     try {
-      const res = await fetch(`/api/challenges/search/${encodeURIComponent(searchCodeInput.trim())}`);
-      if (res.ok) {
-        const data = await res.json();
-        // Map backend's challenge object to local Challenge interface format
+      const cleanCode = searchCodeInput.trim().toUpperCase();
+      const { data, error } = await supabase.rpc("search_challenge_by_code", { search_code: cleanCode });
+
+      if (error) {
+        throw error;
+      }
+      
+      if (data && data.length > 0) {
+        const c = data[0];
         const foundChallenge: Challenge = {
-          id: data.id,
-          competitionId: data.competition_id,
-          matchId: data.match_id,
-          matchHomeTeam: data.match_home_team,
-          matchAwayTeam: data.match_away_team,
-          matchDate: data.match_date,
-          creatorId: data.creator_id,
-          creatorUsername: data.creator_username,
-          title: data.title,
-          rules: data.rules,
-          code: data.rules || data.id.substring(0, 8).toUpperCase(),
-          pointRules:
-            typeof data.point_rules === "string"
-              ? JSON.parse(data.point_rules)
-              : data.point_rules,
-          locked: data.locked,
-          resolved: data.resolved,
+          id: c.id,
+          competitionId: c.competition_id,
+          matchId: c.match_id,
+          matchHomeTeam: "", // Set below if needed
+          matchAwayTeam: "",
+          matchDate: "",
+          creatorId: c.creator_id,
+          creatorUsername: c.creator_username || "Inconnu",
+          title: c.title,
+          rules: c.rules,
+          code: c.rules || c.id.substring(0, 8).toUpperCase(),
+          pointRules: typeof c.point_rules === "string" ? JSON.parse(c.point_rules) : c.point_rules,
+          locked: c.locked,
+          resolved: c.resolved,
         };
         setSearchResult(foundChallenge);
       } else {
-        const err = await res.json();
-        setSearchError(err.error || "Aucun défi trouvé avec ce code.");
+        setSearchError("Aucun défi trouvé avec ce code.");
       }
     } catch (err: any) {
       console.error(err);
@@ -1214,30 +1226,33 @@ export default function ChallengesView({
     setJoiningChallengeId(challengeToJoin.id);
     try {
       // Call the server API endpoint to safely insert/join the challenge
-      const response = await fetch("/api/challenges/join", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          challengeId: challengeToJoin.id,
-          userId,
-        }),
-      });
+      const { data: existingInvite } = await supabase
+        .from("challenge_invitations")
+        .select("id")
+        .eq("challenge_id", challengeToJoin.id)
+        .eq("user_id", userId)
+        .maybeSingle();
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Erreur lors de l'enregistrement");
-      }
-
-      const result = await response.json();
-      if (result.wasAlreadyParticipant) {
+      if (existingInvite) {
         setCustomAlert({
           type: "info",
           title: "Déjà rejoint !",
           message: `Vous avez déjà rejoint le défi "${challengeToJoin.title}".`
         });
         return;
+      }
+
+      const { error: insertError } = await supabase
+        .from("challenge_invitations")
+        .insert({
+          challenge_id: challengeToJoin.id,
+          user_id: userId,
+          invited_by: null,
+          accepted: true,
+        });
+
+      if (insertError) {
+        throw new Error("Impossible de rejoindre le défi.");
       }
 
       // Reload all challenges to fetch the newly joined challenge in local list, or append if missing
