@@ -398,7 +398,16 @@ export function computeLiveActualResults(matches: any[], dynamicR32Matches: Brac
   return result;
 }
 
-export function computeRobustBracketState(picks: BracketPredictions, r32Matches: BracketMatch[]): RobustBracketState {
+export interface ComputeRobustBracketStateOptions {
+  useActualResultsForProgression?: boolean;
+}
+
+export function computeRobustBracketState(
+  picks: BracketPredictions, 
+  r32Matches: BracketMatch[],
+  actualResults?: BracketPredictions | null,
+  options?: ComputeRobustBracketStateOptions
+): RobustBracketState {
   const r32Winners: Record<string, string> = {};
   
   const r32Mapping: Record<string, string> = {
@@ -415,8 +424,11 @@ export function computeRobustBracketState(picks: BracketPredictions, r32Matches:
   r32Matches.forEach(m => {
     const hasBothOpponents = m.homeId !== "" && m.awayId !== "";
     let winner = "";
-    if (hasBothOpponents) {
-      const slotKey = r32Mapping[m.id];
+    const slotKey = r32Mapping[m.id];
+    
+    if (options?.useActualResultsForProgression && actualResults?.r16?.[slotKey]) {
+      winner = actualResults.r16[slotKey];
+    } else if (hasBothOpponents) {
       const pickedWinner = picks.r16?.[slotKey] || "";
       if (pickedWinner === m.homeId || pickedWinner === m.awayId) {
         winner = pickedWinner;
@@ -447,8 +459,11 @@ export function computeRobustBracketState(picks: BracketPredictions, r32Matches:
   r16Matches.forEach(m => {
     const hasBothOpponents = m.homeId !== "" && m.awayId !== "";
     let winner = "";
-    if (hasBothOpponents) {
-      const slotKey = r16Mapping[m.id];
+    const slotKey = r16Mapping[m.id];
+    
+    if (options?.useActualResultsForProgression && actualResults?.r8?.[slotKey]) {
+      winner = actualResults.r8[slotKey];
+    } else if (hasBothOpponents) {
       const pickedWinner = picks.r8?.[slotKey] || "";
       if (pickedWinner === m.homeId || pickedWinner === m.awayId) {
         winner = pickedWinner;
@@ -474,8 +489,11 @@ export function computeRobustBracketState(picks: BracketPredictions, r32Matches:
   r8Matches.forEach(m => {
     const hasBothOpponents = m.homeId !== "" && m.awayId !== "";
     let winner = "";
-    if (hasBothOpponents) {
-      const slotKey = r8Mapping[m.id];
+    const slotKey = r8Mapping[m.id];
+    
+    if (options?.useActualResultsForProgression && actualResults?.r4?.[slotKey]) {
+      winner = actualResults.r4[slotKey];
+    } else if (hasBothOpponents) {
       const pickedWinner = picks.r4?.[slotKey] || "";
       if (pickedWinner === m.homeId || pickedWinner === m.awayId) {
         winner = pickedWinner;
@@ -498,8 +516,11 @@ export function computeRobustBracketState(picks: BracketPredictions, r32Matches:
   r4Matches.forEach(m => {
     const hasBothOpponents = m.homeId !== "" && m.awayId !== "";
     let winner = "";
-    if (hasBothOpponents) {
-      const slotKey = r4Mapping[m.id];
+    const slotKey = r4Mapping[m.id];
+    
+    if (options?.useActualResultsForProgression && actualResults?.r2?.[slotKey]) {
+      winner = actualResults.r2[slotKey];
+    } else if (hasBothOpponents) {
       const pickedWinner = picks.r2?.[slotKey] || "";
       if (pickedWinner === m.homeId || pickedWinner === m.awayId) {
         winner = pickedWinner;
@@ -518,7 +539,9 @@ export function computeRobustBracketState(picks: BracketPredictions, r32Matches:
 
   let winner = "";
   const hasBothFinalOpponents = finalMatch.homeId !== "" && finalMatch.awayId !== "";
-  if (hasBothFinalOpponents) {
+  if (options?.useActualResultsForProgression && actualResults?.winner) {
+    winner = actualResults.winner;
+  } else if (hasBothFinalOpponents) {
     const pickedWinner = picks.winner || "";
     if (pickedWinner === finalMatch.homeId || pickedWinner === finalMatch.awayId) {
       winner = pickedWinner;
@@ -535,49 +558,67 @@ export function computeRobustBracketState(picks: BracketPredictions, r32Matches:
   };
 }
 
-export function sanitizePredictions(picks: BracketPredictions, r32Matches: BracketMatch[]): BracketPredictions {
-  const robustState = computeRobustBracketState(picks, r32Matches);
-  return {
-    r16: {
-      R16_L1_H: robustState.r16Matches[0].homeId,
-      R16_L1_A: robustState.r16Matches[0].awayId,
-      R16_L2_H: robustState.r16Matches[1].homeId,
-      R16_L2_A: robustState.r16Matches[1].awayId,
-      R16_L3_H: robustState.r16Matches[2].homeId,
-      R16_L3_A: robustState.r16Matches[2].awayId,
-      R16_L4_H: robustState.r16Matches[3].homeId,
-      R16_L4_A: robustState.r16Matches[3].awayId,
-      R16_R1_H: robustState.r16Matches[4].homeId,
-      R16_R1_A: robustState.r16Matches[4].awayId,
-      R16_R2_H: robustState.r16Matches[5].homeId,
-      R16_R2_A: robustState.r16Matches[5].awayId,
-      R16_R3_H: robustState.r16Matches[6].homeId,
-      R16_R3_A: robustState.r16Matches[6].awayId,
-      R16_R4_H: robustState.r16Matches[7].homeId,
-      R16_R4_A: robustState.r16Matches[7].awayId,
-    },
-    r8: {
-      R8_L1_H: robustState.r8Matches[0].homeId,
-      R8_L1_A: robustState.r8Matches[0].awayId,
-      R8_L2_H: robustState.r8Matches[1].homeId,
-      R8_L2_A: robustState.r8Matches[1].awayId,
-      R8_R1_H: robustState.r8Matches[2].homeId,
-      R8_R1_A: robustState.r8Matches[2].awayId,
-      R8_R2_H: robustState.r8Matches[3].homeId,
-      R8_R2_A: robustState.r8Matches[3].awayId,
-    },
-    r4: {
-      R4_L1_H: robustState.r4Matches[0].homeId,
-      R4_L1_A: robustState.r4Matches[0].awayId,
-      R4_R1_H: robustState.r4Matches[1].homeId,
-      R4_R1_A: robustState.r4Matches[1].awayId,
-    },
-    r2: {
-      R2_L1_H: robustState.finalMatch.homeId,
-      R2_L1_A: robustState.finalMatch.awayId,
-    },
-    winner: robustState.winner,
+export function sanitizePredictions(picks: BracketPredictions, r32Matches: BracketMatch[], actualResults?: BracketPredictions | null): BracketPredictions {
+  // We compute the bracket state with actual results to mirror the UI the user interacted with
+  const uiState = computeRobustBracketState(picks, r32Matches, actualResults, { useActualResultsForProgression: true });
+  
+  const safePicks = createEmptyBracketPredictions();
+
+  // Rebuild the r32Mapping, etc. to validate slots
+  const r32Mapping: Record<string, string> = {
+    R32_L1: "R16_L1_H", R32_L2: "R16_L1_A", R32_L3: "R16_L2_H", R32_L4: "R16_L2_A",
+    R32_L5: "R16_L3_H", R32_L6: "R16_L3_A", R32_L7: "R16_L4_H", R32_L8: "R16_L4_A",
+    R32_R1: "R16_R1_H", R32_R2: "R16_R1_A", R32_R3: "R16_R2_H", R32_R4: "R16_R2_A",
+    R32_R5: "R16_R3_H", R32_R6: "R16_R3_A", R32_R7: "R16_R4_H", R32_R8: "R16_R4_A",
   };
+  r32Matches.forEach(m => {
+    const slotKey = r32Mapping[m.id];
+    const pickedWinner = picks.r16?.[slotKey];
+    if (pickedWinner && (pickedWinner === m.homeId || pickedWinner === m.awayId)) {
+      safePicks.r16[slotKey] = pickedWinner;
+    }
+  });
+
+  const r16Mapping: Record<string, string> = {
+    R16_L1: "R8_L1_H", R16_L2: "R8_L1_A", R16_L3: "R8_L2_H", R16_L4: "R8_L2_A",
+    R16_R1: "R8_R1_H", R16_R2: "R8_R1_A", R16_R3: "R8_R2_H", R16_R4: "R8_R2_A",
+  };
+  uiState.r16Matches.forEach(m => {
+    const slotKey = r16Mapping[m.id];
+    const pickedWinner = picks.r8?.[slotKey];
+    if (pickedWinner && (pickedWinner === m.homeId || pickedWinner === m.awayId)) {
+      safePicks.r8[slotKey] = pickedWinner;
+    }
+  });
+
+  const r8Mapping: Record<string, string> = {
+    R8_L1: "R4_L1_H", R8_L2: "R4_L1_A", R8_R1: "R4_R1_H", R8_R2: "R4_R1_A",
+  };
+  uiState.r8Matches.forEach(m => {
+    const slotKey = r8Mapping[m.id];
+    const pickedWinner = picks.r4?.[slotKey];
+    if (pickedWinner && (pickedWinner === m.homeId || pickedWinner === m.awayId)) {
+      safePicks.r4[slotKey] = pickedWinner;
+    }
+  });
+
+  const r4Mapping: Record<string, string> = {
+    R4_L1: "R2_L1_H", R4_R1: "R2_L1_A",
+  };
+  uiState.r4Matches.forEach(m => {
+    const slotKey = r4Mapping[m.id];
+    const pickedWinner = picks.r2?.[slotKey];
+    if (pickedWinner && (pickedWinner === m.homeId || pickedWinner === m.awayId)) {
+      safePicks.r2[slotKey] = pickedWinner;
+    }
+  });
+
+  const pickedFinalWinner = picks.winner;
+  if (pickedFinalWinner && (pickedFinalWinner === uiState.finalMatch.homeId || pickedFinalWinner === uiState.finalMatch.awayId)) {
+    safePicks.winner = pickedFinalWinner;
+  }
+
+  return safePicks;
 }
 
 export const BracketChallenge: React.FC<BracketChallengeProps> = ({
@@ -1077,6 +1118,14 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
     }
   }, [pointRulesStr]);
 
+  const currentActualResults = useMemo(() => {
+    return (testMode && simulatedResults) 
+      ? simulatedResults 
+      : (challenge.resolved && parsedPointRules.actualBracketPicks && Object.keys(parsedPointRules.actualBracketPicks.r16 || {}).length > 0 
+          ? parsedPointRules.actualBracketPicks 
+          : liveActualResults);
+  }, [testMode, simulatedResults, challenge.resolved, parsedPointRules, liveActualResults]);
+
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
@@ -1127,7 +1176,7 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
     : (selectedParticipant ? selectedParticipant.predictions : picks);
 
   // Compute the current state of matches in later rounds based on active predictions
-  const bracketState = computeRobustBracketState(activePicks, dynamicR32Matches);
+  const bracketState = computeRobustBracketState(activePicks, dynamicR32Matches, currentActualResults, { useActualResultsForProgression: true });
 
   // Determine slot progression mapping
   // maps previous round winner to subsequent round position key
@@ -1809,12 +1858,6 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
 
         <div className={round === "r32" ? "space-y-0.5 sm:space-y-1" : "space-y-1"}>
           {(() => {
-            const currentActualResults = (testMode && simulatedResults) 
-              ? simulatedResults 
-              : (challenge.resolved && parsedPointRules.actualBracketPicks && Object.keys(parsedPointRules.actualBracketPicks.r16 || {}).length > 0 
-                  ? parsedPointRules.actualBracketPicks 
-                  : liveActualResults);
-
             const simWinnerId = currentActualResults ? getSelectedWinnerForPredictions(currentActualResults, matchId) : "";
             const isSimWinnerA = simWinnerId === teamAId && teamAId !== "";
             const isSimWinnerB = simWinnerId === teamBId && teamBId !== "";
@@ -2521,12 +2564,6 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
                   .sort((a, b) => {
                     const predictionsA = a.user_id === userId ? picks : (a.predictions || {});
                     const predictionsB = b.user_id === userId ? picks : (b.predictions || {});
-                    
-                    const currentActualResults = (testMode && simulatedResults) 
-                      ? simulatedResults 
-                      : (challenge.resolved && parsedPointRules.actualBracketPicks && Object.keys(parsedPointRules.actualBracketPicks.r16 || {}).length > 0 
-                          ? parsedPointRules.actualBracketPicks 
-                          : liveActualResults);
 
                     const hasCurrentResults = currentActualResults && Object.keys(currentActualResults.r16 || {}).some(k => currentActualResults.r16[k]);
 
@@ -2553,12 +2590,6 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
                     const r2C = Object.keys(pPicks.r2 || {}).filter(k => pPicks.r2[k]).length;
                     const winC = pPicks.winner ? 1 : 0;
                     const totalC = r16C + r8C + r4C + r2C + winC;
-
-                    const currentActualResults = (testMode && simulatedResults) 
-                      ? simulatedResults 
-                      : (challenge.resolved && parsedPointRules.actualBracketPicks && Object.keys(parsedPointRules.actualBracketPicks.r16 || {}).length > 0 
-                          ? parsedPointRules.actualBracketPicks 
-                          : liveActualResults);
 
                     const hasCurrentResults = currentActualResults && Object.keys(currentActualResults.r16 || {}).some(k => currentActualResults.r16[k]);
 
