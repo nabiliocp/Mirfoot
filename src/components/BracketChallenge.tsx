@@ -1783,6 +1783,22 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
     const isViewingOther = selectedParticipant !== null && selectedParticipant.user_id !== userId;
     const currentPicks = isViewingOther ? selectedParticipant.predictions : picks;
 
+    const getUserPickForSlot = (r: string, mId: string, slotSuffix: string) => {
+      if (r === "r32") return undefined;
+      const key = r === "r2" ? `R2_L1_${slotSuffix}` : `${mId}_${slotSuffix}`;
+      if (r === "r16") return currentPicks?.r16?.[key];
+      if (r === "r8") return currentPicks?.r8?.[key];
+      if (r === "r4") return currentPicks?.r4?.[key];
+      if (r === "r2") return currentPicks?.r2?.[key];
+      return undefined;
+    };
+
+    const userPickAId = getUserPickForSlot(round, matchId, "H");
+    const userPickBId = getUserPickForSlot(round, matchId, "A");
+
+    const isReplacementA = !!userPickAId && teamAId !== "" && userPickAId !== teamAId && !isPlaceholderTeam(teamAId);
+    const isReplacementB = !!userPickBId && teamBId !== "" && userPickBId !== teamBId && !isPlaceholderTeam(teamBId);
+
     const teamA = BRACKET_TEAMS[teamAId];
     const teamB = BRACKET_TEAMS[teamBId];
 
@@ -1935,6 +1951,11 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
                       <>
                         <span className="text-sm shrink-0">{teamA ? renderFlag(teamA.flag) : "❓"}</span>
                         <span className="truncate">{teamA ? teamA.name : "À déterminer"}</span>
+                        {isReplacementA && (
+                          <span className="text-[9px] text-gray-500/80 font-bold line-through ml-0.5 shrink-0 truncate max-w-[40px] sm:max-w-[60px]" title="Votre pronostic erroné">
+                            {BRACKET_TEAMS[userPickAId!]?.name}
+                          </span>
+                        )}
                         {showValidation && !maskPrediction && teamA && (
                           <>
                             {isWinnerA && isSimWinnerA && (
@@ -1987,6 +2008,11 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
                       <>
                         <span className="text-sm shrink-0">{teamB ? renderFlag(teamB.flag) : "❓"}</span>
                         <span className="truncate">{teamB ? teamB.name : "À déterminer"}</span>
+                        {isReplacementB && (
+                          <span className="text-[9px] text-gray-500/80 font-bold line-through ml-0.5 shrink-0 truncate max-w-[40px] sm:max-w-[60px]" title="Votre pronostic erroné">
+                            {BRACKET_TEAMS[userPickBId!]?.name}
+                          </span>
+                        )}
                         {showValidation && !maskPrediction && teamB && (
                           <>
                             {isWinnerB && isSimWinnerB && (
