@@ -1950,12 +1950,14 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
                     ) : (
                       <>
                         <span className="text-sm shrink-0">{teamA ? renderFlag(teamA.flag) : "❓"}</span>
-                        <span className="truncate">{teamA ? teamA.name : "À déterminer"}</span>
-                        {isReplacementA && (
-                          <span className="text-[9px] text-gray-500/80 font-bold line-through ml-0.5 shrink-0 truncate max-w-[40px] sm:max-w-[60px]" title="Votre pronostic erroné">
-                            {BRACKET_TEAMS[userPickAId!]?.name}
-                          </span>
-                        )}
+                        <div className="flex flex-col min-w-0 items-start justify-center">
+                          <span className="truncate">{teamA ? teamA.name : "À déterminer"}</span>
+                          {isReplacementA && (
+                            <span className="text-[9px] text-gray-400 font-bold line-through leading-none truncate max-w-full" title="Votre pronostic erroné">
+                              {BRACKET_TEAMS[userPickAId!]?.name}
+                            </span>
+                          )}
+                        </div>
                         {showValidation && !maskPrediction && teamA && (
                           <>
                             {isWinnerA && isSimWinnerA && (
@@ -2007,12 +2009,14 @@ export const BracketChallenge: React.FC<BracketChallengeProps> = ({
                     ) : (
                       <>
                         <span className="text-sm shrink-0">{teamB ? renderFlag(teamB.flag) : "❓"}</span>
-                        <span className="truncate">{teamB ? teamB.name : "À déterminer"}</span>
-                        {isReplacementB && (
-                          <span className="text-[9px] text-gray-500/80 font-bold line-through ml-0.5 shrink-0 truncate max-w-[40px] sm:max-w-[60px]" title="Votre pronostic erroné">
-                            {BRACKET_TEAMS[userPickBId!]?.name}
-                          </span>
-                        )}
+                        <div className="flex flex-col min-w-0 items-start justify-center">
+                          <span className="truncate">{teamB ? teamB.name : "À déterminer"}</span>
+                          {isReplacementB && (
+                            <span className="text-[9px] text-gray-400 font-bold line-through leading-none truncate max-w-full" title="Votre pronostic erroné">
+                              {BRACKET_TEAMS[userPickBId!]?.name}
+                            </span>
+                          )}
+                        </div>
                         {showValidation && !maskPrediction && teamB && (
                           <>
                             {isWinnerB && isSimWinnerB && (
